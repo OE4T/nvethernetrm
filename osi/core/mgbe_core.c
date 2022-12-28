@@ -2083,6 +2083,11 @@ static nve32_t mgbe_core_init(struct osi_core_priv_data *const osi_core)
 			    osi_core->hw_feature->fpe_sel);
 	}
 
+#if !defined(L3L4_WILDCARD_FILTER)
+	/* initialize L3L4 Filters variable */
+	osi_core->l3l4_filter_bitmask = OSI_NONE;
+#endif /* !L3L4_WILDCARD_FILTER */
+
 	ret = mgbe_dma_chan_to_vmirq_map(osi_core);
 fail:
 	return ret;

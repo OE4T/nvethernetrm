@@ -1357,9 +1357,11 @@ struct osi_core_priv_data {
 	nveu32_t mdc_cr;
 	/** VLAN tag stripping enable(1) or disable(0) */
 	nveu32_t strip_vlan_tag;
+#if !defined(L3L4_WILDCARD_FILTER)
 	/** L3L4 filter bit bask, set index corresponding bit for
 	 * filter if filter enabled */
 	nveu32_t l3l4_filter_bitmask;
+#endif /* !L3L4_WILDCARD_FILTER */
 	/** Flag which decides virtualization is enabled(1) or disabled(0) */
 	nveu32_t use_virtualization;
 	/** HW supported feature list */

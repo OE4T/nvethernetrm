@@ -1241,8 +1241,7 @@ static void eqos_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
  *  - TraceID:ETHERNET_NVETHERNETRM_006
  *
  * @param[in] osi_core: OSI core private data structure. Used params are
- *  - base, dcs_en, num_mtl_queues, mtl_queues, mtu, stip_vlan_tag, pause_frames,
- *    l3l4_filter_bitmask
+ *  - base, dcs_en, num_mtl_queues, mtl_queues, mtu, stip_vlan_tag, pause_frames.
  *
  * @pre
  *  - MAC should be out of reset. See osi_poll_for_mac_reset_complete()
@@ -1363,8 +1362,10 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 			    osi_core->hw_feature->fpe_sel);
 	}
 
+#if !defined(L3L4_WILDCARD_FILTER)
 	/* initialize L3L4 Filters variable */
 	osi_core->l3l4_filter_bitmask = OSI_NONE;
+#endif /* !L3L4_WILDCARD_FILTER */
 
 	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
 		eqos_dma_chan_to_vmirq_map(osi_core);
