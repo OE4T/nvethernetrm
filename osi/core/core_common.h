@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -85,7 +85,9 @@
 #define MAC_PFR_HPF			OSI_BIT(10)
 #define MAC_PFR_VTFE			OSI_BIT(16)
 #define MAC_PFR_IPFE			OSI_BIT(20)
+#if !defined(L3L4_WILDCARD_FILTER)
 #define MAC_PFR_IPFE_SHIFT		20U
+#endif /* !L3L4_WILDCARD_FILTER */
 #define MAC_PFR_DNTU			OSI_BIT(21)
 #define MAC_PFR_RA			OSI_BIT(31)
 
@@ -154,8 +156,10 @@ nve32_t hw_ptp_tsc_capture(struct osi_core_priv_data *const osi_core,
 			   struct osi_core_ptp_tsc_data *data);
 nve32_t hw_config_mac_pkt_filter_reg(struct osi_core_priv_data *const osi_core,
 				     const struct osi_filter *filter);
+#if !defined(L3L4_WILDCARD_FILTER)
 nve32_t hw_config_l3_l4_filter_enable(struct osi_core_priv_data *const osi_core,
 				      const nveu32_t filter_enb_dis);
+#endif /* !L3L4_WILDCARD_FILTER */
 nve32_t hw_config_est(struct osi_core_priv_data *const osi_core,
 		      struct osi_est_config *const est);
 nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,

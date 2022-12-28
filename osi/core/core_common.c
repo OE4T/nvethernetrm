@@ -585,6 +585,7 @@ nve32_t hw_config_mac_pkt_filter_reg(struct osi_core_priv_data *const osi_core,
 	return ret;
 }
 
+#if !defined(L3L4_WILDCARD_FILTER)
 nve32_t hw_config_l3_l4_filter_enable(struct osi_core_priv_data *const osi_core,
 				      const nveu32_t filter_enb_dis)
 {
@@ -608,6 +609,7 @@ nve32_t hw_config_l3_l4_filter_enable(struct osi_core_priv_data *const osi_core,
 fail:
 	return ret;
 }
+#endif /* !L3L4_WILDCARD_FILTER */
 
 /**
  * @brief hw_est_read - indirect read the GCL to Software own list

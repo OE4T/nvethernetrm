@@ -934,8 +934,10 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 		OSI_CORE_INFO((osi_core->osd), (OSI_LOG_ARG_OUTOFBOUND),
 			("L3L4: ADD: "), (filter_no));
 
+#if !defined(L3L4_WILDCARD_FILTER)
 		/* update filter mask bit */
 		osi_core->l3l4_filter_bitmask |= ((nveu32_t)1U << (filter_no & 0x1FU));
+#endif /* !L3L4_WILDCARD_FILTER */
 	} else {
 		/* Clear the filter data.
 		 * osi_memset is an internal function and it cannot fail, hence
@@ -945,10 +947,13 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 		OSI_CORE_INFO((osi_core->osd), (OSI_LOG_ARG_OUTOFBOUND),
 			("L3L4: DELETE: "), (filter_no));
 
+#if !defined(L3L4_WILDCARD_FILTER)
 		/* update filter mask bit */
 		osi_core->l3l4_filter_bitmask &= ~((nveu32_t)1U << (filter_no & 0x1FU));
+#endif /* !L3L4_WILDCARD_FILTER */
 	}
 
+#if !defined(L3L4_WILDCARD_FILTER)
 	if (osi_core->l3l4_filter_bitmask != 0U) {
 		/* enable l3l4 filter */
 		ret = hw_config_l3_l4_filter_enable(osi_core, OSI_ENABLE);
@@ -956,6 +961,7 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 		/* disable l3l4 filter */
 		ret = hw_config_l3_l4_filter_enable(osi_core, OSI_DISABLE);
 	}
+#endif /* !L3L4_WILDCARD_FILTER */
 
 exit_func:
 
