@@ -2734,6 +2734,11 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 
 	case OSI_CMD_GET_HW_FEAT:
 		ret = ops_p->get_hw_features(osi_core, &data->hw_feat);
+		if (ret >= 0) {
+			/* Get MAC version */
+			ret = osi_get_mac_version(osi_core, &data->arg1_u32);
+		}
+
 		break;
 
 	case OSI_CMD_SET_SYSTOHW_TIME:
