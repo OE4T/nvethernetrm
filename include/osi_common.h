@@ -86,7 +86,6 @@
  * @brief EQOS generic helper MACROS.
  * @{
  */
-#define OSI_PTP_REQ_CLK_FREQ		250000000U
 #define OSI_FLOW_CTRL_DISABLE		0U
 #define OSI_ADDRESS_32BIT		0
 #define OSI_ADDRESS_40BIT		1
@@ -140,6 +139,7 @@
 /** @} */
 #endif /* !OSI_STRIPPED_LIB */
 
+#define OSI_PTP_REQ_CLK_FREQ		250000000U
 #define OSI_POLL_COUNT			1000U
 #ifndef UINT_MAX
 #define UINT_MAX			(~0U)
