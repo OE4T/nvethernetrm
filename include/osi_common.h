@@ -176,11 +176,9 @@
 /* Default maximum Giant Packet Size Limit is 16K */
 #define OSI_MAX_MTU_SIZE	16383U
 
-#ifdef UPDATED_PAD_CAL
 /* MAC Tx/Rx Idle retry and delay count */
 #define OSI_TXRX_IDLE_RETRY	5000U
 #define OSI_DELAY_COUNT		10U
-#endif
 
 #define EQOS_DMA_CHX_STATUS(x)		((0x0080U * (x)) + 0x1160U)
 #define MGBE_DMA_CHX_STATUS(x)		((0x0080U * (x)) + 0x3160U)
