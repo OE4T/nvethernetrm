@@ -1528,6 +1528,11 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 			    (nveu8_t *)osi_core->macsec_base +
 			    MACSEC_COMMON_ISR_SET);
 		break;
+	case OSI_PHY_WRITE_VERIFY_ERR:
+		osi_core->hsi.err_code[PHY_WRITE_VERIFY_FAIL_IDX] = OSI_PHY_WRITE_VERIFY_ERR;
+		osi_core->hsi.report_err = OSI_ENABLE;
+		osi_core->hsi.report_count_err[PHY_WRITE_VERIFY_FAIL_IDX] = OSI_ENABLE;
+		break;
 	case OSI_TX_FRAME_ERR:
 		osi_core->hsi.report_count_err[TX_FRAME_ERR_IDX] = OSI_ENABLE;
 		osi_core->hsi.err_code[TX_FRAME_ERR_IDX] = OSI_TX_FRAME_ERR;
