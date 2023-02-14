@@ -375,6 +375,7 @@ typedef my_lint_64		nvel64_t;
 #define RX_CSUM_ERR_IDX		4U
 #define AUTONEG_ERR_IDX		5U
 #define XPCS_WRITE_FAIL_IDX	6U
+#define PHY_WRITE_VERIFY_FAIL_IDX	7U
 #define MACSEC_RX_CRC_ERR_IDX	0U
 #define MACSEC_TX_CRC_ERR_IDX	1U
 #define MACSEC_RX_ICV_ERR_IDX	2U
@@ -401,7 +402,7 @@ typedef my_lint_64		nvel64_t;
  * @brief Maximum number of different mac error code
  * HSI_SW_ERR_CODE + Two (Corrected and Uncorrected error code)
  */
-#define OSI_HSI_MAX_MAC_ERROR_CODE		7U
+#define OSI_HSI_MAX_MAC_ERROR_CODE		8U
 
 /**
  * @brief Maximum number of different macsec error code
@@ -423,6 +424,7 @@ typedef my_lint_64		nvel64_t;
 #define OSI_MACSEC_RX_ICV_ERR		0x1007U
 #define OSI_MACSEC_REG_VIOL_ERR		0x1008U
 #define OSI_XPCS_WRITE_FAIL_ERR		0x1009U
+#define OSI_PHY_WRITE_VERIFY_ERR	0x100AU
 
 #define OSI_HSI_MGBE0_UE_CODE		0x2A00U
 #define OSI_HSI_MGBE1_UE_CODE		0x2A01U
