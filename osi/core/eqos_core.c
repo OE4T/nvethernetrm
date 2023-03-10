@@ -1915,6 +1915,7 @@ static inline nve32_t eqos_update_mac_addr_helper(
 				nveu32_t *value,
 				const nveu32_t idx,
 				const nveu32_t dma_chan,
+				const nveu32_t dma_chansel,
 				const nveu32_t addr_mask,
 				OSI_UNUSED const nveu32_t src_dest)
 {
@@ -1928,7 +1929,7 @@ static inline nve32_t eqos_update_mac_addr_helper(
 	if ((idx < EQOS_MAX_MAC_ADDR_REG) &&
 	    (osi_core->mac_ver >= OSI_EQOS_MAC_5_00)) {
 		*value &= EQOS_MAC_ADDRH_DCS;
-		temp = OSI_BIT(dma_chan);
+		temp = (OSI_BIT(dma_chan) | dma_chansel);
 		temp = temp << EQOS_MAC_ADDRH_DCS_SHIFT;
 		temp = temp & EQOS_MAC_ADDRH_DCS;
 		*value = *value | temp;
@@ -2066,6 +2067,7 @@ static nve32_t eqos_update_mac_addr_low_high_reg(
 	nveu32_t idx = filter->index;
 	nveu32_t dma_routing_enable = filter->dma_routing;
 	nveu32_t dma_chan = filter->dma_chan;
+	nveu32_t dma_chansel = filter->dma_chansel;
 	nveu32_t addr_mask = filter->addr_mask;
 	nveu32_t src_dest = filter->src_dest;
 	nveu32_t value = OSI_DISABLE;
@@ -2092,7 +2094,7 @@ static nve32_t eqos_update_mac_addr_low_high_reg(
 				      dma_chan);
 	} else {
 		ret = eqos_update_mac_addr_helper(osi_core, &value, idx, dma_chan,
-						  addr_mask, src_dest);
+						  dma_chansel, addr_mask, src_dest);
 		/* Check return value from helper code */
 		if (ret == -1) {
 			goto fail;
