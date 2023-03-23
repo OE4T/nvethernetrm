@@ -1292,6 +1292,11 @@ struct osi_core_priv_data {
 	 * 1- FPE HW configuration initiated to enable
 	 * 0- FPE HW configuration initiated to disable */
 	nveu32_t is_fpe_enabled;
+	/** Dummy SCI/SC/SA etc LUTs programmed with dummy parameter when no
+	 * session setup. SCI LUT hit created with VF's MACID */
+	nveu8_t macsec_dummy_sc_macids[OSI_MAX_NUM_SC][OSI_ETH_ALEN];
+	/** MACSEC initialization state */
+	nveu32_t macsec_initialized;
 #endif /* MACSEC_SUPPORT */
 	/** Pointer to OSD private data structure */
 	void *osd;
