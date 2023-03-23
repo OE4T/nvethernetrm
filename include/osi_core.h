@@ -376,6 +376,7 @@ typedef my_lint_64		nvel64_t;
 #define AUTONEG_ERR_IDX		5U
 #define XPCS_WRITE_FAIL_IDX	6U
 #define PHY_WRITE_VERIFY_FAIL_IDX	7U
+#define MAC2MAC_ERR_IDX		8U
 #define MACSEC_RX_CRC_ERR_IDX	0U
 #define MACSEC_TX_CRC_ERR_IDX	1U
 #define MACSEC_RX_ICV_ERR_IDX	2U
@@ -402,7 +403,7 @@ typedef my_lint_64		nvel64_t;
  * @brief Maximum number of different mac error code
  * HSI_SW_ERR_CODE + Two (Corrected and Uncorrected error code)
  */
-#define OSI_HSI_MAX_MAC_ERROR_CODE		8U
+#define OSI_HSI_MAX_MAC_ERROR_CODE		9U
 
 /**
  * @brief Maximum number of different macsec error code
@@ -425,6 +426,12 @@ typedef my_lint_64		nvel64_t;
 #define OSI_MACSEC_REG_VIOL_ERR		0x1008U
 #define OSI_XPCS_WRITE_FAIL_ERR		0x1009U
 #define OSI_PHY_WRITE_VERIFY_ERR	0x100AU
+#define OSI_M2M_TSC_READ_ERR		0x100BU
+#define OSI_M2M_TIME_CAL_ERR		0x100CU
+#define OSI_M2M_ADJ_FREQ_ERR		0x100DU
+#define OSI_M2M_ADJ_TIME_ERR		0x100EU
+#define OSI_M2M_SET_TIME_ERR		0x100FU
+#define OSI_M2M_CONFIG_PTP_ERR		0x1010U
 
 #define OSI_HSI_MGBE0_UE_CODE		0x2A00U
 #define OSI_HSI_MGBE1_UE_CODE		0x2A01U
