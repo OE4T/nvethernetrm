@@ -1548,6 +1548,15 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 		osi_core->hsi.report_err = OSI_ENABLE;
 		osi_core->hsi.report_count_err[XPCS_WRITE_FAIL_IDX] = OSI_ENABLE;
 		break;
+	case OSI_M2M_TSC_READ_ERR:
+	case OSI_M2M_TIME_CAL_ERR:
+	case OSI_M2M_ADJ_FREQ_ERR:
+	case OSI_M2M_ADJ_TIME_ERR:
+	case OSI_M2M_SET_TIME_ERR:
+	case OSI_M2M_CONFIG_PTP_ERR:
+		osi_core->hsi.report_err = OSI_ENABLE;
+		osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = error_code;
+		break;
 	default:
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "Invalid error code\n", (nveu32_t)error_code);
