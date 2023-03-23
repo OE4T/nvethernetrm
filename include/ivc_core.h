@@ -51,7 +51,6 @@ typedef enum {
 	kt_config_macsec,
 	cipher_config,
 	loopback_config_macsec,
-	en_macsec,
 	config_macsec,
 	read_mmc_macsec,
 	dbg_buf_config_macsec,
@@ -165,6 +164,8 @@ typedef struct ivc_msg_common {
 		struct osi_macsec_mmc_counters macsec_mmc;
 		/** macsec IRQ stats */
 		struct osi_macsec_irq_stats macsec_irq_stats;
+		/** MACSEC Ethernet MAC address */
+		nveu8_t macsec_mac_addr[OSI_ETH_ALEN];
 #endif
 	}data;
 } ivc_msg_common_t;
