@@ -45,6 +45,11 @@ static inline nve32_t xpcs_poll_for_an_complete(struct osi_core_priv_data *osi_c
 	nve32_t cond = 1;
 	nve32_t ret = 0;
 
+	if (osi_core->pre_sil == 0x1U) {
+		//TBD: T264 increase retry for uFPGA
+		retry = 10000;
+	}
+
 	/* 14. Poll for AN complete */
 	cond = 1;
 	count = 0;
@@ -279,27 +284,43 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 	nveu32_t val = 0;
 	nveu32_t count;
 	nve32_t ret = 0;
+	const nveu32_t uphy_status_reg[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		XPCS_WRAP_UPHY_STATUS,
+		T26X_XPCS_WRAP_UPHY_STATUS
+	};
+	const nveu32_t uphy_init_ctrl_reg[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		XPCS_WRAP_UPHY_HW_INIT_CTRL,
+		T26X_XPCS_WRAP_UPHY_HW_INIT_CTRL
+	};
 
 	val = osi_readla(osi_core,
-			 (nveu8_t *)xpcs_base + XPCS_WRAP_UPHY_STATUS);
-	if ((val & XPCS_WRAP_UPHY_STATUS_TX_P_UP_STATUS) !=
-	    XPCS_WRAP_UPHY_STATUS_TX_P_UP_STATUS) {
+			 (nveu8_t *)xpcs_base + uphy_status_reg[osi_core->mac]);
+	if ((lane_init_en == XPCS_WRAP_UPHY_HW_INIT_CTRL_TX_EN) &&
+		((val & XPCS_WRAP_UPHY_STATUS_TX_P_UP_STATUS) ==
+		    XPCS_WRAP_UPHY_STATUS_TX_P_UP_STATUS)) {
+			goto done;
+	} else {
 		val = osi_readla(osi_core,
-				(nveu8_t *)xpcs_base + XPCS_WRAP_UPHY_HW_INIT_CTRL);
+				(nveu8_t *)xpcs_base +
+				uphy_init_ctrl_reg[osi_core->mac]);
 		val |= lane_init_en;
 		osi_writela(osi_core, val,
-				(nveu8_t *)xpcs_base + XPCS_WRAP_UPHY_HW_INIT_CTRL);
+				(nveu8_t *)xpcs_base +
+				uphy_init_ctrl_reg[osi_core->mac]);
 
 		count = 0;
 		while (cond == COND_NOT_MET) {
 			if (count > retry) {
 				ret = -1;
-				goto fail;
+				goto done;
 			}
 			count++;
 
 			val = osi_readla(osi_core,
-					(nveu8_t *)xpcs_base + XPCS_WRAP_UPHY_HW_INIT_CTRL);
+					(nveu8_t *)xpcs_base +
+					uphy_init_ctrl_reg[osi_core->mac]);
 			if ((val & lane_init_en) == OSI_NONE) {
 				/* exit loop */
 				cond = COND_MET;
@@ -313,7 +334,7 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 		}
 	}
 
-fail:
+done:
 	return ret;
 }
 
@@ -335,6 +356,11 @@ static nve32_t xpcs_check_pcs_lock_status(struct osi_core_priv_data *osi_core)
 	nveu32_t val = 0;
 	nveu32_t count;
 	nve32_t ret = 0;
+	const nveu32_t uphy_irq_sts_reg[OSI_MAX_MAC_IP_TYPES] = {
+				0,
+				XPCS_WRAP_INTERRUPT_STATUS,
+				T26X_XPCS_WRAP_INTERRUPT_STATUS
+			};
 
 	count = 0;
 	while (cond == COND_NOT_MET) {
@@ -345,7 +371,8 @@ static nve32_t xpcs_check_pcs_lock_status(struct osi_core_priv_data *osi_core)
 		count++;
 
 		val = osi_readla(osi_core,
-				 (nveu8_t *)xpcs_base + XPCS_WRAP_IRQ_STATUS);
+				 (nveu8_t *)xpcs_base +
+				 uphy_irq_sts_reg[osi_core->mac]);
 		if ((val & XPCS_WRAP_IRQ_STATUS_PCS_LINK_STS) ==
 		    XPCS_WRAP_IRQ_STATUS_PCS_LINK_STS) {
 			/* exit loop */
@@ -361,7 +388,8 @@ static nve32_t xpcs_check_pcs_lock_status(struct osi_core_priv_data *osi_core)
 	}
 
 	/* Clear the status */
-	osi_writela(osi_core, val, (nveu8_t *)xpcs_base + XPCS_WRAP_IRQ_STATUS);
+	osi_writela(osi_core, val, (nveu8_t *)xpcs_base +
+		    uphy_irq_sts_reg[osi_core->mac]);
 fail:
 	return ret;
 }
@@ -394,145 +422,153 @@ static nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
 		goto fail;
 	}
 
-	if (l_core->lane_powered_up == OSI_ENABLE) {
-		goto step10;
-	}
-
-	val = osi_readla(osi_core,
-			(nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-	/* Step1 RX_SW_OVRD */
-	val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_SW_OVRD;
-	osi_writela(osi_core, val,
-			(nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
-	val = osi_readla(osi_core,
-			(nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
-	/* Step2 RX_IDDQ */
-	val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_IDDQ);
-	osi_writela(osi_core, val,
-			(nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
-	val = osi_readla(osi_core,
-			(nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
-	/* Step2 AUX_RX_IDDQ */
-	val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_AUX_RX_IDDQ);
-	osi_writela(osi_core, val,
-			(nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
-	/* Step3: wait for 1usec, HW recommended value is 50nsec minimum */
-	osi_core->osd_ops.udelay(1U);
-
-	/* Step4 RX_SLEEP */
-	val = osi_readla(osi_core,
-			(nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-	val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_SLEEP);
-	osi_writela(osi_core, val,
-			(nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
-	/* Step5: wait for 1usec, HW recommended value is 500nsec minimum */
-	osi_core->osd_ops.udelay(1U);
-
-	/* Step6 RX_CAL_EN */
-	val = osi_readla(osi_core,
-			(nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-	val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CAL_EN;
-	osi_writela(osi_core, val,
-			(nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
-	/* Step7 poll for Rx cal enable */
-	cond = COND_NOT_MET;
-	count = 0;
-	while (cond == COND_NOT_MET) {
-		if (count > retry) {
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		if (xpcs_uphy_lane_bring_up(osi_core,
+					    XPCS_WRAP_UPHY_HW_INIT_CTRL_RX_EN) < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					"UPHY RX lane bring-up failed\n", 0ULL);
 			ret = -1;
 			goto fail;
 		}
-
-		count++;
+	} else {
+		if (l_core->lane_powered_up == OSI_ENABLE) {
+			goto step10;
+		}
 
 		val = osi_readla(osi_core,
 				(nveu8_t *)osi_core->xpcs_base +
 				XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-		if ((val & XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CAL_EN) == 0U) {
-			cond = COND_MET;
-		} else {
-			/* Maximum wait delay as per HW team is 100 usec.
-			 * But most of the time as per experiments it takes
-			 * around 14usec to satisy the condition, so add a
-			 * minimum delay of 14usec and loop it for 7times.
-			 * With this 14usec delay condition gets satifies
-			 * in first iteration itself.
-			 */
-			osi_core->osd_ops.udelay(200U);
+		/* Step1 RX_SW_OVRD */
+		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_SW_OVRD;
+		osi_writela(osi_core, val,
+			    (nveu8_t *)osi_core->xpcs_base +
+			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+
+		val = osi_readla(osi_core,
+				 (nveu8_t *)osi_core->xpcs_base +
+				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+
+		/* Step2 RX_IDDQ */
+		val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_IDDQ);
+		osi_writela(osi_core, val,
+			    (nveu8_t *)osi_core->xpcs_base +
+			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+
+		val = osi_readla(osi_core,
+				 (nveu8_t *)osi_core->xpcs_base +
+				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+
+		/* Step2 AUX_RX_IDDQ */
+		val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_AUX_RX_IDDQ);
+		osi_writela(osi_core, val,
+			    (nveu8_t *)osi_core->xpcs_base +
+			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+
+		/* Step3: wait for 1usec, HW recommended value is 50nsec minimum */
+		osi_core->osd_ops.udelay(1U);
+
+		/* Step4 RX_SLEEP */
+		val = osi_readla(osi_core,
+				 (nveu8_t *)osi_core->xpcs_base +
+				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_SLEEP);
+		osi_writela(osi_core, val,
+			    (nveu8_t *)osi_core->xpcs_base +
+			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+
+		/* Step5: wait for 1usec, HW recommended value is 500nsec minimum */
+		osi_core->osd_ops.udelay(1U);
+
+		/* Step6 RX_CAL_EN */
+		val = osi_readla(osi_core,
+				 (nveu8_t *)osi_core->xpcs_base +
+				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CAL_EN;
+		osi_writela(osi_core, val,
+			    (nveu8_t *)osi_core->xpcs_base +
+			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+
+		/* Step7 poll for Rx cal enable */
+		cond = COND_NOT_MET;
+		count = 0;
+		while (cond == COND_NOT_MET) {
+			if (count > retry) {
+				ret = -1;
+				goto fail;
+			}
+			count++;
+			val = osi_readla(osi_core,
+					 (nveu8_t *)osi_core->xpcs_base +
+					 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+			if ((val & XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CAL_EN) == 0U) {
+				cond = COND_MET;
+			} else {
+				/* Maximum wait delay as per HW team is 100 usec.
+				 * But most of the time as per experiments it takes
+				 * around 14usec to satisy the condition, so add a
+				 * minimum delay of 14usec and loop it for 7times.
+				 * With this 14usec delay condition gets satifies
+				 * in first iteration itself.
+				 */
+				osi_core->osd_ops.udelay(200U);
+			}
 		}
-	}
 
-	/* Step8: wait for 1usec, HW recommended value is 50nsec minimum */
-	osi_core->osd_ops.udelay(1U);
+		/* Step8: wait for 1usec, HW recommended value is 50nsec minimum */
+		osi_core->osd_ops.udelay(1U);
 
-	/* Step9 RX_DATA_EN */
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-	val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_DATA_EN;
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
-			XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		/* Step9 RX_DATA_EN */
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
+				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_DATA_EN;
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
+			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
 
 
-	/* set lane_powered_up to OSI_ENABLE */
-	l_core->lane_powered_up = OSI_ENABLE;
+		/* set lane_powered_up to OSI_ENABLE */
+		l_core->lane_powered_up = OSI_ENABLE;
 
 step10:
 
-	/* Step10 reset RX_PCS_PHY_RDY */
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-			 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-	val &= ~XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_PCS_PHY_RDY;
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
-		    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		/* Step10 reset RX_PCS_PHY_RDY */
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
+				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		val &= ~XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_PCS_PHY_RDY;
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
+			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
 
-	/* Step11: wait for 1usec, HW recommended value is 50nsec minimum */
-	osi_core->osd_ops.udelay(1U);
+		/* Step11: wait for 1usec, HW recommended value is 50nsec minimum */
+		osi_core->osd_ops.udelay(1U);
 
-	/* Step12 RX_CDR_RESET */
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-			 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-	val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CDR_RESET;
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
-		    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		/* Step12 RX_CDR_RESET */
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
+				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CDR_RESET;
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
+			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
 
-	/* Step13: wait for 1usec, HW recommended value is 50nsec minimum */
-	osi_core->osd_ops.udelay(1U);
+		/* Step13: wait for 1usec, HW recommended value is 50nsec minimum */
+		osi_core->osd_ops.udelay(1U);
 
-	/* Step14 RX_PCS_PHY_RDY */
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-			 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-	val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_PCS_PHY_RDY;
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
-		    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-	/* Step14: wait for 30ms */
-	osi_core->osd_ops.udelay(30000U);
+		/* Step14 RX_PCS_PHY_RDY */
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
+				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_PCS_PHY_RDY;
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
+			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		/* Step14: wait for 30ms */
+		osi_core->osd_ops.udelay(30000U);
 
-	/* Step15 RX_CDR_RESET */
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-			 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-	val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CDR_RESET);
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
-		    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		/* Step15 RX_CDR_RESET */
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
+				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CDR_RESET);
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
+			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
 
-	/* Step16: wait for 30ms */
-	osi_core->osd_ops.udelay(30000U);
+		/* Step16: wait for 30ms */
+		osi_core->osd_ops.udelay(30000U);
+	}
 
 	if (xpcs_check_pcs_lock_status(osi_core) < 0) {
 		if (l_core->lane_status == OSI_ENABLE) {
@@ -633,12 +669,15 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 	nveu32_t ctrl = 0;
 	nve32_t ret = 0;
 
-
-	if (xpcs_lane_bring_up(osi_core) < 0) {
-		ret = -1;
-		goto fail;
+	if (osi_core->pre_sil == 0x1U) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "Pre-silicon, skipping lane bring up", 0ULL);
+	} else {
+		if (xpcs_lane_bring_up(osi_core) < 0) {
+			ret = -1;
+			goto fail;
+		}
 	}
-
 	/* Switching to USXGMII Mode based on
 	 * XPCS programming guideline 7.6
 	 */

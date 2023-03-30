@@ -200,7 +200,7 @@ static nve32_t validate_frp_args(struct osi_core_priv_data *const osi_core,
 				 OSI_UNUSED nveu8_t pos,
 				 nveu32_t *req_entries)
 {
-	nveu32_t dma_sel_val[MAX_MAC_IP_TYPES] = {0xFFU, 0x3FFU};
+	nveu32_t dma_sel_val[OSI_MAX_MAC_IP_TYPES] = {0xFFU, 0x3FFU, 0x3FFU};
 	nve32_t ret = 0;
 	(void)pos;
 

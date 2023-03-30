@@ -45,9 +45,21 @@
 #define MAC_CORE_VER_TYPE_MGBE		2U
 
 /**
- * @brief Maximum number of supported MAC IP types (EQOS and MGBE)
+ * @addtogroup MGBE PBL settings.
+ *
+ * @brief Values defined for PBL settings
+ * @{
  */
-#define MAX_MAC_IP_TYPES       2U
+/* Tx Queue size is 128KB */
+#define MGBE_TXQ_SIZE		131072U
+/* Rx Queue size is 192KB */
+#define MGBE_RXQ_SIZE		196608U
+/* MAX PBL value */
+#define MGBE_DMA_CHX_MAX_PBL		256U
+#define MGBE_DMA_CHX_MAX_PBL_VAL	0x200000U
+/* AXI Data width */
+#define MGBE_AXI_DATAWIDTH		128U
+/** @} */
 
 /**
  * @brief osi_readl_poll_timeout - Periodically poll an address until
@@ -277,9 +289,12 @@ static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac_ver,
 		ret = 1;
 		break;
 	case OSI_MGBE_MAC_3_10:
+	//TBD: T264 uFPGA reports mac version 3.2
+	case OSI_MGBE_MAC_3_20:
 #ifndef OSI_STRIPPED_LIB
 	case OSI_MGBE_MAC_4_00:
 #endif /* !OSI_STRIPPED_LIB */
+		//TBD: T264 number of dma channels?
 		*num_max_chans = OSI_MGBE_MAX_NUM_CHANS;
 		*l_mac_ver = MAC_CORE_VER_TYPE_MGBE;
 		ret = 1;

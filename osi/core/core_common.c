@@ -27,7 +27,7 @@
 #include "xpcs.h"
 #include "macsec.h"
 
-static inline nve32_t poll_check(struct osi_core_priv_data *const osi_core, nveu8_t *addr,
+nve32_t poll_check(struct osi_core_priv_data *const osi_core, nveu8_t *addr,
 				 nveu32_t bit_check, nveu32_t *value)
 {
 	nveu32_t retry = RETRY_COUNT;
@@ -62,7 +62,11 @@ fail:
 nve32_t hw_poll_for_swr(struct osi_core_priv_data *const osi_core)
 {
 	nveu32_t dma_mode_val = 0U;
-	const nveu32_t dma_mode[2] = { EQOS_DMA_BMR, MGBE_DMA_MODE };
+	const nveu32_t dma_mode[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_DMA_BMR,
+		MGBE_DMA_MODE,
+		MGBE_DMA_MODE
+	};
 	void *addr = osi_core->base;
 
 	return poll_check(osi_core, ((nveu8_t *)addr + dma_mode[osi_core->mac]),
@@ -73,10 +77,26 @@ void hw_start_mac(struct osi_core_priv_data *const osi_core)
 {
 	void *addr = osi_core->base;
 	nveu32_t value;
-	const nveu32_t mac_mcr_te_reg[2] = { EQOS_MAC_MCR, MGBE_MAC_TMCR };
-	const nveu32_t mac_mcr_re_reg[2] = { EQOS_MAC_MCR, MGBE_MAC_RMCR };
-	const nveu32_t set_bit_te[2] = { EQOS_MCR_TE, MGBE_MAC_TMCR_TE };
-	const nveu32_t set_bit_re[2] = { EQOS_MCR_RE, MGBE_MAC_RMCR_RE };
+	const nveu32_t mac_mcr_te_reg[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_MCR,
+		MGBE_MAC_TMCR,
+		MGBE_MAC_TMCR
+	};
+	const nveu32_t mac_mcr_re_reg[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_MCR,
+		MGBE_MAC_RMCR,
+		MGBE_MAC_RMCR
+	};
+	const nveu32_t set_bit_te[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MCR_TE,
+		MGBE_MAC_TMCR_TE,
+		MGBE_MAC_TMCR_TE
+	};
+	const nveu32_t set_bit_re[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MCR_RE,
+		MGBE_MAC_RMCR_RE,
+		MGBE_MAC_RMCR_RE
+	};
 
 	value = osi_readla(osi_core, ((nveu8_t *)addr + mac_mcr_te_reg[osi_core->mac]));
 	value |= set_bit_te[osi_core->mac];
@@ -91,10 +111,26 @@ void hw_stop_mac(struct osi_core_priv_data *const osi_core)
 {
 	void *addr = osi_core->base;
 	nveu32_t value;
-	const nveu32_t mac_mcr_te_reg[2] = { EQOS_MAC_MCR, MGBE_MAC_TMCR };
-	const nveu32_t mac_mcr_re_reg[2] = { EQOS_MAC_MCR, MGBE_MAC_RMCR };
-	const nveu32_t clear_bit_te[2] = { EQOS_MCR_TE, MGBE_MAC_TMCR_TE };
-	const nveu32_t clear_bit_re[2] = { EQOS_MCR_RE, MGBE_MAC_RMCR_RE };
+	const nveu32_t mac_mcr_te_reg[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_MCR,
+		MGBE_MAC_TMCR,
+		MGBE_MAC_TMCR
+	};
+	const nveu32_t mac_mcr_re_reg[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_MCR,
+		MGBE_MAC_RMCR,
+		MGBE_MAC_RMCR
+	};
+	const nveu32_t clear_bit_te[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MCR_TE,
+		MGBE_MAC_TMCR_TE,
+		MGBE_MAC_TMCR_TE
+	};
+	const nveu32_t clear_bit_re[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MCR_RE,
+		MGBE_MAC_RMCR_RE,
+		MGBE_MAC_RMCR_RE
+	};
 
 	value = osi_readla(osi_core, ((nveu8_t *)addr + mac_mcr_te_reg[osi_core->mac]));
 	value &= ~clear_bit_te[osi_core->mac];
@@ -173,11 +209,16 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 	nveu32_t  value;
 	nve32_t  ret = 0;
 	void *base = osi_core->base;
-	const nveu32_t mac_mcr[2] = { EQOS_MAC_MCR, MGBE_MAC_TMCR };
+	const nveu32_t mac_mcr[OSI_MAX_MAC_IP_TYPES] = {
+				EQOS_MAC_MCR,
+				MGBE_MAC_TMCR,
+				MGBE_MAC_TMCR
+			};
 
 	if (((osi_core->mac == OSI_MAC_HW_EQOS) && (speed > OSI_SPEED_1000)) ||
-	    ((osi_core->mac == OSI_MAC_HW_MGBE) && ((speed < OSI_SPEED_2500) ||
-	    (speed > OSI_SPEED_10000)))) {
+	    (((osi_core->mac == OSI_MAC_HW_MGBE) ||
+	    (osi_core->mac == OSI_MAC_HW_MGBE_T26X)) &&
+	    ((speed < OSI_SPEED_2500) || (speed > OSI_SPEED_25000)))) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "unsupported speed\n", (nveul64_t)speed);
 		ret = -1;
@@ -209,6 +250,10 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 	case OSI_SPEED_10000:
 		value &= ~MGBE_MAC_TMCR_SS_10G;
 		break;
+	case OSI_SPEED_25000:
+		value &= ~MGBE_MAC_TMCR_SS_10G;
+		value |= MGBE_MAC_TMCR_SS_SPEED_25G;
+		break;
 	default:
 		ret = -1;
 		break;
@@ -231,8 +276,11 @@ nve32_t hw_flush_mtl_tx_queue(struct osi_core_priv_data *const osi_core,
 	nveu32_t tx_op_mode_val = 0U;
 	nveu32_t que_idx = (q_inx & 0xFU);
 	nveu32_t value;
-	const nveu32_t tx_op_mode[2] = { EQOS_MTL_CHX_TX_OP_MODE(que_idx),
-					 MGBE_MTL_CHX_TX_OP_MODE(que_idx)};
+	const nveu32_t tx_op_mode[OSI_MAX_MAC_IP_TYPES] = {
+		 EQOS_MTL_CHX_TX_OP_MODE(que_idx),
+		 MGBE_MTL_CHX_TX_OP_MODE(que_idx),
+		 MGBE_MTL_CHX_TX_OP_MODE(que_idx)
+	};
 
 	/* Read Tx Q Operating Mode Register and flush TxQ */
 	value = osi_readla(osi_core, ((nveu8_t *)addr + tx_op_mode[osi_core->mac]));
@@ -250,11 +298,17 @@ nve32_t hw_config_fw_err_pkts(struct osi_core_priv_data *osi_core,
 	nveu32_t val;
 	nve32_t ret = 0;
 	nveu32_t que_idx = (q_inx & 0xFU);
-	const nveu32_t rx_op_mode[2] = { EQOS_MTL_CHX_RX_OP_MODE(que_idx),
-					 MGBE_MTL_CHX_RX_OP_MODE(que_idx)};
+	const nveu32_t rx_op_mode[OSI_MAX_MAC_IP_TYPES] = {
+		 EQOS_MTL_CHX_RX_OP_MODE(que_idx),
+		 MGBE_MTL_CHX_RX_OP_MODE(que_idx),
+		 MGBE_MTL_CHX_RX_OP_MODE(que_idx)
+	};
 #ifndef OSI_STRIPPED_LIB
-	const nveu32_t max_q[2] = { OSI_EQOS_MAX_NUM_QUEUES,
-				    OSI_MGBE_MAX_NUM_QUEUES};
+	const nveu32_t max_q[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_QUEUES,
+		OSI_MGBE_MAX_NUM_QUEUES,
+		OSI_MGBE_MAX_NUM_QUEUES
+	};
 	/* Check for valid enable_fw_err_pkts and que_idx values */
 	if (((enable_fw_err_pkts != OSI_ENABLE) &&
 	    (enable_fw_err_pkts != OSI_DISABLE)) ||
@@ -311,8 +365,16 @@ nve32_t hw_config_rxcsum_offload(struct osi_core_priv_data *const osi_core,
 	void *addr = osi_core->base;
 	nveu32_t value;
 	nve32_t ret = 0;
-	const nveu32_t rxcsum_mode[2] = { EQOS_MAC_MCR, MGBE_MAC_RMCR};
-	const nveu32_t ipc_value[2] = { EQOS_MCR_IPC, MGBE_MAC_RMCR_IPC};
+	const nveu32_t rxcsum_mode[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_MCR,
+		MGBE_MAC_RMCR,
+		MGBE_MAC_RMCR
+	};
+	const nveu32_t ipc_value[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MCR_IPC,
+		MGBE_MAC_RMCR_IPC,
+		MGBE_MAC_RMCR_IPC
+	};
 
 	if ((enabled != OSI_ENABLE) && (enabled != OSI_DISABLE)) {
 		ret = -1;
@@ -337,9 +399,21 @@ nve32_t hw_set_systime_to_mac(struct osi_core_priv_data *const osi_core,
 	void *addr = osi_core->base;
 	nveu32_t mac_tcr = 0U;
 	nve32_t ret = 0;
-	const nveu32_t mac_tscr[2] = { EQOS_MAC_TCR, MGBE_MAC_TCR};
-	const nveu32_t mac_stsur[2] = { EQOS_MAC_STSUR, MGBE_MAC_STSUR};
-	const nveu32_t mac_stnsur[2] = { EQOS_MAC_STNSUR, MGBE_MAC_STNSUR};
+	const nveu32_t mac_tscr[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_TCR,
+		MGBE_MAC_TCR,
+		MGBE_MAC_TCR
+	};
+	const nveu32_t mac_stsur[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_STSUR,
+		MGBE_MAC_STSUR,
+		MGBE_MAC_STSUR
+	};
+	const nveu32_t mac_stnsur[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_STNSUR,
+		MGBE_MAC_STNSUR,
+		MGBE_MAC_STNSUR
+	};
 
 	ret = poll_check(osi_core, ((nveu8_t *)addr + mac_tscr[osi_core->mac]),
 			 MAC_TCR_TSINIT, &mac_tcr);
@@ -371,8 +445,16 @@ nve32_t hw_config_addend(struct osi_core_priv_data *const osi_core,
 	void *addr = osi_core->base;
 	nveu32_t mac_tcr = 0U;
 	nve32_t ret = 0;
-	const nveu32_t mac_tscr[2] = { EQOS_MAC_TCR, MGBE_MAC_TCR};
-	const nveu32_t mac_tar[2] = { EQOS_MAC_TAR, MGBE_MAC_TAR};
+	const nveu32_t mac_tscr[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_TCR,
+		MGBE_MAC_TCR,
+		MGBE_MAC_TCR
+	};
+	const nveu32_t mac_tar[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_TAR,
+		MGBE_MAC_TAR,
+		MGBE_MAC_TAR
+	};
 
 	ret = poll_check(osi_core, ((nveu8_t *)addr + mac_tscr[osi_core->mac]),
 			 MAC_TCR_TSADDREG, &mac_tcr);
@@ -406,8 +488,16 @@ void hw_config_tscr(struct osi_core_priv_data *const osi_core, OSI_UNUSED const 
 	nveu32_t i = 0U, temp = 0U;
 #endif /* !OSI_STRIPPED_LIB */
 	nveu32_t value = 0x0U;
-	const nveu32_t mac_tscr[2] = { EQOS_MAC_TCR, MGBE_MAC_TCR};
-	const nveu32_t mac_pps[2] = { EQOS_MAC_PPS_CTL, MGBE_MAC_PPS_CTL};
+	const nveu32_t mac_tscr[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_TCR,
+		MGBE_MAC_TCR,
+		MGBE_MAC_TCR
+	};
+	const nveu32_t mac_pps[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_PPS_CTL,
+		MGBE_MAC_PPS_CTL,
+		MGBE_MAC_TCR
+	};
 
 	(void)ptp_filter; // unused
 
@@ -484,11 +574,16 @@ void hw_config_ssir(struct osi_core_priv_data *const osi_core)
 	nveu32_t val = 0U;
 	void *addr = osi_core->base;
 	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	const nveu32_t mac_ssir[2] = { EQOS_MAC_SSIR, MGBE_MAC_SSIR};
+	const nveu32_t mac_ssir[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_SSIR,
+		MGBE_MAC_SSIR,
+		MGBE_MAC_SSIR
+	};
 	const nveu32_t ptp_ssinc[3] = {OSI_PTP_SSINC_4, OSI_PTP_SSINC_6, OSI_PTP_SSINC_4};
 
 	/* by default Fine method is enabled */
 	/* Fix the SSINC value based on Exact MAC used */
+	//TBD: review for T264
 	val = ptp_ssinc[l_core->l_mac_ver];
 
 	val |= val << MAC_SSIR_SSINC_SHIFT;
@@ -653,9 +748,16 @@ static inline nve32_t hw_est_read(struct osi_core_priv_data *osi_core,
 	nve32_t retry = 1000;
 	nveu32_t val = 0U;
 	nve32_t ret;
-	const nveu32_t MTL_EST_GCL_CONTROL[MAX_MAC_IP_TYPES] = {
-			EQOS_MTL_EST_GCL_CONTROL, MGBE_MTL_EST_GCL_CONTROL};
-	const nveu32_t MTL_EST_DATA[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_DATA, MGBE_MTL_EST_DATA};
+	const nveu32_t MTL_EST_GCL_CONTROL[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_GCL_CONTROL,
+		MGBE_MTL_EST_GCL_CONTROL,
+		MGBE_MTL_EST_GCL_CONTROL
+	};
+	const nveu32_t MTL_EST_DATA[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_DATA,
+		MGBE_MTL_EST_DATA,
+		MGBE_MTL_EST_DATA
+	};
 	(void)gcla;
 
 	*data = 0U;
@@ -757,17 +859,23 @@ static nve32_t validate_btr(struct osi_core_priv_data *const osi_core,
 	nveu64_t btr_new = 0U;
 	nveu64_t old_btr, old_ctr;
 	nveu32_t btr_l, btr_h, ctr_l, ctr_h;
-	const nveu32_t MTL_EST_CONTROL[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL,
+	const nveu32_t MTL_EST_CONTROL[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL,
+							    MGBE_MTL_EST_CONTROL,
 							    MGBE_MTL_EST_CONTROL};
-	const nveu32_t PTP_CYCLE_8[MAX_MAC_IP_TYPES] = {EQOS_8PTP_CYCLE,
+	const nveu32_t PTP_CYCLE_8[OSI_MAX_MAC_IP_TYPES] = {EQOS_8PTP_CYCLE,
+							MGBE_8PTP_CYCLE,
 							MGBE_8PTP_CYCLE};
-	const nveu32_t MTL_EST_BTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_LOW,
+	const nveu32_t MTL_EST_BTR_LOW[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_LOW,
+							    MGBE_MTL_EST_BTR_LOW,
 							    MGBE_MTL_EST_BTR_LOW};
-	const nveu32_t MTL_EST_BTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_HIGH,
+	const nveu32_t MTL_EST_BTR_HIGH[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_HIGH,
+							     MGBE_MTL_EST_BTR_HIGH,
 							     MGBE_MTL_EST_BTR_HIGH};
-	const nveu32_t MTL_EST_CTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_LOW,
+	const nveu32_t MTL_EST_CTR_LOW[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_LOW,
+							    MGBE_MTL_EST_CTR_LOW,
 							    MGBE_MTL_EST_CTR_LOW};
-	const nveu32_t MTL_EST_CTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_HIGH,
+	const nveu32_t MTL_EST_CTR_HIGH[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_HIGH,
+							     MGBE_MTL_EST_CTR_HIGH,
 							     MGBE_MTL_EST_CTR_HIGH};
 	const struct est_read hw_read_arr[4] = {
 				    {&btr_l, MTL_EST_BTR_LOW[mac]},
@@ -847,10 +955,16 @@ static nve32_t gcl_validate(struct osi_core_priv_data *const osi_core,
 			    const nveu32_t *btr, nveu32_t mac)
 {
 	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	const nveu32_t PTP_CYCLE_8[MAX_MAC_IP_TYPES] = {EQOS_8PTP_CYCLE,
-						  MGBE_8PTP_CYCLE};
-	const nveu32_t MTL_EST_STATUS[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_STATUS,
-						MGBE_MTL_EST_STATUS};
+	const nveu32_t PTP_CYCLE_8[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_8PTP_CYCLE,
+		MGBE_8PTP_CYCLE,
+		MGBE_8PTP_CYCLE
+		};
+	const nveu32_t MTL_EST_STATUS[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_STATUS,
+		MGBE_MTL_EST_STATUS,
+		MGBE_MTL_EST_STATUS
+	};
 	nveu32_t i;
 	nveu64_t sum_ti = 0U;
 	nveu64_t sum_tin = 0U;
@@ -930,10 +1044,16 @@ static nve32_t hw_est_write(struct osi_core_priv_data *osi_core,
 	nve32_t retry = 1000;
 	nveu32_t val = 0x0;
 	nve32_t ret = 0;
-	const nveu32_t MTL_EST_DATA[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_DATA,
-						MGBE_MTL_EST_DATA};
-	const nveu32_t MTL_EST_GCL_CONTROL[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_GCL_CONTROL,
-						MGBE_MTL_EST_GCL_CONTROL};
+	const nveu32_t MTL_EST_DATA[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_DATA,
+		MGBE_MTL_EST_DATA,
+		MGBE_MTL_EST_DATA
+	};
+	const nveu32_t MTL_EST_GCL_CONTROL[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_GCL_CONTROL,
+		MGBE_MTL_EST_GCL_CONTROL,
+		MGBE_MTL_EST_GCL_CONTROL
+	};
 
 	osi_writela(osi_core, data, (nveu8_t *)osi_core->base +
 		   MTL_EST_DATA[osi_core->mac]);
@@ -970,13 +1090,17 @@ static inline nve32_t configure_est_params(struct osi_core_priv_data *const osi_
 	nveu32_t i;
 	nve32_t ret;
 	nveu32_t addr = 0x0;
-	const nveu32_t MTL_EST_CTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_LOW,
+	const nveu32_t MTL_EST_CTR_LOW[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_LOW,
+						MGBE_MTL_EST_CTR_LOW,
 						MGBE_MTL_EST_CTR_LOW};
-	const nveu32_t MTL_EST_CTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_HIGH,
+	const nveu32_t MTL_EST_CTR_HIGH[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_HIGH,
+						MGBE_MTL_EST_CTR_HIGH,
 						MGBE_MTL_EST_CTR_HIGH};
-	const nveu32_t MTL_EST_TER[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_TER,
+	const nveu32_t MTL_EST_TER[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_TER,
+						MGBE_MTL_EST_TER,
 						MGBE_MTL_EST_TER};
-	const nveu32_t MTL_EST_LLR[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_LLR,
+	const nveu32_t MTL_EST_LLR[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_LLR,
+						MGBE_MTL_EST_LLR,
 						MGBE_MTL_EST_LLR};
 
 	ret = hw_est_write(osi_core, MTL_EST_CTR_LOW[osi_core->mac], est->ctr[0], 0);
@@ -1056,12 +1180,21 @@ nve32_t hw_config_est(struct osi_core_priv_data *const osi_core,
 	nveu32_t val = 0x0;
 	void *base = osi_core->base;
 	nve32_t ret = 0;
-	const nveu32_t MTL_EST_CONTROL[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL,
-						MGBE_MTL_EST_CONTROL};
-	const nveu32_t MTL_EST_BTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_LOW,
-						MGBE_MTL_EST_BTR_LOW};
-	const nveu32_t MTL_EST_BTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_HIGH,
-						MGBE_MTL_EST_BTR_HIGH};
+	const nveu32_t MTL_EST_CONTROL[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_CONTROL,
+		MGBE_MTL_EST_CONTROL,
+		MGBE_MTL_EST_CONTROL
+	};
+	const nveu32_t MTL_EST_BTR_LOW[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_BTR_LOW,
+		MGBE_MTL_EST_BTR_LOW,
+		MGBE_MTL_EST_BTR_LOW
+	};
+	const nveu32_t MTL_EST_BTR_HIGH[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_BTR_HIGH,
+		MGBE_MTL_EST_BTR_HIGH,
+		MGBE_MTL_EST_BTR_HIGH
+	};
 
 	if (est->en_dis == OSI_DISABLE) {
 		val = osi_readla(osi_core, (nveu8_t *)base +
@@ -1133,19 +1266,26 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 	nveu32_t temp = 0U, temp1 = 0U;
 	nveu32_t temp_shift = 0U;
 	nve32_t ret = 0;
-	const nveu32_t MTL_FPE_CTS[MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_CTS,
+	const nveu32_t MTL_FPE_CTS[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_CTS,
+						MGBE_MTL_FPE_CTS,
 						MGBE_MTL_FPE_CTS};
-	const nveu32_t MAC_FPE_CTS[MAX_MAC_IP_TYPES] = {EQOS_MAC_FPE_CTS,
+	const nveu32_t MAC_FPE_CTS[OSI_MAX_MAC_IP_TYPES] = {EQOS_MAC_FPE_CTS,
+						MGBE_MAC_FPE_CTS,
 						MGBE_MAC_FPE_CTS};
-	const nveu32_t max_number_queue[MAX_MAC_IP_TYPES] = {OSI_EQOS_MAX_NUM_QUEUES,
+	const nveu32_t max_number_queue[OSI_MAX_MAC_IP_TYPES] = {OSI_EQOS_MAX_NUM_QUEUES,
+						OSI_MGBE_MAX_NUM_QUEUES,
 						OSI_MGBE_MAX_NUM_QUEUES};
-	const nveu32_t MAC_RQC1R[MAX_MAC_IP_TYPES] = {EQOS_MAC_RQC1R,
+	const nveu32_t MAC_RQC1R[OSI_MAX_MAC_IP_TYPES] = {EQOS_MAC_RQC1R,
+						MGBE_MAC_RQC1R,
 						MGBE_MAC_RQC1R};
-	const nveu32_t MAC_RQC1R_RQ[MAX_MAC_IP_TYPES] = {EQOS_MAC_RQC1R_FPRQ,
+	const nveu32_t MAC_RQC1R_RQ[OSI_MAX_MAC_IP_TYPES] = {EQOS_MAC_RQC1R_FPRQ,
+						MGBE_MAC_RQC1R_RQ,
 						MGBE_MAC_RQC1R_RQ};
-	const nveu32_t MAC_RQC1R_RQ_SHIFT[MAX_MAC_IP_TYPES] = {EQOS_MAC_RQC1R_FPRQ_SHIFT,
+	const nveu32_t MAC_RQC1R_RQ_SHIFT[OSI_MAX_MAC_IP_TYPES] = {EQOS_MAC_RQC1R_FPRQ_SHIFT,
+						MGBE_MAC_RQC1R_RQ_SHIFT,
 						MGBE_MAC_RQC1R_RQ_SHIFT};
-	const nveu32_t MTL_FPE_ADV[MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_ADV,
+	const nveu32_t MTL_FPE_ADV[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_ADV,
+						MGBE_MTL_FPE_ADV,
 						MGBE_MTL_FPE_ADV};
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
@@ -1242,10 +1382,16 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 {
 	nveu32_t val = 0U;
 	nve32_t ret = 0;
-	const nveu32_t MTL_FPE_CTS[MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_CTS,
-						MGBE_MTL_FPE_CTS};
-	const nveu32_t MAC_FPE_CTS[MAX_MAC_IP_TYPES] = {EQOS_MAC_FPE_CTS,
-						MGBE_MAC_FPE_CTS};
+	const nveu32_t MTL_FPE_CTS[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_FPE_CTS,
+		MGBE_MTL_FPE_CTS,
+		MGBE_MTL_FPE_CTS
+	};
+	const nveu32_t MAC_FPE_CTS[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_FPE_CTS,
+		MGBE_MAC_FPE_CTS,
+		MGBE_MAC_FPE_CTS
+	};
 
 	/* Only 8 TC */
 	if (fpe->tx_queue_preemption_enable > 0xFFU) {
@@ -1321,8 +1467,11 @@ error:
 static inline void enable_mtl_interrupts(struct osi_core_priv_data *osi_core)
 {
 	nveu32_t  mtl_est_ir = OSI_DISABLE;
-	const nveu32_t MTL_EST_ITRE[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_ITRE,
-							 MGBE_MTL_EST_ITRE};
+	const nveu32_t MTL_EST_ITRE[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_ITRE,
+		MGBE_MTL_EST_ITRE,
+		MGBE_MTL_EST_ITRE
+	};
 
 	mtl_est_ir = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 				MTL_EST_ITRE[osi_core->mac]);
@@ -1352,10 +1501,16 @@ static inline void enable_mtl_interrupts(struct osi_core_priv_data *osi_core)
 static inline void enable_fpe_interrupts(struct osi_core_priv_data *osi_core)
 {
 	nveu32_t  value = OSI_DISABLE;
-	const nveu32_t MAC_IER[MAX_MAC_IP_TYPES] = {EQOS_MAC_IMR,
-						    MGBE_MAC_IER};
-	const nveu32_t IMR_FPEIE[MAX_MAC_IP_TYPES] = {EQOS_IMR_FPEIE,
-						      MGBE_IMR_FPEIE};
+	const nveu32_t MAC_IER[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_IMR,
+		MGBE_MAC_IER,
+		MGBE_MAC_IER
+	};
+	const nveu32_t IMR_FPEIE[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_IMR_FPEIE,
+		MGBE_IMR_FPEIE,
+		MGBE_IMR_FPEIE
+	};
 
 	/* Read MAC IER Register and enable Frame Preemption Interrupt
 	 * Enable */
@@ -1408,38 +1563,86 @@ void hw_tsn_init(struct osi_core_priv_data *osi_core)
 {
 	nveu32_t val = 0x0;
 	nveu32_t temp = 0U;
-	const nveu32_t MTL_EST_CONTROL[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL,
-							MGBE_MTL_EST_CONTROL};
-	const nveu32_t MTL_EST_CONTROL_PTOV[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL_PTOV,
-							MGBE_MTL_EST_CONTROL_PTOV};
-	const nveu32_t MTL_EST_PTOV_RECOMMEND[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_PTOV_RECOMMEND,
-							MGBE_MTL_EST_PTOV_RECOMMEND};
-	const nveu32_t MTL_EST_CONTROL_PTOV_SHIFT[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL_PTOV_SHIFT,
-							MGBE_MTL_EST_CONTROL_PTOV_SHIFT};
-	const nveu32_t MTL_EST_CONTROL_CTOV[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL_CTOV,
-							MGBE_MTL_EST_CONTROL_CTOV};
-	const nveu32_t MTL_EST_CTOV_RECOMMEND[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTOV_RECOMMEND,
-							MGBE_MTL_EST_CTOV_RECOMMEND};
-	const nveu32_t MTL_EST_CONTROL_CTOV_SHIFT[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL_CTOV_SHIFT,
-							MGBE_MTL_EST_CONTROL_CTOV_SHIFT};
-	const nveu32_t MTL_EST_CONTROL_LCSE[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL_LCSE,
-							MGBE_MTL_EST_CONTROL_LCSE};
-	const nveu32_t MTL_EST_CONTROL_LCSE_VAL[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL_LCSE_VAL,
-							MGBE_MTL_EST_CONTROL_LCSE_VAL};
-	const nveu32_t MTL_EST_CONTROL_DDBF[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL_DDBF,
-							MGBE_MTL_EST_CONTROL_DDBF};
-	const nveu32_t MTL_EST_OVERHEAD[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_OVERHEAD,
-							MGBE_MTL_EST_OVERHEAD};
-	const nveu32_t MTL_EST_OVERHEAD_OVHD[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_OVERHEAD_OVHD,
-							MGBE_MTL_EST_OVERHEAD_OVHD};
-	const nveu32_t MTL_EST_OVERHEAD_RECOMMEND[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_OVERHEAD_RECOMMEND,
-							MGBE_MTL_EST_OVERHEAD_RECOMMEND};
-	const nveu32_t MAC_RQC1R[MAX_MAC_IP_TYPES] = {EQOS_MAC_RQC1R,
-							MGBE_MAC_RQC1R};
-	const nveu32_t MAC_RQC1R_RQ[MAX_MAC_IP_TYPES] = {EQOS_MAC_RQC1R_FPRQ,
-							MGBE_MAC_RQC1R_RQ};
-	const nveu32_t MAC_RQC1R_RQ_SHIFT[MAX_MAC_IP_TYPES] = {EQOS_MAC_RQC1R_FPRQ_SHIFT,
-							MGBE_MAC_RQC1R_RQ_SHIFT};
+	const nveu32_t MTL_EST_CONTROL[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_CONTROL,
+		MGBE_MTL_EST_CONTROL,
+		MGBE_MTL_EST_CONTROL
+	};
+	const nveu32_t MTL_EST_CONTROL_PTOV[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_CONTROL_PTOV,
+		MGBE_MTL_EST_CONTROL_PTOV,
+		MGBE_MTL_EST_CONTROL_PTOV
+	};
+	const nveu32_t MTL_EST_PTOV_RECOMMEND[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_PTOV_RECOMMEND,
+		MGBE_MTL_EST_PTOV_RECOMMEND,
+		MGBE_MTL_EST_PTOV_RECOMMEND
+	};
+	const nveu32_t MTL_EST_CONTROL_PTOV_SHIFT[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_CONTROL_PTOV_SHIFT,
+		MGBE_MTL_EST_CONTROL_PTOV_SHIFT,
+		MGBE_MTL_EST_CONTROL_PTOV_SHIFT
+	};
+	const nveu32_t MTL_EST_CONTROL_CTOV[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_CONTROL_CTOV,
+		MGBE_MTL_EST_CONTROL_CTOV,
+		MGBE_MTL_EST_CONTROL_CTOV
+	};
+	const nveu32_t MTL_EST_CTOV_RECOMMEND[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_CTOV_RECOMMEND,
+		MGBE_MTL_EST_CTOV_RECOMMEND,
+		MGBE_MTL_EST_CTOV_RECOMMEND
+	};
+	const nveu32_t MTL_EST_CONTROL_CTOV_SHIFT[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_CONTROL_CTOV_SHIFT,
+		MGBE_MTL_EST_CONTROL_CTOV_SHIFT,
+		MGBE_MTL_EST_CONTROL_CTOV_SHIFT
+	};
+	const nveu32_t MTL_EST_CONTROL_LCSE[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_CONTROL_LCSE,
+		MGBE_MTL_EST_CONTROL_LCSE,
+		MGBE_MTL_EST_CONTROL_LCSE
+	};
+	const nveu32_t MTL_EST_CONTROL_LCSE_VAL[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_CONTROL_LCSE_VAL,
+		MGBE_MTL_EST_CONTROL_LCSE_VAL,
+		MGBE_MTL_EST_CONTROL_LCSE_VAL
+	};
+	const nveu32_t MTL_EST_CONTROL_DDBF[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_CONTROL_DDBF,
+		MGBE_MTL_EST_CONTROL_DDBF,
+		MGBE_MTL_EST_CONTROL_DDBF
+	};
+	const nveu32_t MTL_EST_OVERHEAD[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_OVERHEAD,
+		MGBE_MTL_EST_OVERHEAD,
+		MGBE_MTL_EST_OVERHEAD
+	};
+	const nveu32_t MTL_EST_OVERHEAD_OVHD[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_OVERHEAD_OVHD,
+		MGBE_MTL_EST_OVERHEAD_OVHD,
+		MGBE_MTL_EST_OVERHEAD_OVHD
+	};
+	const nveu32_t MTL_EST_OVERHEAD_RECOMMEND[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_EST_OVERHEAD_RECOMMEND,
+		MGBE_MTL_EST_OVERHEAD_RECOMMEND,
+		MGBE_MTL_EST_OVERHEAD_RECOMMEND
+	};
+	const nveu32_t MAC_RQC1R[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_RQC1R,
+		MGBE_MAC_RQC1R,
+		MGBE_MAC_RQC1R
+	};
+	const nveu32_t MAC_RQC1R_RQ[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_RQC1R_FPRQ,
+		MGBE_MAC_RQC1R_RQ,
+		MGBE_MAC_RQC1R_RQ
+	};
+	const nveu32_t MAC_RQC1R_RQ_SHIFT[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_RQC1R_FPRQ_SHIFT,
+		MGBE_MAC_RQC1R_RQ_SHIFT,
+		MGBE_MAC_RQC1R_RQ_SHIFT
+	};
 
 	/* Configure EST paramenters */
 	save_gcl_params(osi_core);
@@ -1633,9 +1836,16 @@ static inline nveu64_t hsi_update_mmc_val(struct osi_core_priv_data *osi_core,
 {
 	nveu64_t temp = 0;
 	nveu32_t value = osi_readl((nveu8_t *)osi_core->base + offset);
-	const nveu32_t MMC_CNTRL[MAX_MAC_IP_TYPES] = { EQOS_MMC_CNTRL, MGBE_MMC_CNTRL };
-	const nveu32_t MMC_CNTRL_CNTRST[MAX_MAC_IP_TYPES] = { EQOS_MMC_CNTRL_CNTRST,
-						MGBE_MMC_CNTRL_CNTRST };
+	const nveu32_t MMC_CNTRL[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MMC_CNTRL,
+		MGBE_MMC_CNTRL,
+		MGBE_MMC_CNTRL
+	};
+	const nveu32_t MMC_CNTRL_CNTRST[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MMC_CNTRL_CNTRST,
+		MGBE_MMC_CNTRL_CNTRST,
+		MGBE_MMC_CNTRL_CNTRST
+	};
 
 	temp = last_value + value;
 	if (temp < last_value) {
@@ -1667,16 +1877,31 @@ static inline nveu64_t hsi_update_mmc_val(struct osi_core_priv_data *osi_core,
 void hsi_read_err(struct osi_core_priv_data *const osi_core)
 {
 	struct osi_mmc_counters *mmc = &osi_core->mmc;
-	const nveu32_t RXCRCERROR[MAX_MAC_IP_TYPES] = { EQOS_MMC_RXCRCERROR,
-						MGBE_MMC_RXCRCERROR_L };
-	const nveu32_t RXIPV4_HDRERR_PKTS[MAX_MAC_IP_TYPES] = { EQOS_MMC_RXIPV4_HDRERR_PKTS,
-					MGBE_MMC_RXIPV4_HDRERR_PKTS_L };
-	const nveu32_t RXIPV6_HDRERR_PKTS[MAX_MAC_IP_TYPES] = { EQOS_MMC_RXIPV6_HDRERR_PKTS,
-					MGBE_MMC_RXIPV6_HDRERR_PKTS_L };
-	const nveu32_t RXUDP_ERR_PKTS[MAX_MAC_IP_TYPES] = { EQOS_MMC_RXUDP_ERR_PKTS,
-					MGBE_MMC_RXUDP_ERR_PKTS_L };
-	const nveu32_t RXTCP_ERR_PKTS[MAX_MAC_IP_TYPES] = { EQOS_MMC_RXTCP_ERR_PKTS,
-					MGBE_MMC_RXTCP_ERR_PKTS_L };
+	const nveu32_t RXCRCERROR[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MMC_RXCRCERROR,
+		MGBE_MMC_RXCRCERROR_L,
+		MGBE_MMC_RXCRCERROR_L
+	};
+	const nveu32_t RXIPV4_HDRERR_PKTS[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MMC_RXIPV4_HDRERR_PKTS,
+		MGBE_MMC_RXIPV4_HDRERR_PKTS_L,
+		MGBE_MMC_RXIPV4_HDRERR_PKTS_L
+	};
+	const nveu32_t RXIPV6_HDRERR_PKTS[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MMC_RXIPV6_HDRERR_PKTS,
+		MGBE_MMC_RXIPV6_HDRERR_PKTS_L,
+		MGBE_MMC_RXIPV6_HDRERR_PKTS_L
+	};
+	const nveu32_t RXUDP_ERR_PKTS[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MMC_RXUDP_ERR_PKTS,
+		MGBE_MMC_RXUDP_ERR_PKTS_L,
+		MGBE_MMC_RXUDP_ERR_PKTS_L
+	};
+	const nveu32_t RXTCP_ERR_PKTS[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MMC_RXTCP_ERR_PKTS,
+		MGBE_MMC_RXTCP_ERR_PKTS_L,
+		MGBE_MMC_RXTCP_ERR_PKTS_L
+	};
 
 	mmc->mmc_rx_crc_error = hsi_update_mmc_val(osi_core, mmc->mmc_rx_crc_error,
 						   RXCRCERROR[osi_core->mac]);
@@ -1717,8 +1942,9 @@ static void prepare_l3l4_ctr_reg(const struct osi_core_priv_data *const osi_core
 	nveu32_t dma_routing_enable = OSI_BIT(0);
 	nveu32_t dst_addr_match = OSI_BIT(0);
 #endif /* !OSI_STRIPPED_LIB */
-	const nveu32_t dma_chan_en_shift[2] = {
+	const nveu32_t dma_chan_en_shift[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_MAC_L3L4_CTR_DMCHEN_SHIFT,
+		MGBE_MAC_L3L4_CTR_DMCHEN_SHIFT,
 		MGBE_MAC_L3L4_CTR_DMCHEN_SHIFT
 	};
 	nveu32_t value = 0U;
@@ -1932,10 +2158,16 @@ nve32_t hw_validate_avb_input(struct osi_core_priv_data *const osi_core,
 			      const struct osi_core_avb_algorithm *const avb)
 {
 	nve32_t ret = 0;
-	nveu32_t ETS_QW_ISCQW_MASK[MAX_MAC_IP_TYPES] = {EQOS_MTL_TXQ_ETS_QW_ISCQW_MASK,
-							MGBE_MTL_TCQ_ETS_QW_ISCQW_MASK};
-	nveu32_t ETS_SSCR_SSC_MASK[MAX_MAC_IP_TYPES] = {EQOS_MTL_TXQ_ETS_SSCR_SSC_MASK,
-							MGBE_MTL_TCQ_ETS_SSCR_SSC_MASK};
+	nveu32_t ETS_QW_ISCQW_MASK[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_TXQ_ETS_QW_ISCQW_MASK,
+		MGBE_MTL_TCQ_ETS_QW_ISCQW_MASK,
+		MGBE_MTL_TCQ_ETS_QW_ISCQW_MASK
+	};
+	nveu32_t ETS_SSCR_SSC_MASK[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MTL_TXQ_ETS_SSCR_SSC_MASK,
+		MGBE_MTL_TCQ_ETS_SSCR_SSC_MASK,
+		MGBE_MTL_TCQ_ETS_SSCR_SSC_MASK
+	};
 	nveu32_t ETS_HC_BOUND = 0x8000000U;
 	nveu32_t ETS_LC_BOUND = 0xF8000000U;
 	nveu32_t mac = osi_core->mac;

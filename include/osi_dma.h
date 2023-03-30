@@ -790,6 +790,10 @@ struct osi_dma_priv_data {
 	 *  Max value is NVETHERNETCL_PIF$OSI_EQOS_RX_DESC_CNT/NVETHERNETCL_PIF$OSI_MGBE_RX_DESC_CNT
 	 */
 	nveu32_t rx_ring_sz;
+	/** number of PDMA's */
+	nveu32_t num_of_pdma;
+	/** Array of PDMA to VDMA mapping copy of osi_core */
+	struct osi_pdma_vdma_data pdma_data[OSI_MGBE_MAX_NUM_PDMA_CHANS];
 };
 
 /**
@@ -810,6 +814,8 @@ struct osi_dma_priv_data {
  *
  * @param[in] osi_dma: DMA private data.
  * - Valid range: Any valid memory address except NULL.
+ * @param[out] dma_status: Stores the global DMA Interrupt status register value
+ * - Valid range: Any valid memory address except NULL.
  *
  * @retval !=0 DMA status on success
  * @retval 0 on failure - invalid argument
@@ -829,7 +835,8 @@ struct osi_dma_priv_data {
  *
  */
 #endif
-nveu32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma);
+nve32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma,
+				  nveu32_t *const dma_status);
 
 /**
  * @brief

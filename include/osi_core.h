@@ -272,6 +272,7 @@ typedef my_lint_64		nvel64_t;
 #define OSI_SPEED_2500		2500
 #define OSI_SPEED_5000		5000
 #define OSI_SPEED_10000		10000
+#define OSI_SPEED_25000		25000
 
 #define TEN_POWER_9		0x3B9ACA00U
 #define TWO_POWER_32		0x100000000ULL
@@ -1645,12 +1646,12 @@ struct osi_core_priv_data {
 	nveu32_t num_mtl_queues;
 	/** Array of MTL queues
 	 * each array element has max value same as num_mtl_queues */
-	nveu32_t mtl_queues[OSI_MGBE_MAX_NUM_CHANS];
+	nveu32_t mtl_queues[OSI_MGBE_MAX_NUM_QUEUES];
 	/** List of MTL Rx queue mode that need to be enabled */
-	nveu32_t rxq_ctrl[OSI_MGBE_MAX_NUM_CHANS];
+	nveu32_t rxq_ctrl[OSI_MGBE_MAX_NUM_QUEUES];
 	/** Rx MTl Queue mapping based on User Priority field
 	 * valid values are from 1 to 0xFF */
-	nveu32_t rxq_prio[OSI_MGBE_MAX_NUM_CHANS];
+	nveu32_t rxq_prio[OSI_MGBE_MAX_NUM_QUEUES];
 	/** MAC HW type EQOS based on DT compatible
 	 * valid values are NVETHERNETRM_PIF$OSI_MAC_HW_EQOS and
 	 * NVETHERNETRM_PIF$OSI_MAC_HW_MGBE*/
@@ -1683,7 +1684,7 @@ struct osi_core_priv_data {
 	nveu32_t dcs_en;
 	/** TQ:TC mapping
 	 * valid values are from 0 to 7 */
-	nveu32_t tc[OSI_MGBE_MAX_NUM_CHANS];
+	nveu32_t tc[OSI_MGBE_MAX_NUM_PDMA_CHANS];
 #ifndef OSI_STRIPPED_LIB
 	/** Memory mapped base address of HV window */
 	void *hv_base;
@@ -1740,6 +1741,14 @@ struct osi_core_priv_data {
 	nveu32_t mc_dmasel;
 	/** UPHY GBE mode (1 for 10G, 0 for 5G) */
 	nveu32_t uphy_gbe_mode;
+	/** number of PDMA's */
+	nveu32_t num_of_pdma;
+	/** Array of PDMA to VDMA mapping */
+	struct osi_pdma_vdma_data pdma_data[OSI_MGBE_MAX_NUM_PDMA_CHANS];
+	/** Number of channels enabled in MAC */
+	nveu32_t num_dma_chans;
+	/** Array of supported DMA channels */
+	nveu32_t dma_chans[OSI_MGBE_MAX_NUM_CHANS];
 	/** Array of VM IRQ's */
 	struct osi_vm_irq_data irq_data[OSI_MAX_VM_IRQS];
 	/** number of VM IRQ's
@@ -1763,6 +1772,8 @@ struct osi_core_priv_data {
 #ifdef HSI_SUPPORT
 	struct osi_hsi_data hsi;
 #endif
+	/** pre-silicon flag */
+	nveu32_t pre_sil;
 };
 
 /**

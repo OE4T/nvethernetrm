@@ -68,7 +68,7 @@
 #define OSI_MTL_QUEUE_ENABLE	0x2U
 #define OSI_MTL_QUEUE_MODEMAX	0x3U
 #ifndef OSI_STRIPPED_LIB
-#define OSI_MTL_MAX_NUM_QUEUES	10U
+#define OSI_MAX_NUM_CHANS		48U
 #endif
 /** @} */
 
@@ -260,13 +260,13 @@ struct osi_stats {
 	/** Under Flow Error */
 	nveu64_t mgbe_tx_underflow_err;
 	/** RX buffer unavailable irq count */
-	nveu64_t rx_buf_unavail_irq_n[OSI_MTL_MAX_NUM_QUEUES];
+	nveu64_t rx_buf_unavail_irq_n[OSI_MAX_NUM_CHANS];
 	/** Transmit Process Stopped irq count */
-	nveu64_t tx_proc_stopped_irq_n[OSI_MTL_MAX_NUM_QUEUES];
+	nveu64_t tx_proc_stopped_irq_n[OSI_MAX_NUM_CHANS];
 	/** Transmit Buffer Unavailable irq count */
-	nveu64_t tx_buf_unavail_irq_n[OSI_MTL_MAX_NUM_QUEUES];
+	nveu64_t tx_buf_unavail_irq_n[OSI_MAX_NUM_CHANS];
 	/** Receive Process Stopped irq count */
-	nveu64_t rx_proc_stopped_irq_n[OSI_MTL_MAX_NUM_QUEUES];
+	nveu64_t rx_proc_stopped_irq_n[OSI_MAX_NUM_CHANS];
 	/** Receive Watchdog Timeout irq count */
 	nveu64_t rx_watchdog_irq_n;
 	/** Fatal Bus Error irq count */

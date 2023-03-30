@@ -145,7 +145,7 @@ static inline void osi_dma_writel(nveu32_t val, void *addr)
  * @brief Maximum number of OSI DMA instances.
  */
 #ifndef MAX_DMA_INSTANCES
-#define MAX_DMA_INSTANCES	10U
+#define MAX_DMA_INSTANCES	OSI_MGBE_MAX_NUM_CHANS
 #endif
 
 /**
@@ -330,8 +330,9 @@ static inline void update_rx_tail_ptr(const struct osi_dma_priv_data *const osi_
 				      nveu64_t tailptr)
 {
 	nveu32_t chan = dma_chan & 0xFU;
-	const nveu32_t tail_ptr_reg[2] = {
+	const nveu32_t tail_ptr_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_RDTP(chan),
+		MGBE_DMA_CHX_RDTLP(chan),
 		MGBE_DMA_CHX_RDTLP(chan)
 	};
 

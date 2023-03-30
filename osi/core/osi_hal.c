@@ -253,9 +253,11 @@ static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	typedef void (*init_core_ops_arr)(struct core_ops *local_ops);
-	static struct core_ops g_ops[MAX_MAC_IP_TYPES];
-	init_core_ops_arr i_ops[MAX_MAC_IP_TYPES] = {
-		eqos_init_core_ops, mgbe_init_core_ops
+	static struct core_ops g_ops[OSI_MAX_MAC_IP_TYPES];
+	init_core_ops_arr i_ops[OSI_MAX_MAC_IP_TYPES][2] = {
+		{ eqos_init_core_ops, OSI_NULL },
+		{ mgbe_init_core_ops, OSI_NULL },
+		{ mgbe_init_core_ops, OSI_NULL }
 	};
 	nve32_t ret = -1;
 
@@ -269,13 +271,13 @@ static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
 		goto exit;
 	}
 
-	if (osi_core->mac > OSI_MAC_HW_MGBE) {
+	if (osi_core->mac > OSI_MAC_HW_MGBE_T26X) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "Invalid MAC HW type\n", 0ULL);
 		goto exit;
 	}
 
-	i_ops[osi_core->mac](&g_ops[osi_core->mac]);
+	i_ops[osi_core->mac][0](&g_ops[osi_core->mac]);
 
 	l_core->ops_p = &g_ops[osi_core->mac];
 
@@ -883,8 +885,9 @@ static nve32_t l3l4_find_match(const struct core_local *const l_core,
 static nve32_t configure_l3l4_filter_valid_params(const struct osi_core_priv_data *const osi_core,
 						  const struct osi_l3_l4_filter *const l3_l4)
 {
-	const nveu32_t max_dma_chan[2] = {
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
 		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS,
 		OSI_MGBE_MAX_NUM_CHANS
 	};
 	nve32_t ret = -1;
@@ -1114,8 +1117,9 @@ static nve32_t configure_l3l4_filter(struct osi_core_priv_data *const osi_core,
 	nveu32_t filter_no = 0;
 	nveu32_t free_filter_no = UINT_MAX;
 	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	const nveu32_t max_filter_no[2] = {
+	const nveu32_t max_filter_no[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_MAX_L3_L4_FILTER - 1U,
+		OSI_MGBE_MAX_L3_L4_FILTER - 1U,
 		OSI_MGBE_MAX_L3_L4_FILTER - 1U,
 	};
 	nve32_t ret = -1;

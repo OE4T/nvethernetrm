@@ -45,6 +45,7 @@
 /**
  * @brief Maximum number of timestamps stored in OSI from HW FIFO.
  */
+ //TBD: does it change for T264?
 #define MAX_TX_TS_CNT		(PKT_ID_CNT * OSI_MGBE_MAX_NUM_CHANS)
 
 /**

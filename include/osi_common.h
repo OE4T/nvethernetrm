@@ -27,6 +27,11 @@
 #include <nvethernet_type.h>
 
 /**
+ * @brief Maximum number of supported MAC IP types (EQOS, MGBE, MGBE_T26X)
+ */
+#define OSI_MAX_MAC_IP_TYPES	3U
+
+/**
  * @addtogroup FC Flow Control Threshold Macros
  *
  * @brief These bits control the threshold (fill-level of Rx queue) at which
@@ -206,7 +211,12 @@
 /**
  * @brief Maximum number of channels in MGBE
  */
+//TBD: T264, NET04 supports only 10 VDMA
 #define OSI_MGBE_MAX_NUM_CHANS		10U
+/**
+ * @brief Maximum number of PDMA channels in MGBE
+ */
+#define OSI_MGBE_MAX_NUM_PDMA_CHANS	10U
 /** @brief Maximum number of queues in MGBE */
 #define OSI_MGBE_MAX_NUM_QUEUES		10U
 #define OSI_EQOS_XP_MAX_CHANS		4U
@@ -228,6 +238,8 @@
 #define OSI_MAC_HW_EQOS		0U
 /** @brief flag indicating MGBE MAC */
 #define OSI_MAC_HW_MGBE		1U
+/** @brief flag indicating MGBE MAC on T26X */
+#define OSI_MAC_HW_MGBE_T26X	2U
 
 #define OSI_NULL                ((void *)0)
 /** Enable Flag */
@@ -254,6 +266,8 @@
 #define OSI_EQOS_MAC_5_30       0x53U
 /** @brief MGBE MAC version Orin */
 #define OSI_MGBE_MAC_3_10	0x31U
+//TBD: T264 NET04 version, update it later
+#define OSI_MGBE_MAC_3_20	0x32U
 
 /**
  * @brief Maximum number of VM IRQs
@@ -290,5 +304,17 @@
 
 /** @brief macro for 1 micro second delay */
 #define OSI_DELAY_1US			1U
+
+/**
+ * @brief OSI PDMA to VDMA mapping data
+ */
+struct osi_pdma_vdma_data {
+	/** PDMA channel */
+	nveu32_t pdma_chan;
+	/** Number of VDMA channels */
+	nveu32_t num_vdma_chans;
+	/** Array of VDMA channel list */
+	nveu32_t vdma_chans[OSI_MGBE_MAX_NUM_CHANS];
+};
 
 #endif /* OSI_COMMON_H */

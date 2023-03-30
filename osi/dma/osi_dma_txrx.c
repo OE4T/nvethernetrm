@@ -32,7 +32,7 @@
 #endif /* OSI_DEBUG */
 
 /** DMA descriptor operations */
-static struct desc_ops d_ops[MAX_MAC_IP_TYPES];
+static struct desc_ops d_ops[OSI_MAX_MAC_IP_TYPES];
 
 #if defined OSI_DEBUG && !defined OSI_STRIPPED_LIB
 static inline void dump_rx_descriptors(struct osi_dma_priv_data *osi_dma,
@@ -1056,7 +1056,7 @@ static inline void set_swcx_pkt_id_for_ptp(struct osi_dma_priv_data *osi_dma,
 					   nveu32_t pkt_id)
 {
 	if (((tx_pkt_cx->flags & OSI_PKT_CX_PTP) == OSI_PKT_CX_PTP) &&
-	    (osi_dma->mac == OSI_MAC_HW_MGBE)) {
+	    (osi_dma->mac > OSI_MAC_HW_EQOS)) {
 		last_swcx->flags |= OSI_PKT_CX_PTP;
 		last_swcx->pktid = pkt_id;
 	}
@@ -1085,8 +1085,9 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	nveu32_t f_idx = tx_ring->cur_tx_idx;
 #endif /* OSI_DEBUG */
 	nveu32_t chan = dma_chan & 0xFU;
-	const nveu32_t tail_ptr_reg[2] = {
+	const nveu32_t tail_ptr_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TDTP(chan),
+		MGBE_DMA_CHX_TDTLP(chan),
 		MGBE_DMA_CHX_TDTLP(chan)
 	};
 	nve32_t cntx_desc_consumed;
@@ -1131,7 +1132,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 					    osi_dma->ptp_flag, osi_dma->mac);
 	if (cntx_desc_consumed == 1) {
 		if (((tx_pkt_cx->flags & OSI_PKT_CX_PTP) == OSI_PKT_CX_PTP) &&
-		    (osi_dma->mac == OSI_MAC_HW_MGBE)) {
+		    (osi_dma->mac > OSI_MAC_HW_EQOS)) {
 			/* mark packet id valid */
 			tx_desc->tdes3 |= TDES3_PIDV;
 			if ((osi_dma->ptp_flag & OSI_PTP_SYNC_ONESTEP) ==
@@ -1254,19 +1255,22 @@ static nve32_t rx_dma_desc_initialization(const struct osi_dma_priv_data *const 
 					  nveu32_t dma_chan)
 {
 	nveu32_t chan = dma_chan & 0xFU;
-	const nveu32_t start_addr_high_reg[2] = {
+	const nveu32_t start_addr_high_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_RDLH(chan),
+		MGBE_DMA_CHX_RDLH(chan),
 		MGBE_DMA_CHX_RDLH(chan)
 	};
-	const nveu32_t start_addr_low_reg[2] = {
+	const nveu32_t start_addr_low_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_RDLA(chan),
+		MGBE_DMA_CHX_RDLA(chan),
 		MGBE_DMA_CHX_RDLA(chan)
 	};
-	const nveu32_t ring_len_reg[2] = {
+	const nveu32_t ring_len_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_RDRL(chan),
+		MGBE_DMA_CHX_RX_CNTRL2(chan),
 		MGBE_DMA_CHX_RX_CNTRL2(chan)
 	};
-	const nveu32_t mask[2] = { 0x3FFU, 0x3FFFU };
+	const nveu32_t mask[OSI_MAX_MAC_IP_TYPES] = { 0x3FFU, 0x3FFFU, 0x3FFFU };
 	struct osi_rx_ring *rx_ring = OSI_NULL;
 	struct osi_rx_desc *rx_desc = OSI_NULL;
 	struct osi_rx_swcx *rx_swcx = OSI_NULL;
@@ -1396,19 +1400,22 @@ static inline void set_tx_ring_len_and_start_addr(const struct osi_dma_priv_data
 						  nveu32_t len)
 {
 	nveu32_t chan = dma_chan & 0xFU;
-	const nveu32_t ring_len_reg[2] = {
+	const nveu32_t ring_len_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TDRL(chan),
+		MGBE_DMA_CHX_TX_CNTRL2(chan),
 		MGBE_DMA_CHX_TX_CNTRL2(chan)
 	};
-	const nveu32_t start_addr_high_reg[2] = {
+	const nveu32_t start_addr_high_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TDLH(chan),
+		MGBE_DMA_CHX_TDLH(chan),
 		MGBE_DMA_CHX_TDLH(chan)
 	};
-	const nveu32_t start_addr_low_reg[2] = {
+	const nveu32_t start_addr_low_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TDLA(chan),
+		MGBE_DMA_CHX_TDLA(chan),
 		MGBE_DMA_CHX_TDLA(chan)
 	};
-	const nveu32_t mask[2] = { 0x3FFU, 0x3FFFU };
+	const nveu32_t mask[OSI_MAX_MAC_IP_TYPES] = { 0x3FFU, 0x3FFFU, 0x3FFFU };
 	nveu32_t val;
 
 	/* Program ring length */
@@ -1516,8 +1523,8 @@ void init_desc_ops(const struct osi_dma_priv_data *const osi_dma)
 {
 	typedef void (*desc_ops_arr)(struct desc_ops *p_ops);
 
-	const desc_ops_arr desc_ops_a[2] = {
-		eqos_init_desc_ops, mgbe_init_desc_ops
+	const desc_ops_arr desc_ops_a[OSI_MAX_MAC_IP_TYPES] = {
+		eqos_init_desc_ops, mgbe_init_desc_ops, mgbe_init_desc_ops
 	};
 
 	desc_ops_a[osi_dma->mac](&d_ops[osi_dma->mac]);

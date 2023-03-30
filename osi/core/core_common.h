@@ -161,7 +161,8 @@ struct est_read {
 };
 
 /** @} */
-
+nve32_t poll_check(struct osi_core_priv_data *const osi_core, nveu8_t *addr,
+				 nveu32_t bit_check, nveu32_t *value);
 nve32_t hw_poll_for_swr(struct osi_core_priv_data *const osi_core);
 void hw_start_mac(struct osi_core_priv_data *const osi_core);
 void hw_stop_mac(struct osi_core_priv_data *const osi_core);
