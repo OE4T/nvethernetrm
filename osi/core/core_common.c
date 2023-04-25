@@ -193,6 +193,11 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 		if (ret < 0) {
 			goto fail;
 		}
+
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
+		/* Enable Link Status interrupt only after lane bring up success */
+		value |= MGBE_IMR_RGSMIIIE;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
 	}
 fail:
 	return ret;
