@@ -2971,7 +2971,11 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 	case OSI_CMD_HSI_INJECT_ERR:
 		ret = ops_p->core_hsi_inject_err(osi_core, data->arg1_u32);
 		break;
-#endif
+	case OSI_CMD_READ_HSI_ERR:
+		hsi_read_err(osi_core);
+		ret = 0;
+		break;
+#endif /* HSI_SUPPORT */
 
 #ifdef OSI_DEBUG
 	case OSI_CMD_DEBUG_INTR_CONFIG:
