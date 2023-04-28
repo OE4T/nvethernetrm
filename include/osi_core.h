@@ -271,8 +271,11 @@ typedef my_lint_64		nvel64_t;
 #define OSI_CMD_RESUME			54U
 #ifdef HSI_SUPPORT
 #define OSI_CMD_HSI_INJECT_ERR		55U
-#endif
+#endif /* HSI_SUPPORT */
 #define OSI_CMD_READ_STATS		56U
+#ifdef HSI_SUPPORT
+#define OSI_CMD_READ_HSI_ERR		57U
+#endif /* HSI_SUPPORT */
 /** @} */
 
 #ifdef LOG_OSI

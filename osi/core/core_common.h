@@ -119,6 +119,27 @@
 #define EQOS_MAC_L3L4_CTR_DMCHEN_SHIFT	28
 #define MGBE_MAC_L3L4_CTR_DMCHEN_SHIFT	31
 
+#ifdef HSI_SUPPORT
+/**
+ * @addtogroup MMC HW register offsets
+ *
+ * @brief MMC HW register offsets
+ * @{
+ */
+#define EQOS_MMC_RXCRCERROR			0x00794
+#define EQOS_MMC_RXIPV4_HDRERR_PKTS		0x00814
+#define EQOS_MMC_RXIPV6_HDRERR_PKTS		0x00828
+#define EQOS_MMC_RXUDP_ERR_PKTS			0x00834
+#define EQOS_MMC_RXTCP_ERR_PKTS			0x0083c
+
+#define MGBE_MMC_RXCRCERROR_L			0x00928
+#define MGBE_MMC_RXIPV4_HDRERR_PKTS_L		0x00A6C
+#define MGBE_MMC_RXIPV6_HDRERR_PKTS_L		0x00A94
+#define MGBE_MMC_RXUDP_ERR_PKTS_L		0x00AAC
+#define MGBE_MMC_RXTCP_ERR_PKTS_L		0x00ABC
+/** @} */
+#endif /* HSI_SUPPORT */
+
 /**
  * @addtogroup typedef related info
  *
@@ -179,6 +200,7 @@ void prepare_l3l4_registers(const struct osi_core_priv_data *const osi_core,
 #ifdef HSI_SUPPORT
 nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 				nveu32_t error_code);
+void hsi_read_err(struct osi_core_priv_data *const osi_core);
 #endif
 nve32_t hw_validate_avb_input(struct osi_core_priv_data *const osi_core,
 			      const struct osi_core_avb_algorithm *const avb);
