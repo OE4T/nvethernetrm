@@ -26,6 +26,7 @@
 #include "eqos_core.h"
 #include "xpcs.h"
 #include "macsec.h"
+#include "osi_macsec.h"
 
 nve32_t poll_check(struct osi_core_priv_data *const osi_core, nveu8_t *addr,
 				 nveu32_t bit_check, nveu32_t *value)
@@ -1741,6 +1742,12 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 				nveu32_t error_code)
 {
 	nve32_t ret = 0;
+	const nveu32_t rx_isr_set[MAX_MACSEC_IP_TYPES] = {
+				MACSEC_RX_ISR_SET,
+				MACSEC_RX_ISR_SET_T26X};
+	const nveu32_t common_isr_set[MAX_MACSEC_IP_TYPES] = {
+				MACSEC_COMMON_ISR_SET,
+				MACSEC_COMMON_ISR_SET_T26X};
 
 	switch (error_code) {
 	case OSI_INBOUND_BUS_CRC_ERR:
@@ -1756,7 +1763,7 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 	case OSI_MACSEC_RX_CRC_ERR:
 		osi_writela(osi_core, MACSEC_RX_MAC_CRC_ERROR,
 			    (nveu8_t *)osi_core->macsec_base +
-			    MACSEC_RX_ISR_SET);
+			    rx_isr_set[osi_core->macsec]);
 		break;
 	case OSI_MACSEC_TX_CRC_ERR:
 		osi_writela(osi_core, MACSEC_TX_MAC_CRC_ERROR,
@@ -1766,12 +1773,12 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 	case OSI_MACSEC_RX_ICV_ERR:
 		osi_writela(osi_core, MACSEC_RX_ICV_ERROR,
 			    (nveu8_t *)osi_core->macsec_base +
-			    MACSEC_RX_ISR_SET);
+			    rx_isr_set[osi_core->macsec]);
 		break;
 	case OSI_MACSEC_REG_VIOL_ERR:
 		osi_writela(osi_core, MACSEC_SECURE_REG_VIOL,
 			    (nveu8_t *)osi_core->macsec_base +
-			    MACSEC_COMMON_ISR_SET);
+			    common_isr_set[osi_core->macsec]);
 		break;
 	case OSI_PHY_WRITE_VERIFY_ERR:
 		osi_core->hsi.err_code[PHY_WRITE_VERIFY_FAIL_IDX] = OSI_PHY_WRITE_VERIFY_ERR;

@@ -225,7 +225,7 @@
 /**
  * @brief Maximum number of Secure Channels supported
  */
-#define OSI_MACSEC_SC_INDEX_MAX		16
+#define OSI_MACSEC_SC_INDEX_MAX		48
 
 #ifndef OSI_STRIPPED_LIB
 /* HW supports 8 Hash table regs, but eqos_validate_core_regs only checks 4 */

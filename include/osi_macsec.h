@@ -26,6 +26,7 @@
 #include <osi_core.h>
 
 #ifdef MACSEC_SUPPORT
+
 //////////////////////////////////////////////////////////////////////////
 	/* MACSEC OSI data structures */
 //////////////////////////////////////////////////////////////////////////
@@ -51,6 +52,7 @@
 #endif /* DEBUG_MACSEC */
 /** @brief maximum key index */
 #define OSI_KEY_INDEX_MAX		31U
+#define OSI_KEY_INDEX_MAX_T26X		95U
 /** @brief maximum PN by default */
 #define OSI_PN_MAX_DEFAULT		0xFFFFFFFFU
 /** @brief threshold PN by default */
@@ -59,6 +61,8 @@
 #define OSI_TCI_DEFAULT 		0x1
 /** @brief maximum SCs index */
 #define OSI_SC_INDEX_MAX		15U
+/** @brief maximum SCs index for T26X */
+#define OSI_SC_INDEX_MAX_T26X		47U
 /**
  * @brief Length of ethernet type field
  */
@@ -127,6 +131,10 @@
  * @brief Helper macros for generic table CONFIG register programming
  * @{
  */
+/** @brief MACSEC max ip types */
+#define MAX_MACSEC_IP_TYPES 2
+#define OSI_MACSEC_T23X 0U
+#define OSI_MACSEC_T26X 1U
 /** @brief TX MACSEC controller */
 #define OSI_CTLR_SEL_TX		0U
 /** @brief RX MACSEC controller */
@@ -137,13 +145,15 @@
 /** @brief LUT write operation */
 #define OSI_LUT_WRITE		1U
 #define OSI_RW_MAX		1U
-/** @brief Maximum table index */
-#define OSI_TABLE_INDEX_MAX	31U
 /** @brief Maximum bypass lut table index */
-#define OSI_BYP_LUT_MAX_INDEX	OSI_TABLE_INDEX_MAX
-/** @brief Maximum number of SCs */
-#define OSI_SC_LUT_MAX_INDEX	15U
-#define OSI_SA_LUT_MAX_INDEX	OSI_TABLE_INDEX_MAX
+#define OSI_BYP_LUT_MAX_INDEX	31U
+/** @brief Maximum bypass lut table index for T26X */
+#define OSI_BYP_LUT_MAX_INDEX_T26X	47U
+/** @brief Maximum number of SAs */
+#define OSI_SA_LUT_MAX_INDEX	31U
+/** @brief Maximum number of SAs for T26X */
+#define OSI_SA_LUT_MAX_INDEX_T26X	95U
+
 /** @} */
 
 #ifdef DEBUG_MACSEC
@@ -242,6 +252,10 @@ struct osi_sc_param_outputs {
 	/** Indicates 1 bit VLAN IN CLEAR config
 	 * vlaid values are 0(vlan not in clear) and 1(vlan in clear) */
 	nveu8_t vlan_in_clear;
+	/** Indicates 1 bit Encription config */
+	nveu8_t encrypt;
+	/** Indicates 2 bit confidentiality offset config */
+	nveu8_t conf_offset;
 };
 
 /**

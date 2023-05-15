@@ -4240,11 +4240,15 @@ static void mgbe_config_for_macsec(struct osi_core_priv_data *const osi_core,
 		/* Configure IPG  {EIPG,IPG} value according to macsec IAS in
 		 * MAC_Tx_Configuration and MAC_Extended_Configuration
 		 * IPG (12 B[default] + 32 B[sectag]) = 352 bits
+		 * IPG (12 B[default] + 32 B[sectag] + 15B[if encryption is supported]) = 472 bits
 		 */
 		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 				   MGBE_MAC_TMCR);
 		value &= ~MGBE_MAC_TMCR_IPG_MASK;
 		value |= MGBE_MAC_TMCR_IFP;
+		if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+			value |= MGBE_MAC_TMCR_IPG;
+		}
 		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
 			    MGBE_MAC_TMCR);
 		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +

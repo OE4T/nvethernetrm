@@ -1656,6 +1656,8 @@ struct osi_core_priv_data {
 	 * valid values are NVETHERNETRM_PIF$OSI_MAC_HW_EQOS and
 	 * NVETHERNETRM_PIF$OSI_MAC_HW_MGBE*/
 	nveu32_t mac;
+	/** MACSEC HW type based on DT compatible */
+	nveu32_t macsec;
 	/** MAC version
 	 * valid values are NVETHERNETRM_PIF$OSI_EQOS_MAC_5_00,
 	 * NVETHERNETRM_PIF$OSI_EQOS_MAC_5_30

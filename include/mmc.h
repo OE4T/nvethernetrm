@@ -60,6 +60,8 @@ struct osi_macsec_mmc_counters {
 	/** This counter provides the number of octets after IVC passing
 	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_octets_validated;
+	/** This counter provides the number of octets after decryption */
+	nveul64_t rx_octets_decrypted;
 	/** This counter provides the number not valid packets
 	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_not_valid[OSI_MACSEC_SC_INDEX_MAX];
@@ -84,9 +86,13 @@ struct osi_macsec_mmc_counters {
 	/** This counter provides the number of out packets protected
 	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t tx_pkts_protected[OSI_MACSEC_SC_INDEX_MAX];
+	/** This counter provides the number of out packets encrypted */
+	nveul64_t tx_pkts_encrypted[OSI_MACSEC_SC_INDEX_MAX];
 	/** This counter provides the number of out octets protected/
 	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t tx_octets_protected;
+	/** This counter provides the number of out octets encrypted */
+	nveul64_t tx_octets_encrypted;
 };
 #endif /* MACSEC_SUPPORT */
 #endif /* INCLUDED_MMC_H */
