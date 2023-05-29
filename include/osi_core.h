@@ -1024,6 +1024,8 @@ struct osi_macsec_sc_info {
 	nveu32_t sc_idx_start;
 	/** flags - encoding various states of SA */
 	nveu32_t flags;
+	/** flag indicating the prosition of vlan tag */
+	nveu8_t vlan_in_clear;
 };
 
 /**

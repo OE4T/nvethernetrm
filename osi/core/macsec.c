@@ -4343,15 +4343,28 @@ static nve32_t upd_byp_rx_lut_with_vf_mac(struct osi_core_priv_data *const osi_c
 			      "Failed to set Rx BYP for MACSEC VF MAC\n", (nveul64_t)ret);
 		goto exit;
 	} else {
-		osi_core->macsec_lut_status[OSI_CTLR_SEL_RX].next_byp_idx = (nveu16_t)
-			((osi_core->macsec_lut_status[OSI_CTLR_SEL_RX].next_byp_idx & 0xFFU) + 1U);
+		INC_BYP_LUT_IDX(osi_core->macsec_lut_status[OSI_CTLR_SEL_RX].next_byp_idx);
 	}
+
+	/* Program the byp lut for VLAN frames without considering vlanID or vlan priority */
+	table_config->index =
+			osi_core->macsec_lut_status[OSI_CTLR_SEL_RX].next_byp_idx;
+	lut_config.flags |= OSI_LUT_FLAGS_VLAN_VALID;
+	ret = macsec_lut_config(osi_core, &lut_config);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			      "Failed to set Rx BYP for MACSEC VF MAC\n", (nveul64_t)ret);
+		goto exit;
+	} else {
+		INC_BYP_LUT_IDX(osi_core->macsec_lut_status[OSI_CTLR_SEL_RX].next_byp_idx);
+	}
+
 exit:
 	return ret;
 }
 
 /**
- * @brief set_byp_lut - Sets bypass lut
+ * @brief set_byp_lut_for_mkpdu - Sets bypass lut
  *
  * @note
  * Algorithm:
@@ -4373,13 +4386,87 @@ exit:
  * @retval 0 for success
  * @retval -1 for failure
  */
-static nve32_t set_byp_lut(struct osi_core_priv_data *const osi_core)
+static nve32_t set_byp_lut_for_mkpdu(struct osi_core_priv_data *const osi_core)
 {
 	struct osi_macsec_lut_config lut_config = {0};
 	struct osi_macsec_table_config *table_config = &lut_config.table_config;
 	/* Store MAC address in reverse, per HW design */
 	const nveu8_t mac_da_mkpdu[OSI_ETH_ALEN] = {0x3, 0x0, 0x0,
 					      0xC2, 0x80, 0x01};
+	nve32_t ret = 0;
+	nveu16_t i, j;
+
+	/* Set default BYP for MKPDU packets */
+	table_config->rw = OSI_LUT_WRITE;
+	lut_config.lut_sel = OSI_LUT_SEL_BYPASS;
+	lut_config.flags |= (OSI_LUT_FLAGS_DA_VALID |
+			     OSI_LUT_FLAGS_ENTRY_VALID);
+
+	for (j = 0; j < OSI_ETH_ALEN; j++) {
+		lut_config.lut_in.da[j] = mac_da_mkpdu[j];
+	}
+
+	for (i = OSI_CTLR_SEL_TX; i <= OSI_CTLR_SEL_RX; i++) {
+		table_config->ctlr_sel = i;
+		table_config->index =
+				osi_core->macsec_lut_status[i].next_byp_idx;
+		ret = macsec_lut_config(osi_core, &lut_config);
+		if (ret < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			   "Failed to set BYP for MKPDU multicast DA\n", (nveul64_t)ret);
+
+			goto exit;
+		} else {
+			INC_BYP_LUT_IDX(osi_core->macsec_lut_status[i].next_byp_idx);
+
+		}
+		/* Program to bypass MKPDU frames with VLANID */
+		lut_config.flags |= OSI_LUT_FLAGS_VLAN_VALID;
+		table_config->index =
+				osi_core->macsec_lut_status[i].next_byp_idx;
+		ret = macsec_lut_config(osi_core, &lut_config);
+		if (ret < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			   "Failed to set BYP for MKPDU multicast DA\n", (nveul64_t)ret);
+
+			goto exit;
+		} else {
+			INC_BYP_LUT_IDX(osi_core->macsec_lut_status[i].next_byp_idx);
+		}
+		lut_config.flags &= ~(OSI_LUT_FLAGS_VLAN_VALID);
+
+	}
+exit:
+	return ret;
+}
+
+/**
+ * @brief set_byp_lut - Sets bypass lut
+ *
+ * @note
+ * Algorithm:
+ *  - Adds broadcast address to the Tx and Rx Bypass luts
+ *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
+ *  - TraceID: ***********
+ *
+ * @param[in] osi_core: OSI core private data structure. used param macsec_base
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ *
+ * @retval 0 for success
+ * @retval -1 for failure
+ */
+static nve32_t set_byp_lut(struct osi_core_priv_data *const osi_core)
+{
+	struct osi_macsec_lut_config lut_config = {0};
+	struct osi_macsec_table_config *table_config = &lut_config.table_config;
+	/* Store MAC address in reverse, per HW design */
 	const nveu8_t mac_da_bc[OSI_ETH_ALEN] = {0xFF, 0xFF, 0xFF,
 					   0xFF, 0xFF, 0xFF};
 	nve32_t ret = 0;
@@ -4392,7 +4479,7 @@ static nve32_t set_byp_lut(struct osi_core_priv_data *const osi_core)
 			      "Invalidating all LUT's failed\n", (nveul64_t)ret);
 		goto exit;
 	}
-	/* Set default BYP for MKPDU/BC packets */
+	/* Set default BYP for BC packets */
 	table_config->rw = OSI_LUT_WRITE;
 	lut_config.lut_sel = OSI_LUT_SEL_BYPASS;
 	lut_config.flags |= (OSI_LUT_FLAGS_DA_VALID |
@@ -4411,31 +4498,25 @@ static nve32_t set_byp_lut(struct osi_core_priv_data *const osi_core)
 				      "Failed to set BYP for BC addr\n", (nveul64_t)ret);
 			goto exit;
 		} else {
-			osi_core->macsec_lut_status[i].next_byp_idx = (nveu16_t )
-				((osi_core->macsec_lut_status[i].next_byp_idx & 0xFFU) + 1U);
+			INC_BYP_LUT_IDX(osi_core->macsec_lut_status[i].next_byp_idx);
 		}
-	}
-
-	for (j = 0; j < OSI_ETH_ALEN; j++) {
-		lut_config.lut_in.da[j] = mac_da_mkpdu[j];
-	}
-
-	for (i = OSI_CTLR_SEL_TX; i <= OSI_CTLR_SEL_RX; i++) {
-		table_config->ctlr_sel = i;
+		/* Program to bypass BC frames with VLANID */
+		lut_config.flags |= OSI_LUT_FLAGS_VLAN_VALID;
 		table_config->index =
 				osi_core->macsec_lut_status[i].next_byp_idx;
 		ret = macsec_lut_config(osi_core, &lut_config);
 		if (ret < 0) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			   "Failed to set BYP for MKPDU multicast DA\n", (nveul64_t)ret);
-
+				      "Failed to set BYP for BC addr\n", (nveul64_t)ret);
 			goto exit;
 		} else {
-			osi_core->macsec_lut_status[i].next_byp_idx = (nveu16_t )
-				((osi_core->macsec_lut_status[i].next_byp_idx & 0xFFU) + 1U);
+			INC_BYP_LUT_IDX(osi_core->macsec_lut_status[i].next_byp_idx);
 		}
+		lut_config.flags &= ~(OSI_LUT_FLAGS_VLAN_VALID);
+
 	}
 
+	ret = set_byp_lut_for_mkpdu(osi_core);
 exit:
 	return ret;
 }
@@ -4918,7 +4999,7 @@ static nve32_t del_upd_sc(struct osi_core_priv_data *const osi_core,
 	if (existing_sc->curr_an == sc->curr_an) {
 		/* 1. SCI LUT */
 		lut_config.lut_sel = OSI_LUT_SEL_SCI;
-		table_config->index = (nveu16_t)(existing_sc->sc_idx_start & 0xFFU);
+		table_config->index = GET_SCI_LUT_IDX(existing_sc->sc_idx_start);
 
 		lut_config.flags = OSI_NONE;
 		/* Extract the mac sa from the SCI itself */
@@ -4935,6 +5016,16 @@ static nve32_t del_upd_sc(struct osi_core_priv_data *const osi_core,
 
 		lut_config.flags |= OSI_LUT_FLAGS_ENTRY_VALID;
 
+		ret = macsec_lut_config(osi_core, &lut_config);
+		if (ret < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "Failed to del SCI LUT idx\n",
+				     sc->sc_idx_start);
+			ret = -1;
+			goto exit;
+		}
+		/* delete next SCI LUT with VLAN */
+		table_config->index = GET_SCI_LUT_VLAN_IDX(existing_sc->sc_idx_start);
 		ret = macsec_lut_config(osi_core, &lut_config);
 		if (ret < 0) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
@@ -5062,21 +5153,27 @@ static void add_upd_sc_err_cleanup(struct osi_core_priv_data *const osi_core,
 	nve32_t ret_fail = 0;
 	nveu8_t error_mask = mask;
 
-	if ((error_mask & OSI_BIT(3)) != OSI_NONE) {
+	if ((error_mask & CLEAR_SCI_LUT) != OSI_NONE) {
 		/* Cleanup SCI LUT */
-		error_mask &= ((~OSI_BIT(3)) & (0xFFU));
+		error_mask &= ((~CLEAR_SCI_LUT) & (0xFFU));
 		osi_memset(&lut_config, 0, sizeof(lut_config));
 		table_config = &lut_config.table_config;
 		table_config->ctlr_sel = ctlr;
 		table_config->rw = OSI_LUT_WRITE;
 		lut_config.lut_sel = OSI_LUT_SEL_SCI;
-		table_config->index = (nveu16_t)(sc->sc_idx_start & 0xFFU);
+		table_config->index = GET_SCI_LUT_IDX(sc->sc_idx_start);
 		ret_fail = macsec_lut_config(osi_core, &lut_config);
 		print_error(osi_core, ret_fail);
+		if ((error_mask & CLEAR_SCI_LUT_FOR_VLAN) != OSI_NONE) {
+			error_mask &= ((~CLEAR_SCI_LUT_FOR_VLAN) & (0xFFU));
+			table_config->index = GET_SCI_LUT_VLAN_IDX(sc->sc_idx_start);
+			ret_fail = macsec_lut_config(osi_core, &lut_config);
+			print_error(osi_core, ret_fail);
+		}
 	}
-	if ((error_mask & OSI_BIT(2)) != OSI_NONE) {
+	if ((error_mask & CLEAR_SC_PARAM_LUT) != OSI_NONE) {
 		/* cleanup SC param */
-		error_mask &= ((~OSI_BIT(2)) & (0xFFU));
+		error_mask &= ((~CLEAR_SC_PARAM_LUT) & (0xFFU));
 		osi_memset(&lut_config, 0, sizeof(lut_config));
 		table_config = &lut_config.table_config;
 		table_config->ctlr_sel = ctlr;
@@ -5085,9 +5182,9 @@ static void add_upd_sc_err_cleanup(struct osi_core_priv_data *const osi_core,
 		ret_fail = macsec_lut_config(osi_core, &lut_config);
 		print_error(osi_core, ret_fail);
 	}
-	if ((error_mask & OSI_BIT(1)) != OSI_NONE) {
+	if ((error_mask & CLEAR_SA_STATE_LUT) != OSI_NONE) {
 		/* Cleanup SA state LUT */
-		error_mask &= ((~OSI_BIT(1)) & (0xFFU));
+		error_mask &= ((~CLEAR_SA_STATE_LUT) & (0xFFU));
 		osi_memset(&lut_config, 0, sizeof(lut_config));
 		table_config = &lut_config.table_config;
 		table_config->ctlr_sel = ctlr;
@@ -5099,8 +5196,8 @@ static void add_upd_sc_err_cleanup(struct osi_core_priv_data *const osi_core,
 		print_error(osi_core, ret_fail);
 	}
 #ifdef MACSEC_KEY_PROGRAM
-	if ((error_mask & OSI_BIT(0)) != OSI_NONE) {
-		error_mask &= ((~OSI_BIT(0)) & (0xFFU));
+	if ((error_mask & CLEAR_KEY_LUT) != OSI_NONE) {
+		error_mask &= ((~CLEAR_KEY_LUT) & (0xFFU));
 		osi_memset(&kt_config, 0, sizeof(kt_config));
 		table_config = &kt_config.table_config;
 		table_config->ctlr_sel = ctlr;
@@ -5196,7 +5293,7 @@ static nve32_t add_upd_sc(struct osi_core_priv_data *const osi_core,
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "Failed to set SA state\n", (nveul64_t)ret);
-		error_mask |= OSI_BIT(0);
+		error_mask |= CLEAR_KEY_LUT;
 		goto exit;
 	}
 
@@ -5212,19 +5309,20 @@ static nve32_t add_upd_sc(struct osi_core_priv_data *const osi_core,
 	lut_config.sc_param_out.pn_threshold = OSI_PN_THRESHOLD_DEFAULT;
 	lut_config.sc_param_out.pn_window = sc->pn_window;
 	lut_config.sc_param_out.tci = OSI_TCI_DEFAULT;
-	lut_config.sc_param_out.vlan_in_clear = OSI_VLAN_IN_CLEAR_DEFAULT;
+	lut_config.sc_param_out.vlan_in_clear = sc->vlan_in_clear;
 	ret = macsec_lut_config(osi_core, &lut_config);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "Failed to set SC param\n", (nveul64_t)ret);
-		error_mask |= OSI_BIT(1);
+		error_mask |= CLEAR_SA_STATE_LUT;
+		error_mask |= CLEAR_KEY_LUT;
 		goto exit;
 	}
 
 	/* 4. SCI LUT */
 	lut_config.flags = OSI_NONE;
 	lut_config.lut_sel = OSI_LUT_SEL_SCI;
-	table_config->index = (nveu16_t)(sc->sc_idx_start);
+	table_config->index = GET_SCI_LUT_IDX(sc->sc_idx_start);
 	/* Extract the mac sa from the SCI itself */
 	copy_rev_order(lut_config.lut_in.sa, sc->sci, OSI_ETH_ALEN);
 	lut_config.flags |= OSI_LUT_FLAGS_SA_VALID;
@@ -5239,7 +5337,22 @@ static nve32_t add_upd_sc(struct osi_core_priv_data *const osi_core,
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "Failed to set SCI LUT\n", (nveul64_t)ret);
-		error_mask |= OSI_BIT(2);
+		error_mask |= CLEAR_SC_PARAM_LUT;
+		error_mask |= CLEAR_SA_STATE_LUT;
+		error_mask |= CLEAR_KEY_LUT;
+		goto exit;
+	}
+	/* Reprogram the next SCI index for vlan frames with same keys and SC index*/
+	table_config->index = GET_SCI_LUT_VLAN_IDX(sc->sc_idx_start);
+	lut_config.flags |= OSI_LUT_FLAGS_VLAN_VALID;
+	ret = macsec_lut_config(osi_core, &lut_config);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "Failed to set SCI LUT\n", (nveul64_t)ret);
+		error_mask |= CLEAR_SCI_LUT;
+		error_mask |= CLEAR_SC_PARAM_LUT;
+		error_mask |= CLEAR_SA_STATE_LUT;
+		error_mask |= CLEAR_KEY_LUT;
 		goto exit;
 	}
 
@@ -5253,7 +5366,11 @@ static nve32_t add_upd_sc(struct osi_core_priv_data *const osi_core,
 		if (ret < 0) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				     "Failed to set SC state\n", (nveul64_t)ret);
-			error_mask |= OSI_BIT(3);
+			error_mask |= CLEAR_SCI_LUT_FOR_VLAN;
+			error_mask |= CLEAR_SCI_LUT;
+			error_mask |= CLEAR_SC_PARAM_LUT;
+			error_mask |= CLEAR_SA_STATE_LUT;
+			error_mask |= CLEAR_KEY_LUT;
 			goto exit;
 		}
 	}
@@ -5268,6 +5385,7 @@ exit:
  * @note
  * Algorithm:
  *  - Returns -1 if the validation fails else returns 0
+ *  - Returns -1 if dummy SC deletion fails
  *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
  *  - TraceID: ***********
  *
@@ -5286,8 +5404,10 @@ exit:
  * @retval 0 on success
  * @retval -1 on failure
  */
-static nve32_t macsec_config_validate_inputs(nveu32_t enable, nveu16_t ctlr,
-					     const nveu16_t *kt_idx)
+static nve32_t macsec_config_validate_inputs(struct osi_core_priv_data *const osi_core,
+					     nveu32_t enable, nveu16_t ctlr,
+					     const nveu16_t *kt_idx,
+					     struct osi_macsec_sc_info *const sc)
 {
 	nve32_t ret = 0;
 
@@ -5296,7 +5416,17 @@ static nve32_t macsec_config_validate_inputs(nveu32_t enable, nveu16_t ctlr,
 	    ((ctlr != OSI_CTLR_SEL_TX) && (ctlr != OSI_CTLR_SEL_RX)) ||
 	    (kt_idx == OSI_NULL)) {
 		ret = -1;
+		goto exit_func;
 	}
+	ret = delete_dummy_sc(osi_core, sc);
+	if (ret < OSI_NONE_SIGNED) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "Delete dummy SC failed\n", 0ULL);
+		ret = -1;
+		goto exit_func;
+	}
+
+exit_func:
 	return ret;
 }
 
@@ -5415,6 +5545,7 @@ static nve32_t add_new_sc(struct osi_core_priv_data *const osi_core,
 	new_sc->next_pn = sc->next_pn;
 	new_sc->pn_window = sc->pn_window;
 	new_sc->flags = sc->flags;
+	new_sc->vlan_in_clear = sc->vlan_in_clear;
 
 	new_sc->sc_idx_start = avail_sc_idx;
 	if (is_sc_valid == OSI_MACSEC_SC_VALID) {
@@ -5483,7 +5614,7 @@ static nve32_t macsec_configure(struct osi_core_priv_data *const osi_core,
 	struct osi_macsec_lut_status *lut_status_ptr;
 	nve32_t ret = 0;
 
-	if (macsec_config_validate_inputs(enable, ctlr, kt_idx) < 0) {
+	if (macsec_config_validate_inputs(osi_core, enable, ctlr, kt_idx, sc) < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "Input validation failed\n", 0ULL);
 		ret = -1;
@@ -5491,13 +5622,6 @@ static nve32_t macsec_configure(struct osi_core_priv_data *const osi_core,
 	}
 
 	lut_status_ptr = &osi_core->macsec_lut_status[ctlr];
-	ret = delete_dummy_sc(osi_core, sc);
-	if (ret < OSI_NONE_SIGNED) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "Delete dummy SC failed\n", 0ULL);
-		ret = -1;
-		goto exit;
-	}
 	/* 1. Find if SC is already existing in HW */
 	existing_sc = find_existing_sc(osi_core, sc, ctlr);
 	if (existing_sc == OSI_NULL) {
@@ -5549,6 +5673,7 @@ static nve32_t macsec_configure(struct osi_core_priv_data *const osi_core,
 			tmp_sc_p->next_pn = sc->next_pn;
 			tmp_sc_p->pn_window = sc->pn_window;
 			tmp_sc_p->flags = sc->flags;
+			tmp_sc_p->vlan_in_clear = sc->vlan_in_clear;
 
 			tmp_sc_p->an_valid |= OSI_BIT(sc->curr_an & 0x1FU);
 
