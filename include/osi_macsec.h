@@ -48,7 +48,6 @@
 #define OSI_PN_MAX_DEFAULT		0xFFFFFFFFU
 #define OSI_PN_THRESHOLD_DEFAULT	0xC0000000U
 #define OSI_TCI_DEFAULT 		0x1
-#define OSI_VLAN_IN_CLEAR_DEFAULT	0x0
 #define OSI_SC_INDEX_MAX		15U
 #define OSI_ETHTYPE_LEN 		2
 #define OSI_LUT_BYTE_PATTERN_MAX	4U
@@ -64,6 +63,12 @@
 #define OSI_LUT_SEL_SC_STATE		3U
 #define OSI_LUT_SEL_SA_STATE		4U
 #define OSI_LUT_SEL_MAX 		4U
+/* Helper MACROS to set which LUTs to be cleared in error scenario */
+#define CLEAR_KEY_LUT			OSI_BIT(0)
+#define CLEAR_SA_STATE_LUT		OSI_BIT(1)
+#define CLEAR_SC_PARAM_LUT		OSI_BIT(2)
+#define CLEAR_SCI_LUT			OSI_BIT(3)
+#define CLEAR_SCI_LUT_FOR_VLAN		OSI_BIT(4)
 
 /* LUT input fields flags bit offsets */
 #define OSI_LUT_FLAGS_DA_BYTE0_VALID	OSI_BIT(0)
@@ -160,6 +165,22 @@
 #define OSI_CREATE_SA           1U
 #endif /* MACSEC_KEY_PROGRAM */
 #define OSI_ENABLE_SA           2U
+
+/**
+ * @addtogroup MACROS to increment
+ *
+ * @brief Helper macros to increment without MISRA errors
+ * @{
+ */
+#define INC_BYP_LUT_IDX(x)\
+	(x) = ((nveu16_t)(((x) & 0xFFU) + 1U))
+/* To Obtained the SCI LUT Index SC index is multiplied by 2 because
+ * For each SC 2 SCI LUTs are added one for VLAN and another for non-VLAN
+ */
+#define GET_SCI_LUT_IDX(x)	((nveu16_t)((((x) & 0xFFU) * 2U) & 0xFFU))
+#define GET_SCI_LUT_VLAN_IDX(x)	((nveu16_t)(((((x) & 0xFFU) * 2U) + 1U) & 0xFFU))
+/** @} */
+
 
 /**
  * @addtogroup AES ciphers
