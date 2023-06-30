@@ -524,6 +524,16 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	const nveu32_t ptp_ref_clk_rate[3] = {EQOS_X_PTP_CLK_SPEED, EQOS_PTP_CLK_SPEED,
 					      MGBE_PTP_CLK_SPEED};
+#ifdef HSI_SUPPORT
+	const nveu32_t error_attr[5][2] = {
+			 {OSI_EQOS_UNCORRECTABLE_ATTR, OSI_EQOS_CORRECTABLE_ATTR},
+			 {OSI_MGBE0_UNCORRECTABLE_ATTR, OSI_MGBE0_CORRECTABLE_ATTR},
+			 {OSI_MGBE1_UNCORRECTABLE_ATTR, OSI_MGBE1_CORRECTABLE_ATTR},
+			 {OSI_MGBE2_UNCORRECTABLE_ATTR, OSI_MGBE2_CORRECTABLE_ATTR},
+			 {OSI_MGBE3_UNCORRECTABLE_ATTR, OSI_MGBE3_CORRECTABLE_ATTR}};
+	nveu32_t i = 0U;
+	nveu32_t instance = 0U;
+#endif
 	nve32_t ret;
 
 	ret = osi_get_mac_version(osi_core, &osi_core->mac_ver);
@@ -580,6 +590,30 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 	/* Start the MAC */
 	hw_start_mac(osi_core);
 
+#ifdef HSI_SUPPORT
+	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+		/* Update MGBE instance */
+		instance = osi_core->instance_id + 1U;
+	} else {
+		/* Update EQOS instance */
+		instance = OSI_MAC_HW_EQOS;
+	}
+
+	/* Fill HSI error attribute values */
+	for (i = 0; i < OSI_HSI_MAX_MAC_ERROR_CODE; i++) {
+		if (i == CE_IDX) {
+			osi_core->hsi.err_attr[i] =
+				error_attr[instance][CE_IDX];
+		} else {
+			osi_core->hsi.err_attr[i] =
+				error_attr[instance][UE_IDX];
+		}
+	}
+	for (i = 0; i < HSI_MAX_MACSEC_ERROR_CODE; i++) {
+		osi_core->hsi.macsec_err_attr[i] =
+			error_attr[instance][UE_IDX];
+	}
+#endif
 	l_core->lane_status = OSI_ENABLE;
 	l_core->hw_init_successful = OSI_ENABLE;
 

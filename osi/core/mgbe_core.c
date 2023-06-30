@@ -1517,16 +1517,9 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 {
 	nveu32_t value = 0U;
 	nve32_t ret = 0;
-	const nveu16_t osi_hsi_reporter_id[] = {
-		OSI_HSI_MGBE0_REPORTER_ID,
-		OSI_HSI_MGBE1_REPORTER_ID,
-		OSI_HSI_MGBE2_REPORTER_ID,
-		OSI_HSI_MGBE3_REPORTER_ID,
-	};
 
 	if (enable == OSI_ENABLE) {
 		osi_core->hsi.enabled = OSI_ENABLE;
-		osi_core->hsi.reporter_id = osi_hsi_reporter_id[osi_core->instance_id];
 
 		/* T23X-MGBE_HSIv2-12:Initialization of Transaction Timeout in PCS */
 		/* T23X-MGBE_HSIv2-11:Initialization of Watchdog Timer */
@@ -1705,17 +1698,11 @@ static nve32_t mgbe_hsi_inject_err(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = 0;
 
 	switch (error_code) {
-	case OSI_HSI_MGBE0_CE_CODE:
-	case OSI_HSI_MGBE1_CE_CODE:
-	case OSI_HSI_MGBE2_CE_CODE:
-	case OSI_HSI_MGBE3_CE_CODE:
+	case OSI_CORRECTABLE_ERR:
 		osi_writela(osi_core, val_ce, (nveu8_t *)osi_core->base +
 			    MGBE_MTL_DEBUG_CONTROL);
 		break;
-	case OSI_HSI_MGBE0_UE_CODE:
-	case OSI_HSI_MGBE1_UE_CODE:
-	case OSI_HSI_MGBE2_UE_CODE:
-	case OSI_HSI_MGBE3_UE_CODE:
+	case OSI_UNCORRECTABLE_ERR:
 		osi_writela(osi_core, val_ue, (nveu8_t *)osi_core->base +
 			    MGBE_MTL_DEBUG_CONTROL);
 		break;
@@ -2913,19 +2900,12 @@ static void mgbe_handle_hsi_intr(struct osi_core_priv_data *osi_core)
 	nveu32_t val2 = 0;
 	void *xpcs_base = osi_core->xpcs_base;
 	nveu64_t ce_count_threshold;
-	const nveu32_t osi_hsi_err_code[][2] = {
-		{OSI_HSI_MGBE0_UE_CODE, OSI_HSI_MGBE0_CE_CODE},
-		{OSI_HSI_MGBE1_UE_CODE, OSI_HSI_MGBE1_CE_CODE},
-		{OSI_HSI_MGBE2_UE_CODE, OSI_HSI_MGBE2_CE_CODE},
-		{OSI_HSI_MGBE3_UE_CODE, OSI_HSI_MGBE3_CE_CODE},
-	};
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 			MGBE_WRAP_COMMON_INTR_STATUS);
 	if (((val & MGBE_REGISTER_PARITY_ERR) == MGBE_REGISTER_PARITY_ERR) ||
 	    ((val & MGBE_CORE_UNCORRECTABLE_ERR) == MGBE_CORE_UNCORRECTABLE_ERR)) {
-		osi_core->hsi.err_code[UE_IDX] =
-				osi_hsi_err_code[osi_core->instance_id][UE_IDX];
+		osi_core->hsi.err_code[UE_IDX] = OSI_UNCORRECTABLE_ERR;
 		osi_core->hsi.report_err = OSI_ENABLE;
 		osi_core->hsi.report_count_err[UE_IDX] = OSI_ENABLE;
 		/* Disable the interrupt */
@@ -2937,8 +2917,7 @@ static void mgbe_handle_hsi_intr(struct osi_core_priv_data *osi_core)
 			    MGBE_WRAP_COMMON_INTR_ENABLE);
 	}
 	if ((val & MGBE_CORE_CORRECTABLE_ERR) == MGBE_CORE_CORRECTABLE_ERR) {
-		osi_core->hsi.err_code[CE_IDX] =
-			osi_hsi_err_code[osi_core->instance_id][CE_IDX];
+		osi_core->hsi.err_code[CE_IDX] = OSI_CORRECTABLE_ERR;
 		osi_core->hsi.report_err = OSI_ENABLE;
 		osi_core->hsi.ce_count =
 			osi_update_stats_counter(osi_core->hsi.ce_count, 1UL);
@@ -2977,7 +2956,7 @@ static void mgbe_handle_hsi_intr(struct osi_core_priv_data *osi_core)
 			XPCS_WRAP_INTERRUPT_STATUS);
 	if (((val & XPCS_CORE_UNCORRECTABLE_ERR) == XPCS_CORE_UNCORRECTABLE_ERR) ||
 	    ((val & XPCS_REGISTER_PARITY_ERR) == XPCS_REGISTER_PARITY_ERR)) {
-		osi_core->hsi.err_code[UE_IDX] = osi_hsi_err_code[osi_core->instance_id][UE_IDX];
+		osi_core->hsi.err_code[UE_IDX] = OSI_UNCORRECTABLE_ERR;
 		osi_core->hsi.report_err = OSI_ENABLE;
 		osi_core->hsi.report_count_err[UE_IDX] = OSI_ENABLE;
 		/* Disable uncorrectable interrupts */
@@ -2989,7 +2968,7 @@ static void mgbe_handle_hsi_intr(struct osi_core_priv_data *osi_core)
 				XPCS_WRAP_INTERRUPT_CONTROL);
 	}
 	if ((val & XPCS_CORE_CORRECTABLE_ERR) == XPCS_CORE_CORRECTABLE_ERR) {
-		osi_core->hsi.err_code[CE_IDX] = osi_hsi_err_code[osi_core->instance_id][CE_IDX];
+		osi_core->hsi.err_code[CE_IDX] = OSI_CORRECTABLE_ERR;
 		osi_core->hsi.report_err = OSI_ENABLE;
 		osi_core->hsi.ce_count =
 			osi_update_stats_counter(osi_core->hsi.ce_count, 1UL);

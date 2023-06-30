@@ -419,40 +419,35 @@ typedef my_lint_64		nvel64_t;
  * @brief software defined error code
  * @{
  */
-#define OSI_INBOUND_BUS_CRC_ERR		0x1001U
-#define OSI_TX_FRAME_ERR		0x1002U
-#define OSI_RECEIVE_CHECKSUM_ERR	0x1003U
-#define OSI_PCS_AUTONEG_ERR		0x1004U
-#define OSI_MACSEC_RX_CRC_ERR		0x1005U
-#define OSI_MACSEC_TX_CRC_ERR		0x1006U
-#define OSI_MACSEC_RX_ICV_ERR		0x1007U
-#define OSI_MACSEC_REG_VIOL_ERR		0x1008U
-#define OSI_XPCS_WRITE_FAIL_ERR		0x1009U
-#define OSI_PHY_WRITE_VERIFY_ERR	0x100AU
-#define OSI_M2M_TSC_READ_ERR		0x100BU
-#define OSI_M2M_TIME_CAL_ERR		0x100CU
-#define OSI_M2M_ADJ_FREQ_ERR		0x100DU
-#define OSI_M2M_ADJ_TIME_ERR		0x100EU
-#define OSI_M2M_SET_TIME_ERR		0x100FU
-#define OSI_M2M_CONFIG_PTP_ERR		0x1010U
+#define OSI_UNCORRECTABLE_ERR		0x1U
+#define OSI_CORRECTABLE_ERR		0x2U
+#define OSI_INBOUND_BUS_CRC_ERR		0x3U
+#define OSI_TX_FRAME_ERR		0x4U
+#define OSI_RECEIVE_CHECKSUM_ERR	0x5U
+#define OSI_PCS_AUTONEG_ERR		0x6U
+#define OSI_MACSEC_RX_CRC_ERR		0x7U
+#define OSI_MACSEC_TX_CRC_ERR		0x8U
+#define OSI_MACSEC_RX_ICV_ERR		0x9U
+#define OSI_MACSEC_REG_VIOL_ERR		0xAU
+#define OSI_XPCS_WRITE_FAIL_ERR		0xBU
+#define OSI_PHY_WRITE_VERIFY_ERR	0xCU
+#define OSI_M2M_TSC_READ_ERR		0xDU
+#define OSI_M2M_TIME_CAL_ERR		0xEU
+#define OSI_M2M_ADJ_FREQ_ERR		0xFU
+#define OSI_M2M_ADJ_TIME_ERR		0x10U
+#define OSI_M2M_SET_TIME_ERR		0x11U
+#define OSI_M2M_CONFIG_PTP_ERR		0x12U
 
-#define OSI_HSI_MGBE0_UE_CODE		0x2A00U
-#define OSI_HSI_MGBE1_UE_CODE		0x2A01U
-#define OSI_HSI_MGBE2_UE_CODE		0x2A02U
-#define OSI_HSI_MGBE3_UE_CODE		0x2A03U
-#define OSI_HSI_EQOS0_UE_CODE		0x28ADU
-
-#define OSI_HSI_MGBE0_CE_CODE		0x2E08U
-#define OSI_HSI_MGBE1_CE_CODE		0x2E09U
-#define OSI_HSI_MGBE2_CE_CODE		0x2E0AU
-#define OSI_HSI_MGBE3_CE_CODE		0x2E0BU
-#define OSI_HSI_EQOS0_CE_CODE		0x2DE6U
-
-#define OSI_HSI_MGBE0_REPORTER_ID	0x8019U
-#define OSI_HSI_MGBE1_REPORTER_ID	0x801AU
-#define OSI_HSI_MGBE2_REPORTER_ID	0x801BU
-#define OSI_HSI_MGBE3_REPORTER_ID	0x801CU
-#define OSI_HSI_EQOS0_REPORTER_ID	0x8009U
+#define OSI_EQOS_UNCORRECTABLE_ATTR	0x109
+#define OSI_EQOS_CORRECTABLE_ATTR	0x309
+#define OSI_MGBE0_UNCORRECTABLE_ATTR	0x119
+#define OSI_MGBE0_CORRECTABLE_ATTR	0x319
+#define OSI_MGBE1_UNCORRECTABLE_ATTR	0x11A
+#define OSI_MGBE1_CORRECTABLE_ATTR	0x31A
+#define OSI_MGBE2_UNCORRECTABLE_ATTR	0x11B
+#define OSI_MGBE2_CORRECTABLE_ATTR	0x31B
+#define OSI_MGBE3_UNCORRECTABLE_ATTR	0x11C
+#define OSI_MGBE3_CORRECTABLE_ATTR	0x31C
 /** @} */
 #endif
 
@@ -1230,12 +1225,16 @@ struct osi_hsi_data {
 	nveu16_t reporter_id;
 	/** HSI error codes */
 	nveu32_t err_code[OSI_HSI_MAX_MAC_ERROR_CODE];
+	/** HSI error attribute */
+	nveu32_t err_attr[OSI_HSI_MAX_MAC_ERROR_CODE];
 	/** HSI MAC report count threshold based error */
 	nveu32_t report_count_err[OSI_HSI_MAX_MAC_ERROR_CODE];
 	/** Indicates if error reporting to FSI is pending */
 	nveu32_t report_err;
 	/** HSI MACSEC error codes */
 	nveu32_t macsec_err_code[HSI_MAX_MACSEC_ERROR_CODE];
+	/** HSI MACSEC error attribute  */
+	nveu32_t macsec_err_attr[HSI_MAX_MACSEC_ERROR_CODE];
 	/** HSI MACSEC report error based on count threshold */
 	nveu32_t macsec_report_count_err[HSI_MAX_MACSEC_ERROR_CODE];
 	/** Indicates if error report to FSI is pending for MACSEC*/
