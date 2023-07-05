@@ -118,6 +118,12 @@
 #define MAC_L3L4_CTR_DMCHN_SHIFT	24
 #define EQOS_MAC_L3L4_CTR_DMCHEN_SHIFT	28
 #define MGBE_MAC_L3L4_CTR_DMCHEN_SHIFT	31
+#define MAC_QX_TX_FLW_CTRL(x)		((0x0004U * (x)) + 0x0070U)
+#define MAC_QX_TX_FLW_CTRL_TFE		OSI_BIT(1)
+#define MAC_PAUSE_TIME_MASK		0xFFFF0000U
+#define MAC_PAUSE_TIME			0xFFFF0000U
+#define MAC_RX_FLW_CTRL			0x0090
+#define MAC_RX_FLW_CTRL_RFE		OSI_BIT(0)
 
 #ifdef HSI_SUPPORT
 /**
@@ -204,4 +210,6 @@ void hsi_read_err(struct osi_core_priv_data *const osi_core);
 #endif
 nve32_t hw_validate_avb_input(struct osi_core_priv_data *const osi_core,
 			      const struct osi_core_avb_algorithm *const avb);
+nve32_t hw_config_flow_control(struct osi_core_priv_data *const osi_core,
+			       const nveu32_t flw_ctrl);
 #endif /* INCLUDED_CORE_COMMON_H */

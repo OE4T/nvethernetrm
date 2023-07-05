@@ -1855,18 +1855,6 @@ static nve32_t mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 		    (nveu8_t *)osi_core->base + MGBE_MAC_VLANTIR);
 
 #ifndef OSI_STRIPPED_LIB
-	/* Configure default flow control settings */
-	if (osi_core->pause_frames == OSI_PAUSE_FRAMES_ENABLE) {
-		osi_core->flow_ctrl = (OSI_FLOW_CTRL_TX | OSI_FLOW_CTRL_RX);
-		if (mgbe_config_flow_control(osi_core,
-					     osi_core->flow_ctrl) != 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-				"Failed to set flow control configuration\n",
-				0ULL);
-		}
-	}
-	/* TODO: USP (user Priority) to RxQ Mapping */
-
 	/* RSS cofiguration */
 	mgbe_config_rss(osi_core);
 #endif /* !OSI_STRIPPED_LIB */
