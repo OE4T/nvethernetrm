@@ -100,7 +100,6 @@ typedef my_lint_64		nvel64_t;
 #define OSI_MAC_TCR_CSC			OSI_BIT(19)
 #define OSI_MAC_TCR_AV8021ASMEN		OSI_BIT(28)
 
-#define OSI_FLOW_CTRL_RX		OSI_BIT(1)
 
 #define OSI_INSTANCE_ID_MBGE0	0
 #define OSI_INSTANCE_ID_MGBE1	1
@@ -182,6 +181,7 @@ typedef my_lint_64		nvel64_t;
 #endif /* !OSI_STRIPPED_LIB */
 
 #define OSI_FLOW_CTRL_TX		OSI_BIT(0)
+#define OSI_FLOW_CTRL_RX		OSI_BIT(1)
 
 #define OSI_FULL_DUPLEX			1
 #define OSI_HALF_DUPLEX			0
@@ -1350,9 +1350,9 @@ struct osi_core_priv_data {
 	nveu16_t vlan_filter_cnt;
 	/** RSS core structure */
 	struct osi_core_rss rss;
+#endif
 	/** DT entry to enable(1) or disable(0) pause frame support */
 	nveu32_t pause_frames;
-#endif
 	/** Residual queue valid with FPE support */
 	nveu32_t residual_queue;
 	/** FRP Instruction Table */

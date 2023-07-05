@@ -557,6 +557,14 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 		goto fail;
 	}
 
+	if (osi_core->pause_frames == OSI_PAUSE_FRAMES_ENABLE) {
+		/* Pasing correct value - OSI_FLOW_CTRL_TX and OSI_FLOW_CTRL_RX
+		 * as arguments. So it will not return error
+		 */
+		osi_core->flow_ctrl = (OSI_FLOW_CTRL_TX | OSI_FLOW_CTRL_RX);
+		(void)hw_config_flow_control(osi_core, osi_core->flow_ctrl);
+	}
+
 	/* By default set MAC to Full duplex mode.
 	 * Since this is a local function it will always return sucess,
 	 * so no need to check for return value

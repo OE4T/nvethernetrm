@@ -44,7 +44,6 @@
 #define OSI_UNLOCKED		0x0U
 #define OSI_LOCKED		0x1U
 #define OSI_NSEC_PER_SEC	1000000000ULL
-
 #ifndef OSI_STRIPPED_LIB
 #define OSI_MAX_RX_COALESCE_USEC	1020U
 #define OSI_EQOS_MIN_RX_COALESCE_USEC	5U
@@ -53,12 +52,18 @@
 #define OSI_MAX_TX_COALESCE_USEC	1020U
 #define OSI_MIN_TX_COALESCE_USEC	32U
 #define OSI_MIN_TX_COALESCE_FRAMES	1U
-#define OSI_PAUSE_FRAMES_DISABLE	0U
-#define OSI_PAUSE_FRAMES_ENABLE		1U
 #endif /* !OSI_STRIPPED_LIB */
 
 /* Compiler hints for branch prediction */
 #define osi_unlikely(x)			__builtin_expect(!!(x), 0)
+/** @} */
+
+/**
+ * @addtogroup FC-Helper Flow control enable/disable macros.
+ * @{
+ */
+#define OSI_PAUSE_FRAMES_DISABLE	0U
+#define OSI_PAUSE_FRAMES_ENABLE		1U
 /** @} */
 
 /**

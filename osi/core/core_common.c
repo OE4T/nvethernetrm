@@ -1934,3 +1934,38 @@ nve32_t hw_validate_avb_input(struct osi_core_priv_data *const osi_core,
 fail:
 	return ret;
 }
+
+nve32_t hw_config_flow_control(struct osi_core_priv_data *const osi_core,
+			       const nveu32_t flw_ctrl)
+{
+	nveu8_t *addr = (nveu8_t *)osi_core->base;
+	nve32_t ret = -1;
+	nveu32_t val;
+
+	if (flw_ctrl <= (OSI_FLOW_CTRL_RX | OSI_FLOW_CTRL_TX)) {
+		/* Configure Tx flow control */
+		val = osi_readla(osi_core, addr + MAC_QX_TX_FLW_CTRL(0U));
+
+		if ((flw_ctrl & OSI_FLOW_CTRL_TX) == OSI_FLOW_CTRL_TX) {
+			val |= MAC_QX_TX_FLW_CTRL_TFE;
+			val &= ~MAC_PAUSE_TIME_MASK;
+			val |= MAC_PAUSE_TIME & MAC_PAUSE_TIME_MASK;
+		} else {
+			val &= ~MAC_QX_TX_FLW_CTRL_TFE;
+		}
+		osi_writela(osi_core, val, addr + MAC_QX_TX_FLW_CTRL(0U));
+
+		/* configure Rx flow control */
+		val = osi_readla(osi_core, addr + MAC_RX_FLW_CTRL);
+
+		if ((flw_ctrl & OSI_FLOW_CTRL_RX) == OSI_FLOW_CTRL_RX) {
+			val |= MAC_RX_FLW_CTRL_RFE;
+		} else {
+			val &= ~MAC_RX_FLW_CTRL_RFE;
+		}
+		osi_writela(osi_core, val, addr + MAC_RX_FLW_CTRL);
+		ret = 0;
+	}
+
+	return ret;
+}

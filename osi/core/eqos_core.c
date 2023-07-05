@@ -1037,19 +1037,6 @@ static void eqos_configure_mac(struct osi_core_priv_data *const osi_core)
 	osi_writela(osi_core, value,
 		    (nveu8_t *)osi_core->base + EQOS_MAC_VLANTIR);
 
-#ifndef OSI_STRIPPED_LIB
-	/* Configure default flow control settings */
-	if (osi_core->pause_frames != OSI_PAUSE_FRAMES_DISABLE) {
-		osi_core->flow_ctrl = (OSI_FLOW_CTRL_TX | OSI_FLOW_CTRL_RX);
-		if (eqos_config_flow_control(osi_core,
-					     osi_core->flow_ctrl) != 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-				     "Failed to set flow control configuration\n",
-				     0ULL);
-		}
-	}
-#endif /* !OSI_STRIPPED_LIB */
-
 	/* USP (user Priority) to RxQ Mapping, only if DCS not enabled */
 	if (osi_core->dcs_en != OSI_ENABLE) {
 		eqos_configure_rxq_priority(osi_core);
