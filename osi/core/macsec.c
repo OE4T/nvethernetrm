@@ -5623,6 +5623,8 @@ static nve32_t add_upd_sc(struct osi_core_priv_data *const osi_core,
 	lut_config.sc_param_out.pn_window = sc->pn_window;
 	lut_config.sc_param_out.tci = OSI_TCI_DEFAULT;
 	lut_config.sc_param_out.vlan_in_clear = sc->vlan_in_clear;
+	lut_config.sc_param_out.conf_offset = sc->conf_offset;
+	lut_config.sc_param_out.encrypt = sc->encrypt;
 	ret = macsec_lut_config(osi_core, &lut_config);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
@@ -5794,6 +5796,8 @@ static nve32_t add_new_sc(struct osi_core_priv_data *const osi_core,
 	new_sc->pn_window = sc->pn_window;
 	new_sc->flags = sc->flags;
 	new_sc->vlan_in_clear = sc->vlan_in_clear;
+	new_sc->conf_offset = sc->conf_offset;
+	new_sc->encrypt = sc->encrypt;
 
 	new_sc->sc_idx_start = avail_sc_idx;
 	if (is_sc_valid == OSI_MACSEC_SC_VALID) {
@@ -5916,6 +5920,8 @@ static nve32_t macsec_configure(struct osi_core_priv_data *const osi_core,
 			tmp_sc_p->pn_window = sc->pn_window;
 			tmp_sc_p->flags = sc->flags;
 			tmp_sc_p->vlan_in_clear = sc->vlan_in_clear;
+			tmp_sc_p->encrypt = sc->encrypt;
+			tmp_sc_p->conf_offset = sc->conf_offset;
 
 			tmp_sc_p->an_valid |= OSI_BIT(sc->curr_an & 0x1FU);
 

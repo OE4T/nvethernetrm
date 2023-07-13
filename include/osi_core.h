@@ -1300,6 +1300,17 @@ struct osi_macsec_sc_info {
 	/** flag indicating the prosition of vlan tag
 	 * valid values are either 0(vlan not in clear) or 1(vlan in clear) */
 	nveu8_t vlan_in_clear;
+        /** Indicates 1 bit for encription configuration
+        0: Indicates disabled
+        1: Indicates enabled
+        */
+        nveu8_t encrypt;
+        /** Indicates 2 bit for confidentiality offset configuration
+        0: Indicates offset as 0
+        1: Indicates offset as 30
+        2: Indicates offset as 50
+        */
+        nveu8_t conf_offset;
 };
 
 /**
