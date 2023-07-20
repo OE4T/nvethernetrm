@@ -2132,7 +2132,11 @@ done:
 static nve32_t mgbe_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
 {
 #ifndef OSI_STRIPPED_LIB
-	nveu32_t sid[4] = { MGBE0_SID, MGBE1_SID, MGBE2_SID, MGBE3_SID };
+	nveu32_t sid[3][4] = {
+		{ 0U, 0U, 0U, 0U },
+		{ MGBE0_SID, MGBE1_SID, MGBE2_SID, MGBE3_SID },
+		{ MGBE0_SID_T264, MGBE1_SID_T264, MGBE2_SID_T264, MGBE3_SID_T264 }
+	};
 #endif
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	struct osi_vm_irq_data *irq_data;
@@ -2172,18 +2176,14 @@ static nve32_t mgbe_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
 			ret = -1;
 			goto exit;
 		}
+		osi_writela(osi_core, MGBE_SID_VAL1(sid[osi_core->mac][osi_core->instance_id]),
+			    (nveu8_t *)osi_core->hv_base + MGBE_WRAP_AXI_ASID0_CTRL);
 
-		osi_writela(osi_core, MGBE_SID_VAL1(sid[osi_core->instance_id]),
-			    (nveu8_t *)osi_core->hv_base +
-			    MGBE_WRAP_AXI_ASID0_CTRL);
+		osi_writela(osi_core, MGBE_SID_VAL1(sid[osi_core->mac][osi_core->instance_id]),
+			    (nveu8_t *)osi_core->hv_base + MGBE_WRAP_AXI_ASID1_CTRL);
 
-		osi_writela(osi_core, MGBE_SID_VAL1(sid[osi_core->instance_id]),
-			    (nveu8_t *)osi_core->hv_base +
-			    MGBE_WRAP_AXI_ASID1_CTRL);
-
-		osi_writela(osi_core, MGBE_SID_VAL2(sid[osi_core->instance_id]),
-			    (nveu8_t *)osi_core->hv_base +
-			    MGBE_WRAP_AXI_ASID2_CTRL);
+		osi_writela(osi_core, MGBE_SID_VAL2(sid[osi_core->mac][osi_core->instance_id]),
+			    (nveu8_t *)osi_core->hv_base + MGBE_WRAP_AXI_ASID2_CTRL);
 	}
 #endif
 

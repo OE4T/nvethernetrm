@@ -58,6 +58,10 @@
 #define MGBE1_SID				((nveu32_t)0x49U)
 #define MGBE2_SID				((nveu32_t)0x4AU)
 #define MGBE3_SID				((nveu32_t)0x4BU)
+#define MGBE0_SID_T264				((nveu32_t)0x0U)
+#define MGBE1_SID_T264				((nveu32_t)0x0U)
+#define MGBE2_SID_T264				((nveu32_t)0x0U)
+#define MGBE3_SID_T264				((nveu32_t)0x0U)
 #define MGBE_MAC_PAUSE_TIME			0xFFFF0000U
 #define MGBE_MAC_PAUSE_TIME_MASK		0xFFFF0000U
 #define MGBE_MAC_VLAN_TR_VTHM			OSI_BIT(25)
