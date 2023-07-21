@@ -254,6 +254,7 @@ static inline void osi_writela(OSI_UNUSED void *priv, nveu32_t val, void *addr)
 /**
  * @brief validate_mac_ver_update_chans - Validates mac version and update chan
  *
+ * @param[in] mac: MAC HW type.
  * @param[in] mac_ver: MAC version read.
  * @param[out] num_max_chans: Maximum channel number.
  * @param[out] l_mac_ver: local mac version.
@@ -269,10 +270,16 @@ static inline void osi_writela(OSI_UNUSED void *priv, nveu32_t val, void *addr)
  * @retval 0 - for not Valid MAC
  * @retval 1 - for Valid MAC
  */
-static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac_ver,
+static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac,
+						    nveu32_t mac_ver,
 						    nveu32_t *num_max_chans,
 						    nveu32_t *l_mac_ver)
 {
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 	nve32_t ret;
 
 	switch (mac_ver) {
@@ -295,7 +302,7 @@ static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac_ver,
 	case OSI_MGBE_MAC_4_00:
 #endif /* !OSI_STRIPPED_LIB */
 		//TBD: T264 number of dma channels?
-		*num_max_chans = OSI_MGBE_MAX_NUM_CHANS;
+		*num_max_chans = max_dma_chan[mac];
 		*l_mac_ver = MAC_CORE_VER_TYPE_MGBE;
 		ret = 1;
 		break;

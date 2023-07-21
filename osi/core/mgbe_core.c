@@ -206,6 +206,7 @@ fail:
 static nve32_t mgbe_filter_args_validate(struct osi_core_priv_data *const osi_core,
 					 const struct osi_filter *filter)
 {
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nveu32_t idx = filter->index;
 	nveu32_t dma_routing_enable = filter->dma_routing;
 	nveu32_t dma_chan = filter->dma_chan;
@@ -214,7 +215,6 @@ static nve32_t mgbe_filter_args_validate(struct osi_core_priv_data *const osi_co
 	nveu32_t dma_chansel = filter->dma_chansel;
 	nve32_t ret = 0;
 
-	(void) osi_core;
 	/* check for valid index (0 to 31) */
 	if (idx >= OSI_MGBE_MAX_MAC_ADDRESS_FILTER) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
@@ -224,8 +224,8 @@ static nve32_t mgbe_filter_args_validate(struct osi_core_priv_data *const osi_co
 		goto fail;
 	}
 
-	/* check for DMA channel index (0 to 9) */
-	if ((dma_chan > (OSI_MGBE_MAX_NUM_CHANS - 0x1U)) &&
+	/* check for DMA channel index */
+	if ((dma_chan > (l_core->num_max_chans - 0x1U)) &&
 	    (dma_chan != OSI_CHAN_ANY)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_OUTOFBOUND,
 			"invalid dma channel\n",
@@ -1144,9 +1144,9 @@ static nve32_t mgbe_configure_mtl_queue(struct osi_core_priv_data *osi_core,
 {
 	nveu32_t qinx = hw_qinx & 0xFU;
 	/*
-	 * Total available Rx queue size is 192KB.
+	 * Total available Rx queue size is 192KB in T23x, 256KB in T26x.
 	 * Below is the destribution among the Rx queueu -
-	 * Q0 - 160KB
+	 * Q0 - 160KB for T23x and 224KB for T26x
 	 * Q1 to Q8 - 2KB each = 8 * 2KB = 16KB
 	 * Q9 - 16KB (MVBCQ)
 	 *
@@ -1154,9 +1154,21 @@ static nve32_t mgbe_configure_mtl_queue(struct osi_core_priv_data *osi_core,
 	 *
 	 * vale= (size in KB / 256) - 1U
 	 */
-	const nveu32_t rx_fifo_sz[OSI_MGBE_MAX_NUM_QUEUES] = {
-		FIFO_SZ(160U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U),
-		FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(16U),
+	const nveu32_t rx_fifo_sz[OSI_MAX_MAC_IP_TYPES][OSI_MGBE_MAX_NUM_QUEUES] = {
+		{
+			0U ,0U ,0U ,0U ,0U ,0U ,0U ,0U ,0U ,0U
+		},
+		{
+			FIFO_SZ(160U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U),
+			FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U),
+			FIFO_SZ(2U), FIFO_SZ(16U)
+		},
+		{
+			FIFO_SZ(224U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U),
+			FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U),
+			FIFO_SZ(2U), FIFO_SZ(16U)
+		},
+
 	};
 	const nveu32_t tx_fifo_sz[OSI_MGBE_MAX_NUM_QUEUES] = {
 		TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ,
@@ -1222,7 +1234,7 @@ static nve32_t mgbe_configure_mtl_queue(struct osi_core_priv_data *osi_core,
 	/* read RX Q0 Operating Mode Register */
 	value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 			  MGBE_MTL_CHX_RX_OP_MODE(qinx));
-	value |= (rx_fifo_sz[qinx] << MGBE_MTL_RXQ_SIZE_SHIFT);
+	value |= (rx_fifo_sz[osi_core->mac][qinx] << MGBE_MTL_RXQ_SIZE_SHIFT);
 	/* Enable Store and Forward mode */
 	value |= MGBE_MTL_RSF;
 	/* Enable HW flow control */
@@ -1482,6 +1494,11 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 				XPCS_WRAP_INTERRUPT_CONTROL,
 				T26X_XPCS_WRAP_INTERRUPT_CONTROL
 			};
+	const nveu32_t intr_en[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_WRAP_COMMON_INTR_ENABLE,
+		MGBE_T26X_WRAP_COMMON_INTR_ENABLE
+	};
 
 	if (enable == OSI_ENABLE) {
 		osi_core->hsi.enabled = OSI_ENABLE;
@@ -1571,12 +1588,12 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 			    (nveu8_t *)osi_core->base + MGBE_DMA_ECC_INTERRUPT_ENABLE);
 
 		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				   MGBE_WRAP_COMMON_INTR_ENABLE);
+				   intr_en[osi_core->mac]);
 		value |= MGBE_REGISTER_PARITY_ERR;
 		value |= MGBE_CORE_CORRECTABLE_ERR;
 		value |= MGBE_CORE_UNCORRECTABLE_ERR;
 		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-			    MGBE_WRAP_COMMON_INTR_ENABLE);
+			    intr_en[osi_core->mac]);
 
 		value = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
 				   xpcs_intr_ctrl_reg[osi_core->mac]);
@@ -1638,12 +1655,12 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 			    (nveu8_t *)osi_core->base + MGBE_DMA_ECC_INTERRUPT_ENABLE);
 
 		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				   MGBE_WRAP_COMMON_INTR_ENABLE);
+				   intr_en[osi_core->mac]);
 		value &= ~MGBE_REGISTER_PARITY_ERR;
 		value &= ~MGBE_CORE_CORRECTABLE_ERR;
 		value &= ~MGBE_CORE_UNCORRECTABLE_ERR;
 		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-			    MGBE_WRAP_COMMON_INTR_ENABLE);
+			    intr_en[osi_core->mac]);
 
 		value = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
 				   xpcs_intr_ctrl_reg[osi_core->mac]);
@@ -1724,6 +1741,11 @@ static nve32_t mgbe_hsi_inject_err(struct osi_core_priv_data *const osi_core,
 static void mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 {
 	nveu32_t value = 0U, max_queue = 0U, i = 0U;
+	const nveu32_t intr_en[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_WRAP_COMMON_INTR_ENABLE,
+		MGBE_T26X_WRAP_COMMON_INTR_ENABLE
+	};
 
 	/* TODO: Need to check if we need to enable anything in Tx configuration
 	 * value = osi_readla(osi_core,
@@ -1811,10 +1833,10 @@ static void mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 
 	/* Enable common interrupt at wrapper level */
 	value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			  MGBE_WRAP_COMMON_INTR_ENABLE);
+			   intr_en[osi_core->mac]);
 	value |= MGBE_MAC_SBD_INTR;
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-		   MGBE_WRAP_COMMON_INTR_ENABLE);
+		    intr_en[osi_core->mac]);
 
 	/* Enable VLAN configuration */
 	value = osi_readla(osi_core,
@@ -1995,6 +2017,20 @@ static nve32_t mgbe_configure_pdma(struct osi_core_priv_data *osi_core)
 			}
 		}
 	}
+
+	value = osi_readla(osi_core,
+			   (nveu8_t *)osi_core->base + MGBE_DMA_MODE);
+	/* set DMA_Mode register DSCB bit */
+	value |= MGBE_DMA_MODE_DSCB;
+	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_DMA_MODE);
+	/* poll for Tx/Rx Dcache calculations complete and fixed */
+	ret = poll_check(osi_core, (nveu8_t *)osi_core->base + MGBE_DMA_MODE,
+			 MGBE_DMA_MODE_DSCB, &value);
+	if (ret == -1) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "MGBE_DMA_MODE_DSCB timeout\n", 0ULL);
+	}
+
 done:
 	return ret;
 }
@@ -2075,6 +2111,7 @@ static nve32_t mgbe_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
 #ifndef OSI_STRIPPED_LIB
 	nveu32_t sid[4] = { MGBE0_SID, MGBE1_SID, MGBE2_SID, MGBE3_SID };
 #endif
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	struct osi_vm_irq_data *irq_data;
 	nve32_t ret = 0;
 	nveu32_t i, j;
@@ -2087,7 +2124,7 @@ static nve32_t mgbe_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
 		for (j = 0; j < irq_data->num_vm_chans; j++) {
 			chan = irq_data->vm_chans[j];
 
-			if (chan >= OSI_MGBE_MAX_NUM_CHANS) {
+			if (chan >= l_core->num_max_chans) {
 				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 					     "Invalid channel number\n", chan);
 				ret = -1;
@@ -2179,14 +2216,15 @@ static nve32_t mgbe_core_init(struct osi_core_priv_data *const osi_core)
 	value |= MGBE_RXQ_TO_DMA_MAP_DDMACH;
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
 		   MGBE_MTL_RXQ_DMA_MAP2);
-
-	/* Enable XDCS in MAC_Extended_Configuration */
-	value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			  MGBE_MAC_EXT_CNF);
-	value |= MGBE_MAC_EXT_CNF_DDS;
-	osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-		   MGBE_MAC_EXT_CNF);
-
+	/* T264 DDS bit moved */
+	if (osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
+		/* Enable DDS in MAC_Extended_Configuration */
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+				  MGBE_MAC_EXT_CNF);
+		value |= MGBE_MAC_EXT_CNF_DDS;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+			   MGBE_MAC_EXT_CNF);
+	}
 	/* Configure MTL Queues */
 	/* TODO: Iterate over Number MTL queues need to be removed */
 	for (qinx = 0; qinx < osi_core->num_mtl_queues; qinx++) {
@@ -3099,9 +3137,19 @@ static void mgbe_handle_hsi_wrap_common_intr(struct osi_core_priv_data *osi_core
 	nveu32_t val = 0;
 	nveu32_t val2 = 0;
 	nveu64_t ce_count_threshold;
+	const nveu32_t intr_en[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_WRAP_COMMON_INTR_ENABLE,
+		MGBE_T26X_WRAP_COMMON_INTR_ENABLE
+	};
+	const nveu32_t intr_status[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_WRAP_COMMON_INTR_STATUS,
+		MGBE_T26X_WRAP_COMMON_INTR_STATUS
+	};
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			MGBE_WRAP_COMMON_INTR_STATUS);
+			intr_en[osi_core->mac]);
 	if (((val & MGBE_REGISTER_PARITY_ERR) == MGBE_REGISTER_PARITY_ERR) ||
 	    ((val & MGBE_CORE_UNCORRECTABLE_ERR) == MGBE_CORE_UNCORRECTABLE_ERR)) {
 		osi_core->hsi.err_code[UE_IDX] = OSI_UNCORRECTABLE_ERR;
@@ -3109,11 +3157,11 @@ static void mgbe_handle_hsi_wrap_common_intr(struct osi_core_priv_data *osi_core
 		osi_core->hsi.report_count_err[UE_IDX] = OSI_ENABLE;
 		/* Disable the interrupt */
 		val2 = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				  MGBE_WRAP_COMMON_INTR_ENABLE);
+				  intr_en[osi_core->mac]);
 		val2 &= ~MGBE_REGISTER_PARITY_ERR;
 		val2 &= ~MGBE_CORE_UNCORRECTABLE_ERR;
 		osi_writela(osi_core, val2, (nveu8_t *)osi_core->base +
-			    MGBE_WRAP_COMMON_INTR_ENABLE);
+			    intr_en[osi_core->mac]);
 	}
 	if ((val & MGBE_CORE_CORRECTABLE_ERR) == MGBE_CORE_CORRECTABLE_ERR) {
 		osi_core->hsi.err_code[CE_IDX] = OSI_CORRECTABLE_ERR;
@@ -3128,7 +3176,7 @@ static void mgbe_handle_hsi_wrap_common_intr(struct osi_core_priv_data *osi_core
 	}
 	val &= ~MGBE_MAC_SBD_INTR;
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			MGBE_WRAP_COMMON_INTR_STATUS);
+		    intr_status[osi_core->mac]);
 
 	if (((val & MGBE_CORE_CORRECTABLE_ERR) == MGBE_CORE_CORRECTABLE_ERR) ||
 	    ((val & MGBE_CORE_UNCORRECTABLE_ERR) == MGBE_CORE_UNCORRECTABLE_ERR)) {
@@ -3239,6 +3287,17 @@ static void mgbe_handle_hsi_intr(struct osi_core_priv_data *osi_core)
  */
 static void mgbe_handle_common_intr(struct osi_core_priv_data *const osi_core)
 {
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	const nveu32_t intr_en[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_WRAP_COMMON_INTR_ENABLE,
+		MGBE_T26X_WRAP_COMMON_INTR_ENABLE
+	};
+	const nveu32_t intr_status[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_WRAP_COMMON_INTR_STATUS,
+		MGBE_T26X_WRAP_COMMON_INTR_STATUS
+	};
 	void *base = osi_core->base;
 	nveu32_t dma_isr_ch0_15 = 0;
 	nveu32_t dma_isr_ch16_47 = 0;
@@ -3271,7 +3330,7 @@ static void mgbe_handle_common_intr(struct osi_core_priv_data *const osi_core)
 		for (i = 0; i < osi_core->num_dma_chans; i++) {
 			chan = osi_core->dma_chans[i];
 
-			if (chan >= OSI_MGBE_MAX_NUM_CHANS) {
+			if (chan >= l_core->num_max_chans) {
 				continue;
 			}
 
@@ -3317,12 +3376,12 @@ static void mgbe_handle_common_intr(struct osi_core_priv_data *const osi_core)
 
 	/* Clear common interrupt status in wrapper register */
 	osi_writela(osi_core, MGBE_MAC_SBD_INTR,
-		   (nveu8_t *)base + MGBE_WRAP_COMMON_INTR_STATUS);
+		   (nveu8_t *)base + intr_status[osi_core->mac]);
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			MGBE_WRAP_COMMON_INTR_ENABLE);
+			intr_en[osi_core->mac]);
 	val |= MGBE_MAC_SBD_INTR;
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-		   MGBE_WRAP_COMMON_INTR_ENABLE);
+		   intr_en[osi_core->mac]);
 
 	/* Clear FRP Interrupts in MTL_RXP_Interrupt_Control_Status */
 	val = osi_readla(osi_core, (nveu8_t *)base + MGBE_MTL_RXP_INTR_CS);
@@ -3706,7 +3765,7 @@ static void mgbe_get_hw_features(struct osi_core_priv_data *const osi_core,
 #ifndef OSI_STRIPPED_LIB
 	nveu32_t val = 0;
 #endif /* !OSI_STRIPPED_LIB */
-	nveu32_t ret = 0;
+	nve32_t ret = 0;
 
 	if (osi_core->pre_sil == OSI_ENABLE) {
 		/* TBD: T264 reset to get mac version for MGBE */

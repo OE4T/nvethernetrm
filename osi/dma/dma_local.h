@@ -41,6 +41,7 @@
 /**
  * @brief validate_dma_mac_ver_update_chans - Validates mac version and update chan
  *
+ * @param[in] mac: MAC HW type.
  * @param[in] mac_ver: MAC version read.
  * @param[out] num_max_chans: Maximum channel number.
  * @param[out] l_mac_ver: local mac version.
@@ -56,10 +57,16 @@
  * @retval 0 - for not Valid MAC
  * @retval 1 - for Valid MAC
  */
-static inline nve32_t validate_dma_mac_ver_update_chans(nveu32_t mac_ver,
+static inline nve32_t validate_dma_mac_ver_update_chans(nveu32_t mac,
+						        nveu32_t mac_ver,
 						        nveu32_t *num_max_chans,
 						        nveu32_t *l_mac_ver)
 {
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 	nve32_t ret;
 
 	switch (mac_ver) {
@@ -69,17 +76,19 @@ static inline nve32_t validate_dma_mac_ver_update_chans(nveu32_t mac_ver,
 		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS;
 		ret = 1;
 		break;
-#endif
+#endif /* !OSI_STRIPPED_LIB */
 	case OSI_EQOS_MAC_5_30:
 		*num_max_chans = OSI_EQOS_MAX_NUM_CHANS;
 		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS_5_30;
 		ret = 1;
 		break;
 	case OSI_MGBE_MAC_3_10:
+	//TBD: T264 uFPGA reports mac version 3.2
+	case OSI_MGBE_MAC_3_20:
 #ifndef OSI_STRIPPED_LIB
 	case OSI_MGBE_MAC_4_00:
 #endif /* !OSI_STRIPPED_LIB */
-		*num_max_chans = OSI_MGBE_MAX_NUM_CHANS;
+		*num_max_chans = max_dma_chan[mac];
 		*l_mac_ver = MAC_CORE_VER_TYPE_MGBE;
 		ret = 1;
 		break;
@@ -329,7 +338,9 @@ static inline void update_rx_tail_ptr(const struct osi_dma_priv_data *const osi_
 				      nveu32_t dma_chan,
 				      nveu64_t tailptr)
 {
-	nveu32_t chan = dma_chan & 0xFU;
+	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
+
+	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
 	const nveu32_t tail_ptr_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_RDTP(chan),
 		MGBE_DMA_CHX_RDTLP(chan),

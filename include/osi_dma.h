@@ -606,12 +606,12 @@ struct osi_tx_ring {
  * @brief osi_xtra_dma_stat_counters -  OSI DMA extra stats counters
  */
 struct osi_xtra_dma_stat_counters {
-	/** Per Q TX packet count */
-	nveu64_t q_tx_pkt_n[OSI_MGBE_MAX_NUM_QUEUES];
-	/** Per Q RX packet count */
-	nveu64_t q_rx_pkt_n[OSI_MGBE_MAX_NUM_QUEUES];
-	/** Per Q TX complete call count */
-	nveu64_t tx_clean_n[OSI_MGBE_MAX_NUM_QUEUES];
+	/** Per chan TX packet count */
+	nveu64_t chan_tx_pkt_n[OSI_MGBE_MAX_NUM_CHANS];
+	/** Per chan RX packet count */
+	nveu64_t chan_rx_pkt_n[OSI_MGBE_MAX_NUM_CHANS];
+	/** Per chan TX complete call count */
+	nveu64_t tx_clean_n[OSI_MGBE_MAX_NUM_CHANS];
 	/** Total number of tx packets count */
 	nveu64_t tx_pkt_n;
 	/** Total number of rx packet count */

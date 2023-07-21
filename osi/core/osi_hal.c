@@ -522,7 +522,7 @@ static nve32_t osi_get_mac_version(struct osi_core_priv_data *const osi_core, nv
 	*mac_ver = osi_readla(osi_core, ((nveu8_t *)osi_core->base + (nve32_t)MAC_VERSION)) &
 			      MAC_VERSION_SNVER_MASK;
 
-	if (validate_mac_ver_update_chans(*mac_ver, &l_core->num_max_chans,
+	if (validate_mac_ver_update_chans(osi_core->mac, *mac_ver, &l_core->num_max_chans,
 					  &l_core->l_mac_ver) == 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "Invalid MAC version\n", (nveu64_t)*mac_ver)
@@ -885,15 +885,11 @@ static nve32_t l3l4_find_match(const struct core_local *const l_core,
 static nve32_t configure_l3l4_filter_valid_params(const struct osi_core_priv_data *const osi_core,
 						  const struct osi_l3_l4_filter *const l3_l4)
 {
-	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
-		OSI_EQOS_MAX_NUM_CHANS,
-		OSI_MGBE_MAX_NUM_CHANS,
-		OSI_MGBE_MAX_NUM_CHANS
-	};
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nve32_t ret = -1;
 
 	/* validate dma channel */
-	if (l3_l4->dma_chan > max_dma_chan[osi_core->mac]) {
+	if (l3_l4->dma_chan > l_core->num_max_chans) {
 		OSI_CORE_ERR((osi_core->osd), (OSI_LOG_ARG_OUTOFBOUND),
 			("L3L4: Wrong DMA channel: "), (l3_l4->dma_chan));
 		goto exit_func;

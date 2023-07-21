@@ -298,9 +298,9 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 		process_rx_desc(osi_dma, rx_ring, rx_desc, rx_swcx, rx_pkt_cx, chan, rx_ring_mask);
 
 #ifndef OSI_STRIPPED_LIB
-		osi_dma->dstats.q_rx_pkt_n[chan] =
+		osi_dma->dstats.chan_rx_pkt_n[chan] =
 			dma_update_stats_counter(
-					osi_dma->dstats.q_rx_pkt_n[chan],
+					osi_dma->dstats.chan_rx_pkt_n[chan],
 					1UL);
 		osi_dma->dstats.rx_pkt_n =
 			dma_update_stats_counter(osi_dma->dstats.rx_pkt_n, 1UL);
@@ -341,8 +341,8 @@ fail:
 static inline void inc_tx_pkt_stats(struct osi_dma_priv_data *osi_dma,
 				    nveu32_t chan)
 {
-	osi_dma->dstats.q_tx_pkt_n[chan] =
-		dma_update_stats_counter(osi_dma->dstats.q_tx_pkt_n[chan], 1UL);
+	osi_dma->dstats.chan_tx_pkt_n[chan] =
+		dma_update_stats_counter(osi_dma->dstats.chan_tx_pkt_n[chan], 1UL);
 	osi_dma->dstats.tx_pkt_n =
 		dma_update_stats_counter(osi_dma->dstats.tx_pkt_n, 1UL);
 }
@@ -549,7 +549,7 @@ static inline nve32_t process_last_desc(struct osi_dma_priv_data *osi_dma,
 	/* check for Last Descriptor */
 	if ((tx_desc->tdes3 & TDES3_LD) == TDES3_LD) {
 		if (((tx_desc->tdes3 & TDES3_ES_BITS) != 0U) &&
-		    (osi_dma->mac != OSI_MAC_HW_MGBE)) {
+		    (osi_dma->mac == OSI_MAC_HW_EQOS)) {
 			txdone_pkt_cx->flags |= OSI_TXDONE_CX_ERROR;
 #ifndef OSI_STRIPPED_LIB
 			/* fill packet error stats */
@@ -1073,6 +1073,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 		    struct osi_tx_ring *tx_ring,
 		    nveu32_t dma_chan)
 {
+	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
 	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
 	struct osi_tx_pkt_cx *tx_pkt_cx = OSI_NULL;
 	struct osi_tx_desc *first_desc = OSI_NULL;
@@ -1084,7 +1085,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 #ifdef OSI_DEBUG
 	nveu32_t f_idx = tx_ring->cur_tx_idx;
 #endif /* OSI_DEBUG */
-	nveu32_t chan = dma_chan & 0xFU;
+	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
 	const nveu32_t tail_ptr_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TDTP(chan),
 		MGBE_DMA_CHX_TDTLP(chan),
@@ -1254,7 +1255,8 @@ fail:
 static nve32_t rx_dma_desc_initialization(const struct osi_dma_priv_data *const osi_dma,
 					  nveu32_t dma_chan)
 {
-	nveu32_t chan = dma_chan & 0xFU;
+	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
+	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
 	const nveu32_t start_addr_high_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_RDLH(chan),
 		MGBE_DMA_CHX_RDLH(chan),
@@ -1399,7 +1401,8 @@ static inline void set_tx_ring_len_and_start_addr(const struct osi_dma_priv_data
 						  nveu32_t dma_chan,
 						  nveu32_t len)
 {
-	nveu32_t chan = dma_chan & 0xFU;
+	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
+	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
 	const nveu32_t ring_len_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TDRL(chan),
 		MGBE_DMA_CHX_TX_CNTRL2(chan),

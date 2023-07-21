@@ -470,7 +470,8 @@ done:
 }
 static inline void start_dma(const struct osi_dma_priv_data *const osi_dma, nveu32_t dma_chan)
 {
-	nveu32_t chan = dma_chan & 0xFU;
+	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
+	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
 	const nveu32_t tx_dma_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TX_CTRL(chan),
 		MGBE_DMA_CHX_TX_CTRL(chan),
@@ -498,8 +499,9 @@ static inline void start_dma(const struct osi_dma_priv_data *const osi_dma, nveu
 static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 			     nveu32_t dma_chan)
 {
+	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
 	nveu32_t pdma_chan = 0xFFU;
-	nveu32_t chan = dma_chan & 0xFU;
+	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
 	nveu32_t riwt = osi_dma->rx_riwt & 0xFFFU;
 	const nveu32_t intr_en_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_INTR_ENA(chan),
@@ -558,8 +560,7 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 		DMA_CHX_TX_CTRL_TSE
 	};
 	const nveu32_t owrq = (MGBE_DMA_CHX_RX_CNTRL2_OWRQ_MCHAN / osi_dma->num_dma_chans);
-	//TBD: owrq_arr add more entries for T264?
-	const nveu32_t owrq_arr[OSI_MGBE_MAX_NUM_CHANS] = {
+	const nveu32_t owrq_arr[OSI_MGBE_T23X_MAX_NUM_CHANS] = {
 		MGBE_DMA_CHX_RX_CNTRL2_OWRQ_SCHAN, owrq, owrq, owrq,
 		owrq, owrq, owrq, owrq, owrq, owrq
 	};
@@ -777,7 +778,7 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma)
 
 	l_dma->mac_ver = osi_dma_readl((nveu8_t *)osi_dma->base + MAC_VERSION) &
 				       MAC_VERSION_SNVER_MASK;
-	if (validate_dma_mac_ver_update_chans(l_dma->mac_ver,
+	if (validate_dma_mac_ver_update_chans(osi_dma->mac, l_dma->mac_ver,
 			       		      &l_dma->num_max_chans,
 					      &l_dma->l_mac_ver) == 0) {
 		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
@@ -825,7 +826,8 @@ fail:
 static inline void stop_dma(const struct osi_dma_priv_data *const osi_dma,
 			    nveu32_t dma_chan)
 {
-	nveu32_t chan = dma_chan & 0xFU;
+	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
+	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
 	const nveu32_t dma_tx_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TX_CTRL(chan),
 		MGBE_DMA_CHX_TX_CTRL(chan),
