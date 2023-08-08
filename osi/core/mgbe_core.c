@@ -4253,7 +4253,13 @@ static void mgbe_configure_eee(struct osi_core_priv_data *const osi_core,
 	nveu32_t tic_counter = 0;
 	void *addr =  osi_core->base;
 
-	if (xpcs_eee(osi_core, tx_lpi_enabled) != 0) {
+	if (osi_core->uphy_gbe_mode == OSI_UPHY_GBE_MODE_25G) {
+		if (xlgpcs_eee(osi_core, tx_lpi_enabled) != 0) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+					     "xlgpcs_eee call failed\n", 0ULL);
+				return;
+		}
+	} else if (xpcs_eee(osi_core, tx_lpi_enabled) != 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "xpcs_eee call failed\n", 0ULL);
 		return;

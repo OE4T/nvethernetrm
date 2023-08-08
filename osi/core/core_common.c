@@ -266,7 +266,6 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 		osi_writela(osi_core, value, ((nveu8_t *)osi_core->base + mac_mcr[osi_core->mac]));
 		if (osi_core->mac != OSI_MAC_HW_EQOS) {
 			if (speed == OSI_SPEED_25000) {
-#if 0 //TBD: enable after xlgpcs changes merge
 				ret = xlgpcs_init(osi_core);
 				if (ret < 0) {
 					goto fail;
@@ -276,9 +275,6 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 				if (ret < 0) {
 					goto fail;
 				}
-#endif
-			} else if (osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
-				//TDB: eqos sgmii pcs changes
 			} else {
 				ret = xpcs_init(osi_core);
 				if (ret < 0) {
@@ -294,6 +290,12 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 			/* Enable Link Status interrupt only after lane bring up success */
 			value |= MGBE_IMR_RGSMIIIE;
 			osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
+		} else if (osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+			//TDB: eqos sgmii pcs changes
+//			ret = eqos_xpcs_init(osi_core);
+//			if (ret < 0) {
+//				goto fail;
+//			}
 		}
 	}
 fail:
