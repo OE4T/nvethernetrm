@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -171,20 +171,50 @@ typedef struct ivc_msg_common {
 } ivc_msg_common_t;
 
 /**
- * @brief osd_ivc_send_cmd - OSD ivc send cmd
+ * @brief
+ * Description: OSD ivc send cmd
  *
- * @param[in] priv: OSD private data
- * @param[in] ivc_buf: ivc_msg_common structure
+ * @param[in] priv: Pointer to osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] ivc_buf: Pointer to ivc_msg_common structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$ivc_msg_common structure.
  * @param[in] len: length of data
- * @note
- * API Group:
- * - Initialization: Yes
- * - Run time: Yes
- * - De-initialization: Yes
+ *   * Range: 0 to UINT32_MAX
  *
- * @retval ivc status
- * @retval -1 on failure
+ * @return
+ *  - 0 on successful completion of the NVETHERNETRM_PIF#osd_ivc_send_cmd/osi_core
+ *    IVC command.
+ *  - -1 on NVETHERNETRM_PIF#osd_ivc_send_cmd/osi_core IVC command execution fail
+ *  - -1 on NVETHERNETRM_PIF#osi_hw_core_init/osi_core is NULL
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: Yes
+ *
  */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *
+ * @note
+ * Traceability Details:
+ */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
 nve32_t osd_ivc_send_cmd(void *priv, ivc_msg_common_t *ivc_buf,
 			 nveu32_t len);
 #endif /* IVC_CORE_H */
