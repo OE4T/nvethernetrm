@@ -1409,13 +1409,13 @@ struct osi_core_priv_data {
 };
 
 /**
- * @brief osi_hw_core_init - EQOS MAC, MTL and common DMA initialization.
+ * @brief
+ * Description: EQOS MAC, MTL and common DMA initialization.
  *
- * @note
- * Algorithm:
- *  - Invokes EQOS MAC, MTL and common DMA register init code.
- *
- * @param[in, out] osi_core: OSI core private data structure.
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ *   * Used Structure variables: osi_core.base, osi_core.num_mtl_queues, osi_core.mtl_queues
+ *     * Refer NVETHERNETRM_PIF$osi_core_priv_data
  *
  * @pre
  * - MAC should be out of reset. See osi_poll_for_mac_reset_complete()
@@ -1424,9 +1424,11 @@ struct osi_core_priv_data {
  * - osi_core->num_mtl_queues needs to be filled.
  * - osi_core->mtl_queues[qinx] need to be filled.
  *
- * @note
- * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_006
+ * @return
+ *  - 0 on successful completion of the NVETHERNETRM_PIF#osi_hw_core_init/osi_core
+ *    deinitialization operation.
+ *  - -1 on NVETHERNETRM_PIF#osi_hw_core_init/osi_core core deinitialization operation fail
+ *  - -1 on NVETHERNETRM_PIF#osi_hw_core_init/osi_core is NULL
  *
  * @usage
  * - Allowed context for the API call
@@ -1434,31 +1436,46 @@ struct osi_core_priv_data {
  *  - Signal handler: No
  *  - Thread safe: No
  *  - Async/Sync: Sync
- *  - Required Privileges: None
+ * - Required Privileges: None
  * - API Group:
  *  - Initialization: Yes
  *  - Run time: No
  *  - De-initialization: No
  *
- * @retval 0 on success
- * @retval -1 on failure.
  */
-nve32_t osi_hw_core_init(struct osi_core_priv_data *const osi_core);
-
+#ifndef DOXYGEN_ICD
 /**
- * @brief osi_hw_core_deinit - EQOS MAC deinitialization.
- *
  * @note
  * Algorithm:
- *  - Stops MAC transmission and reception.
- *
- * @param[in] osi_core: OSI core private data structure.
- *
- * @pre MAC has to be out of reset.
+ *  - Invokes EQOS MAC, MTL and common DMA register init code.
  *
  * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_007
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_006
+ */
+#else
+/**
+ *
+ * @dir
+ * - forward
+ */
+#endif
+nve32_t osi_hw_core_init(struct osi_core_priv_data *const osi_core);
+
+/**
+ * @brief
+ * Description: EQOS MAC deinitialization.
+ *
+ * @pre MAC has to be out of reset.
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ *
+ * @return
+ *  - 0 on successful completion of the NVETHERNETRM_PIF#osi_hw_core_deinit/osi_core
+ *    deinitialization operation.
+ *  - -1 on NVETHERNETRM_PIF#osi_hw_core_deinit/osi_core core deinitialization operation fail
+ *  - -1 on NVETHERNETRM_PIF#osi_hw_core_deinit/osi_core is NULL
  *
  * @usage
  * - Allowed context for the API call
@@ -1466,20 +1483,67 @@ nve32_t osi_hw_core_init(struct osi_core_priv_data *const osi_core);
  *  - Signal handler: No
  *  - Thread safe: No
  *  - Async/Sync: Sync
- *  - Required Privileges: None
+ * - Required Privileges: None
  * - API Group:
  *  - Initialization: No
  *  - Run time: No
  *  - De-initialization: Yes
  *
- * @retval 0 on success
- * @retval -1 on failure.
  */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *  - Stops MAC transmission and reception.
+ *
+ * @note
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_007
+ */
+#else
+/**
+ *
+ * @dir
+ * - forward
+ */
+#endif
 nve32_t osi_hw_core_deinit(struct osi_core_priv_data *const osi_core);
 
 /**
- * @brief osi_write_phy_reg - Write to a PHY register through MAC over MDIO bus.
+ * @brief
+ * Description: Write to a PHY register through MAC over MDIO bus.
  *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] phyaddr: PHY address (PHY ID) associated with PHY
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] phyreg: Register which needs to be write to PHY.
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] phydata: Data to write to a PHY register.
+ *   * Range: 0 to UINT32_MAX
+ *
+ * @pre MAC should be init and started. see osi_start_mac()
+ *
+ * @return
+ *  - 0 on NVETHERNETRM_PIF#osi_write_phy_reg/osi_core PHY register write operation success
+ *  - -1 on NVETHERNETRM_PIF#osi_write_phy_reg/osi_core PHY register write operation fail
+ *  - -1 on NVETHERNETRM_PIF#osi_write_phy_reg/osi_core is NULL
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  * - Before proceeding for reading for PHY register check whether any MII
@@ -1491,16 +1555,38 @@ nve32_t osi_hw_core_deinit(struct osi_core_priv_data *const osi_core);
  * - Write into MAC MDIO address register poll for GMII busy for MDIO
  *   operation to complete.
  *
- * @param[in] osi_core: OSI core private data structure.
- * @param[in] phyaddr: PHY address (PHY ID) associated with PHY
- * @param[in] phyreg: Register which needs to be write to PHY.
- * @param[in] phydata: Data to write to a PHY register.
- *
- * @pre MAC should be init and started. see osi_start_mac()
- *
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETRM_002
+ */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+nve32_t osi_write_phy_reg(struct osi_core_priv_data *const osi_core,
+			  const nveu32_t phyaddr, const nveu32_t phyreg,
+			  const nveu16_t phydata);
+
+/**
+ * @brief
+ * Description: Read from a PHY register through MAC over MDIO bus.
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] phyaddr: PHY address (PHY ID) associated with PHY
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] phyreg: Register which needs to be read from PHY.
+ *   * Range: 0 to UINT32_MAX
+ *
+ * @pre MAC should be init and started. see osi_start_mac()
+ *
+ * @return
+ *  - 0 on NVETHERNETRM_PIF#osi_read_phy_reg/osi_core PHY register read operation success
+ *  - -1 on NVETHERNETRM_PIF#osi_read_phy_reg/osi_core PHY register read operation fail
+ *  - -1 on NVETHERNETRM_PIF#osi_read_phy_reg/osi_core is NULL
  *
  * @usage
  * - Allowed context for the API call
@@ -1508,22 +1594,15 @@ nve32_t osi_hw_core_deinit(struct osi_core_priv_data *const osi_core);
  *  - Signal handler: No
  *  - Thread safe: No
  *  - Async/Sync: Sync
- *  - Required Privileges: None
+ * - Required Privileges: None
  * - API Group:
  *  - Initialization: Yes
  *  - Run time: Yes
  *  - De-initialization: No
  *
- * @retval 0 on success
- * @retval -1 on failure.
  */
-nve32_t osi_write_phy_reg(struct osi_core_priv_data *const osi_core,
-			  const nveu32_t phyaddr, const nveu32_t phyreg,
-			  const nveu16_t phydata);
-
+#ifndef DOXYGEN_ICD
 /**
- * @brief osi_read_phy_reg - Read from a PHY register through MAC over MDIO bus.
- *
  * @note
  * Algorithm:
  *  - Before proceeding for reading for PHY register check whether any MII
@@ -1535,46 +1614,81 @@ nve32_t osi_write_phy_reg(struct osi_core_priv_data *const osi_core,
  *    operation to complete. After this data will be available at MAC MDIO
  *    data register.
  *
- * @param[in] osi_core: OSI core private data structure.
- * @param[in] phyaddr: PHY address (PHY ID) associated with PHY
- * @param[in] phyreg: Register which needs to be read from PHY.
- *
- * @pre MAC should be init and started. see osi_start_mac()
- *
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETRM_003
  *
- * @usage
- * - Allowed context for the API call
- *  - Interrupt handler: No
- *  - Signal handler: No
- *  - Thread safe: No
- *  - Async/Sync: Sync
- *  - Required Privileges: None
- * - API Group:
- *  - Initialization: Yes
- *  - Run time: Yes
- *  - De-initialization: No
- *
- * @retval data from PHY register on success
- * @retval -1 on failure
  */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
 nve32_t osi_read_phy_reg(struct osi_core_priv_data *const osi_core,
 			 const nveu32_t phyaddr,
 			 const nveu32_t phyreg);
 
 /**
- * @brief initializing the core operations
+ * @brief
+ * Description: initializing the core operations
  *
- * @param[in] osi_core: OSI core private data structure.
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ *   * Used Structure variables: osi_core.use_virtualization
+ *    * Refer NVETHERNETRM_PIF$osi_core_priv_data/use_virtualization
  *
- * @retval data from PHY register on success
- * @retval -1 on failure
+ * @pre Obtain a valid osi_core pointer by using the NVETHERNETRM_PIF#osi_get_core function.
  *
+ * @return
+ *  - 0 on successful initialization of the NVETHERNETRM_PIF#osi_init_core_ops/osi_core operation
+ *  - -1 on NVETHERNETRM_PIF#osi_init_core_ops/osi_core is NULL
+ *  - -1 on NVETHERNETRM_PIF#osi_init_core_ops/osi_core$use_virtualization>
+ *    NVETHERNETRM_PIF$OSI_ENABLE
+ *  - -1 on NVETHERNETRM_PIF#osi_init_core_ops/osi_core core operation init fail
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread safe: No
+ *   - Async/Sync: Sync
+ *  - Required Privileges: None
+ *  - API Group:
+ *   - Initialization: Yes
+ *   - Run time: No
+ *   - De-initialization: No
+ *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETRM_001
+ */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+nve32_t osi_init_core_ops(struct osi_core_priv_data *const osi_core);
+
+/**
+ * @brief
+ * Description: API designed to manage runtime IOCTL commands.
+ *
+ * @pre MAC should be init and started. see osi_start_mac()
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ *   * Used Structure variables: none
+ * @param[in] data: A pointer referring to the osi_ioctl data structure.
+ *   * Range: A non-null pointer to a valid NVETHERNETRM_PIF$osi_ioctl structure.
+ *   * Used Structure variables: data/all
+ *    * Refer NVETHERNETRM_PIF$osi_ioctl
  *
  * @usage
  * - Allowed context for the API call
@@ -1582,18 +1696,21 @@ nve32_t osi_read_phy_reg(struct osi_core_priv_data *const osi_core,
  *  - Signal handler: No
  *  - Thread safe: No
  *  - Async/Sync: Sync
- *  - Required Privileges: None
+ * - Required Privileges: None
  * - API Group:
- *  - Initialization: Yes
- *  - Run time: No
+ *  - Initialization: No
+ *  - Run time: Yes
  *  - De-initialization: No
  *
- */
-nve32_t osi_init_core_ops(struct osi_core_priv_data *const osi_core);
-
-/**
- * @brief osi_handle_ioctl - API to handle runtime command
+ * @return
+ *  - 0 on successful execution of IOCTL command
+ *  - -1 on IOCTL command exection fail
+ *  - -1 on NVETHERNETRM_PIF#osi_handle_ioctl/osi_core is NULL
+ *  - -1 on NVETHERNETRM_PIF#osi_handle_ioctl/data is NULL
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - Handle runtime commands to OSI
@@ -1723,44 +1840,25 @@ nve32_t osi_init_core_ops(struct osi_core_priv_data *const osi_core);
  *	Enable/Disable MAC to MAC time sync for Secondary interface
  *	enable_disable - 1 - enable, 0- disable
  *
- * @param[in] osi_core: OSI core private data structure.
- * @param[in] data: void pointer pointing to osi_ioctl
- *
- * @pre MAC should be init and started. see osi_start_mac()
- *
  * @note
  * Traceability Details:
- *
- * @usage
- * - Allowed context for the API call
- *  - Interrupt handler: No
- *  - Signal handler: No
- *  - Thread safe: No
- *  - Async/Sync: Sync
- *  - Required Privileges: None
- * - API Group:
- *  - Initialization: No
- *  - Run time: Yes
- *  - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure.
  */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
 nve32_t osi_handle_ioctl(struct osi_core_priv_data *osi_core,
 			 struct osi_ioctl *data);
 
 /**
- * @brief osi_get_core - Get pointer to osi_core data structure.
- *
- * @note
- * Algorithm:
- *  - Returns OSI core data structure.
+ * @brief
+ * Description: Get pointer to osi_core data structure.
  *
  * @pre OSD layer should use this as first API to get osi_core pointer and
  * use the same in remaning API invocation.
- *
- * @note
- * Traceability Details:
  *
  * @usage
  * - Allowed context for the API call
@@ -1768,14 +1866,33 @@ nve32_t osi_handle_ioctl(struct osi_core_priv_data *osi_core,
  *  - Signal handler: No
  *  - Thread safe: No
  *  - Async/Sync: Sync
- *  - Required Privileges: None
+ * - Required Privileges: None
  * - API Group:
  *  - Initialization: Yes
  *  - Run time: No
  *  - De-initialization: No
  *
- * @retval valid and unique osi_core pointer on success
- * @retval NULL on failure.
+ * @return
+ * - NVETHERNETRM_PIF$osi_core_priv_data pointer on each success exection.
+ * - NULL if the total enabled VFs exceed the maximum core
+ *   instances allowed (MAX_CORE_INSTANCES).
+ *
  */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *  - Returns OSI core data structure.
+ *
+ * @note
+ * Traceability Details:
+ */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
 struct osi_core_priv_data *osi_get_core(void);
 #endif /* INCLUDED_OSI_CORE_H */
