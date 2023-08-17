@@ -51,6 +51,8 @@
 #define OSI_LOCKED		0x1U
 /** @brief Number of Nano seconds per second */
 #define OSI_NSEC_PER_SEC	1000000000ULL
+#define OSI_MGBE_MAX_RX_RIIT_NSEC	17500U
+#define OSI_MGBE_MIN_RX_RIIT_NSEC	535U
 #ifndef OSI_STRIPPED_LIB
 #define OSI_MAX_RX_COALESCE_USEC	1020U
 #define OSI_EQOS_MIN_RX_COALESCE_USEC	5U
@@ -223,6 +225,8 @@
 /** @brief Maximum number of queues in MGBE */
 #define OSI_MGBE_MAX_NUM_QUEUES		10U
 #define OSI_EQOS_XP_MAX_CHANS		4U
+/* max riit DT configs for supported speeds */
+#define OSI_MGBE_MAX_NUM_RIIT		4U
 
 /**
  * @brief Maximum number of Secure Channels supported

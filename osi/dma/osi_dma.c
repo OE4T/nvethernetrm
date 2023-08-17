@@ -672,7 +672,7 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 		val &= ~DMA_CHX_RX_WDT_RWT_MASK;
 		val |= rwt_val[osi_dma->mac];
 		osi_dma_writel(val, (nveu8_t *)osi_dma->base +
-			rx_wdt_reg[osi_dma->mac]);
+			   rx_wdt_reg[osi_dma->mac]);
 
 		val = osi_dma_readl((nveu8_t *)osi_dma->base +
 				rx_wdt_reg[osi_dma->mac]);
@@ -850,6 +850,71 @@ static inline void stop_dma(const struct osi_dma_priv_data *const osi_dma,
 	val &= ~OSI_BIT(0);
 	val |= OSI_BIT(31);
 	osi_dma_writel(val, (nveu8_t *)osi_dma->base + dma_rx_reg[osi_dma->mac]);
+}
+
+static inline void set_rx_riit_dma(
+			const struct osi_dma_priv_data *const osi_dma,
+			nveu32_t chan, nveu32_t riit)
+{
+	const nveu32_t rx_wdt_reg[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_DMA_CHX_RX_WDT(chan),
+		MGBE_DMA_CHX_RX_WDT(chan),
+		MGBE_DMA_CHX_RX_WDT(chan)
+	};
+	/* riit is in ns */
+	const nveu32_t itw_val = {
+		(((riit * ((nveu32_t)MGBE_AXI_CLK_FREQ / OSI_ONE_MEGA_HZ)) /
+		 (MGBE_DMA_CHX_RX_WDT_ITCU * OSI_MSEC_PER_SEC))
+		 & MGBE_DMA_CHX_RX_WDT_ITW_MAX)
+	};
+	nveu32_t val;
+
+	if (osi_dma->use_riit != OSI_DISABLE &&
+		osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
+		val = osi_dma_readl((nveu8_t *)osi_dma->base +
+			rx_wdt_reg[osi_dma->mac]);
+		val &= ~MGBE_DMA_CHX_RX_WDT_ITW_MASK;
+		val |= (itw_val << MGBE_DMA_CHX_RX_WDT_ITW_SHIFT);
+		osi_dma_writel(val, (nveu8_t *)osi_dma->base +
+			rx_wdt_reg[osi_dma->mac]);
+	}
+
+	return;
+}
+
+static inline void set_rx_riit(
+		const struct osi_dma_priv_data *const osi_dma, nveu32_t speed)
+{
+	nveu32_t i, chan, riit;
+	nveu32_t found =OSI_DISABLE;
+
+	for (i = 0; i < osi_dma->num_of_riit; i++) {
+		if (osi_dma->rx_riit[i].speed == speed) {
+			riit = osi_dma->rx_riit[i].riit;
+			found = OSI_ENABLE;
+			break;
+		}
+	}
+
+	if (found != OSI_ENABLE) {
+		/* use default ~1us value */
+		riit = MGBE_DMA_CHX_RX_WDT_ITW_DEFAULT;
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "Invalid speed value, using default riit 1us\n",
+			    speed);
+	}
+
+	/* riit is in nsec */
+	if ((riit  > (osi_dma->rx_riwt * OSI_MSEC_PER_SEC))) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "Invalid riit value, using default 1us\n", riit);
+	}
+
+	for (i = 0; i < osi_dma->num_dma_chans; i++) {
+		chan = osi_dma->dma_chans[i];
+		set_rx_riit_dma(osi_dma, chan, riit);
+	}
+	return;
 }
 
 nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma)
@@ -1333,7 +1398,7 @@ fail:
 	return ret;
 }
 
-#ifdef OSI_DEBUG
+
 nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma)
 {
 	struct dma_local *l_dma = (struct dma_local *)osi_dma;
@@ -1349,6 +1414,7 @@ nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma)
 	data = &osi_dma->ioctl_data;
 
 	switch (data->cmd) {
+#ifdef OSI_DEBUG
 	case OSI_DMA_IOCTL_CMD_REG_DUMP:
 		reg_dump(osi_dma);
 		break;
@@ -1357,6 +1423,10 @@ nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma)
 		break;
 	case OSI_DMA_IOCTL_CMD_DEBUG_INTR_CONFIG:
 		l_dma->ops_p->debug_intr_config(osi_dma);
+		break;
+#endif /* OSI_DEBUG */
+	case OSI_DMA_IOCTL_CMD_RX_RIIT_CONFIG:
+		set_rx_riit(osi_dma, data->arg_u32);
 		break;
 	default:
 		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
@@ -1369,7 +1439,6 @@ nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma)
 #endif /* OSI_CL_FTRACE */
 	return 0;
 }
-#endif /* OSI_DEBUG */
 
 #ifndef OSI_STRIPPED_LIB
 
