@@ -1971,7 +1971,10 @@ static void prepare_l3l4_ctr_reg(const struct osi_core_priv_data *const osi_core
 	/* Enable L4 filters for SOURCE Port No matching */
 	value |= (l3_l4->data.src.port_match << MAC_L3L4_CTR_L4SPM_SHIFT) |
 		 (l3_l4->data.src.port_match_inv << MAC_L3L4_CTR_L4SPIM_SHIFT);
-
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		/* Enable combined L3 and L4 filters */
+		value |= l3_l4->data.is_l3l4_match_en << MAC_L3L4_CTR_L5TEN_SHIFT;
+	}
 	/* set udp / tcp port matching bit (for l4) */
 	value |= l3_l4->data.is_udp << MAC_L3L4_CTR_L4PEN_SHIFT;
 
