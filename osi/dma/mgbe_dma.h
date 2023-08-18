@@ -57,6 +57,8 @@
 #define MGBE_DMA_CHX_RDLH(x)		((0x0080U * (x)) + 0x3118U)
 #define MGBE_DMA_CHX_RDLA(x)		((0x0080U * (x)) + 0x311CU)
 #define MGBE_DMA_CHX_RDTLP(x)		((0x0080U * (x)) + 0x312CU)
+#define MGBE_DMA_CHX_RX_DESC_WR_RNG_OFFSET(x)	((0x0080U * (x)) + 0x317CU)
+
 /** @} */
 
 /** @} */
@@ -92,6 +94,8 @@
 #define MGBE_TX_VDMA_TC_SHIFT			4
 #define MGBE_RX_VDMA_TC_MASK			(OSI_BIT(28) | OSI_BIT(29) | OSI_BIT(30))
 #define MGBE_RX_VDMA_TC_SHIFT			28
+#define MGBE_RX_DESC_WR_RNG_RWDC_SHIFT		16
+
 /** @} */
 
 /**

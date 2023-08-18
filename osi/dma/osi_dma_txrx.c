@@ -194,6 +194,40 @@ static inline void check_for_more_data_avail(struct osi_rx_ring *rx_ring, nve32_
 #ifdef OSI_CL_FTRACE
 nveu32_t osi_process_rx_completions_cnt = 0;
 #endif /* OSI_CL_FTRACE */
+
+/**
+ * @brief compltd_rxdesc_cnt - number of Rx descriptors completed by HW
+ *
+ * @note
+ * Algorithm:
+ *  - This routine will be invoked by OSI layer internally to get the
+ *    available Rx descriptor to process by SW.
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ *
+ * @param[in, out] osi_dma: Pointer to OSI DMA private data structure.
+ * @param[in] chan: DMA channel number for which stats should be incremented.
+ */
+static inline nveu32_t compltd_rx_desc_cnt(struct osi_dma_priv_data *osi_dma,
+					    nveu32_t chan)
+{
+	struct osi_rx_ring *rx_ring = osi_dma->rx_ring[chan];
+	nveu32_t value, rx_desc_wr_idx, descr_compltd;
+
+	value = osi_dma_readl((nveu8_t *)osi_dma->base +
+			  MGBE_DMA_CHX_RX_DESC_WR_RNG_OFFSET(chan));
+	/* completed desc write back offset */
+	rx_desc_wr_idx = ((value >> MGBE_RX_DESC_WR_RNG_RWDC_SHIFT ) &
+			  (osi_dma->rx_ring_sz - 1));
+	descr_compltd = (rx_desc_wr_idx - (rx_ring->cur_rx_idx - 1U))
+			 & (osi_dma->rx_ring_sz - 1U);
+	return descr_compltd;
+}
+
 nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 				   nveu32_t chan, nve32_t budget,
 				   nveu32_t *more_data_avail)
@@ -209,6 +243,7 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 	nve32_t received_resv = 0;
 #endif /* !OSI_STRIPPED_LIB */
 	nve32_t ret = 0;
+	nveu32_t rx_desc_compltd;
 
 #ifdef OSI_CL_FTRACE
 	if ((osi_process_rx_completions_cnt % 1000) == 0)
@@ -228,6 +263,11 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 
 	/* Reset flag to indicate if more Rx frames available to OSD layer */
 	*more_data_avail = OSI_NONE;
+
+	if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
+		rx_desc_compltd = compltd_rx_desc_cnt(osi_dma, chan);
+		budget = (budget > ((nve32_t)rx_desc_compltd)? ((nve32_t)rx_desc_compltd): budget);
+	}
 
 	while ((received < budget)
 #ifndef OSI_STRIPPED_LIB
