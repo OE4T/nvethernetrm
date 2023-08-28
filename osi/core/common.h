@@ -298,6 +298,7 @@ static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac,
 	case OSI_MGBE_MAC_3_10:
 	//TBD: T264 uFPGA reports mac version 3.2
 	case OSI_MGBE_MAC_3_20:
+	case OSI_MGBE_MAC_4_20:
 #ifndef OSI_STRIPPED_LIB
 	case OSI_MGBE_MAC_4_00:
 #endif /* !OSI_STRIPPED_LIB */

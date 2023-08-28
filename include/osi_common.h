@@ -267,8 +267,8 @@
 #define OSI_EQOS_MAC_5_30       0x53U
 /** @brief MGBE MAC version Orin */
 #define OSI_MGBE_MAC_3_10	0x31U
-//TBD: T264 NET04 version, update it later
 #define OSI_MGBE_MAC_3_20	0x32U
+#define OSI_MGBE_MAC_4_20	0x42U
 
 /**
  * @brief Maximum number of VM IRQs

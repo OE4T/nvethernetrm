@@ -295,13 +295,19 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 				struct osi_core_priv_data *const osi_core,
 				const struct osi_filter *filter)
 {
+	const nveu32_t dch_dpc_reg[OSI_MAX_MAC_IP_TYPES] = {
+		0xFF, /* place holder */
+		MGBE_MAC_DCHSEL,
+		MGBE_MAC_DPCSEL
+	 };
+
 	nveu32_t idx = filter->index;
 	nveu32_t dma_chan = filter->dma_chan;
 	nveu32_t addr_mask = filter->addr_mask;
 	nveu32_t src_dest = filter->src_dest;
 	const nveu8_t *addr = filter->mac_addr;
 	nveu32_t dma_chansel = filter->dma_chansel;
-	nveu32_t xdcs_check;
+	nveu32_t xdcs_dds;
 	nveu32_t value = 0x0U;
 	nve32_t ret = 0;
 
@@ -317,9 +323,9 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 
 	/* read current value at index preserve XDCS current value */
 	ret = mgbe_mac_indir_addr_read(osi_core,
-				       MGBE_MAC_DCHSEL,
+				       dch_dpc_reg[osi_core->mac],
 				       idx,
-				       &xdcs_check);
+				       &xdcs_dds);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "indirect register read failed\n", 0ULL);
@@ -327,17 +333,26 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 	}
 
 	/* preserve last XDCS bits */
-	xdcs_check &= MGBE_MAC_XDCS_DMA_MAX;
+	xdcs_dds &= ((osi_core->mac == OSI_MAC_HW_MGBE) ?
+		     MGBE_MAC_XDCS_DMA_MAX : UINT_MAX);
 
-	/* High address reset DCS and AE bits  and XDCS in MAC_DChSel_IndReg */
+	/* High address reset DCS and AE bits  and XDCS in MAC_DChSel_IndReg or
+	 * reset DDS bit in DPCSel reg
+	 */
 	if ((filter->oper_mode & OSI_OPER_ADDR_DEL) != OSI_NONE) {
-		xdcs_check &= ~OSI_BIT(dma_chan);
-		ret = mgbe_mac_indir_addr_write(osi_core, MGBE_MAC_DCHSEL,
-						idx, xdcs_check);
+		//TBD: T264 revisit logic for receive channel list duplication
+		xdcs_dds &= ((osi_core->mac == OSI_MAC_HW_MGBE) ?
+				~OSI_BIT(dma_chan) : ~OSI_BIT(1));
+		ret = mgbe_mac_indir_addr_write(osi_core,
+						dch_dpc_reg[osi_core->mac],
+						idx, xdcs_dds);
 		value &= ~(MGBE_MAC_ADDRH_DCS);
 
 		/* XDCS values is always maintained */
-		if (xdcs_check == OSI_DISABLE) {
+		if ((osi_core->mac == OSI_MAC_HW_MGBE) &&
+		    (xdcs_dds == OSI_DISABLE)) {
+			value &= ~(MGBE_MAC_ADDRH_AE);
+		} else {
 			value &= ~(MGBE_MAC_ADDRH_AE);
 		}
 
@@ -371,10 +386,17 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 			    ((nveu32_t)addr[2] << 16) | ((nveu32_t)addr[3] << 24)),
 			    (nveu8_t *)osi_core->base +  MGBE_MAC_ADDRL((idx)));
 
-		/* Write XDCS configuration into MAC_DChSel_IndReg(x) */
-		/* Append DCS DMA channel to XDCS hot bit selection */
-		xdcs_check |= (OSI_BIT(dma_chan) | dma_chansel);
-		ret = mgbe_mac_indir_addr_write(osi_core, MGBE_MAC_DCHSEL, idx, xdcs_check);
+		if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+			/* reset DDS bit 1 to select DCS as channel number */
+			xdcs_dds &= ~OSI_BIT(1);
+		} else {
+			/* Write XDCS configuration into MAC_DChSel_IndReg(x) */
+			/* Append DCS DMA channel to XDCS hot bit selection */
+			xdcs_dds |= (OSI_BIT(dma_chan) | dma_chansel);
+		}
+		ret = mgbe_mac_indir_addr_write(osi_core,
+						dch_dpc_reg[osi_core->mac],
+						idx, xdcs_dds);
 	}
 fail:
 	return ret;
@@ -1983,6 +2005,7 @@ static nve32_t mgbe_configure_pdma(struct osi_core_priv_data *osi_core)
 				MGBE_PDMA_CHX_TXRX_EXTCFG_PBL_SHIFT) &
 				MGBE_PDMA_CHX_TXRX_EXTCFG_PBL_MASK;
 		}
+		value |= MGBE_PDMA_CHX_RX_EXTCFG_RXPEN;
 		ret = mgbe_dma_indir_addr_write(osi_core,
 				MGBE_PDMA_CHX_RX_EXTCFG, pdma_chan, value);
 		if (ret < 0) {
