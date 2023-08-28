@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -636,34 +637,19 @@ struct osi_dma_priv_data {
 };
 
 /**
- * @brief osi_get_global_dma_status - Gets DMA status.
+ * @brief
+ * Description: Gets DMA status.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
  * Algorithm: Returns global DMA Tx/Rx interrupt status
  *
- * @param[in] osi_dma: DMA private data.
- *
- * @note
- *	Dependencies: None.
- *	Protection: None.
- *
- * @retval status
  */
-nveu32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma);
-
+#endif
 /**
- * @brief osi_get_refill_rx_desc_cnt - Rx descriptors count that needs to refill
- *
  * @note
- * Algorithm:
- *  - subtract current index with fill (need to cleanup)
- *    to get Rx descriptors count that needs to refill.
- *
- * @param[in] rx_ring: DMA channel Rx ring.
- *
- * @note
- * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETCL_007
- *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -676,31 +662,120 @@ nveu32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma);
  *  - Run time: Yes
  *  - De-initialization: No
  *
- * @retval "Number of available free descriptors."
+ * @param[in] osi_dma: DMA private data.
+ * - Valid range: Any valid memory address except NULL.
+ *
+ * @note
+ *	Dependencies: None.
+ *	Protection: None.
+ *
+ * @retval !=0 DMA status on success
+ * @retval 0 on failure - invalid argument
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
+nveu32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma);
+
+/**
+ * @brief
+ * Description: Rx descriptors count that needs to refill
+ *
+ */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *  - subtract current index with fill (need to cleanup)
+ *    to get Rx descriptors count that needs to refill.
+ *
+ */
+#endif
+/**
+ * @param[in] osi_dma: OSI DMA private data structure.
+ * - Valid range: Any valid memory address except NULL.
+ * @param[in] chan: Channel number whose ring is to be refilled.
+ * - Valid range: 0 to OSI_MGBE_MAX_NUM_CHANS - 1
+ *
+ */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETCL_007
+ *
+ */
+#endif
+/**
+ * @note
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: Yes
+ *  - Signal handler: Yes
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ *  - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
+ * @retval !=0 "Number of available free descriptors."
+ * @retval 0 on failure - invalid rx ring
+ */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nveu32_t osi_get_refill_rx_desc_cnt(const struct osi_dma_priv_data *const osi_dma,
 				    nveu32_t chan);
 
 /**
- * @brief osi_rx_dma_desc_init - DMA Rx descriptor init
+ * @brief
+ * Description: DMA Rx descriptor init
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - Initialize a Rx DMA descriptor.
  *
+ */
+#endif
+/**
  * @param[in] osi_dma: OSI DMA private data structure.
+ * - Valid range: Any valid memory address except NULL.
  * @param[in, out] rx_ring: HW ring corresponding to Rx DMA channel.
+ * - Valid range: Any valid memory address except NULL.
  * @param[in] chan: Rx DMA channel number. Max OSI_EQOS_MAX_NUM_CHANS.
+ * - Valid range: 0 to OSI_MGBE_MAX_NUM_CHANS - 1
  *
  * @pre
  *  - MAC needs to be out of reset and proper clocks need to be configured.
  *  - rx_swcx->buf_phy_addr need to be filled with DMA mapped address
  *  - DMA HW init need to be completed successfully, see osi_hw_dma_init
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETCL_008
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -714,25 +789,43 @@ nveu32_t osi_get_refill_rx_desc_cnt(const struct osi_dma_priv_data *const osi_dm
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - invalid tail pointer
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nve32_t osi_rx_dma_desc_init(struct osi_dma_priv_data *osi_dma,
 			     struct osi_rx_ring *rx_ring, nveu32_t chan);
 
 /**
- * @brief Updates rx buffer length.
+ * @brief
+ * Description: Updates rx buffer length.
  *
  * @param[in, out] osi_dma: OSI DMA private data structure.
+ * - Valid range: Any valid memory address except NULL.
  *
  * @pre
  *  - MAC needs to be out of reset and proper clocks need to be configured.
  *  - DMA HW init need to be completed successfully, see osi_hw_dma_init
  *  - osi_dma->mtu need to be filled with current MTU size <= 9K
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETCL_009
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -746,21 +839,39 @@ nve32_t osi_rx_dma_desc_init(struct osi_dma_priv_data *osi_dma,
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - invalid mtu setting
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nve32_t osi_set_rx_buf_len(struct osi_dma_priv_data *osi_dma);
 
 /**
- * @brief osi_hw_transmit - Initialize Tx DMA descriptors for a channel
+ * @brief
+ * Description: Initialize Tx DMA descriptors for a channel
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - Initialize Transmit descriptors with DMA mappable buffers,
  *    set OWN bit, Tx ring length and set starting address of Tx DMA channel
  *    Tx ring base address in Tx DMA registers.
  *
+ */
+#endif
+/**
  * @param[in, out] osi_dma: OSI DMA private data.
+ * - Valid range: Any valid memory address except NULL.
  * @param[in] chan: DMA Tx channel number. Max OSI_EQOS_MAX_NUM_CHANS.
+ * - Valid range: 0 to OSI_MGBE_MAX_NUM_CHANS - 1
  *
  * @pre
  *  - MAC needs to be out of reset and proper clocks need to be configured.
@@ -778,10 +889,17 @@ nve32_t osi_set_rx_buf_len(struct osi_dma_priv_data *osi_dma);
  *    buffer len, DMA mapped address of buffer for each descriptor
  *    consumed by the packet
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETCL_010
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -795,13 +913,27 @@ nve32_t osi_set_rx_buf_len(struct osi_dma_priv_data *osi_dma);
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - invalid dma channel number
+ * @retval -1 on failure - invalid tx ring
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nve32_t osi_hw_transmit(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
 
 /**
- * @brief osi_process_tx_completions - Process Tx complete on DMA channel ring.
+ * @brief
+ * Description: Process Tx complete on DMA channel ring.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - This function will be invoked by OSD layer to process Tx
@@ -810,20 +942,33 @@ nve32_t osi_hw_transmit(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
  *    - Invokes OSD layer to release DMA address and Tx buffer which are
  *      updated as part of transmit routine.
  *
+ */
+#endif
+/**
  * @param[in, out] osi_dma: OSI dma private data structure.
+ * - Valid range: Any valid memory address except NULL.
  * @param[in] chan: Channel number on which Tx complete need to be done.
  *            Max OSI_EQOS_MAX_NUM_CHANS.
+ * - Valid range: 0 to OSI_MGBE_MAX_NUM_CHANS - 1
  * @param[in] budget: Threshold for reading the packets at a time.
+ * - Valid range: >= 0
  *
  * @pre
  *  - MAC needs to be out of reset and proper clocks need to be configured.
  *  - DMA HW init need to be completed successfully, see osi_hw_dma_init
  *  - DMA need to be started, see osi_start_dma
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETCL_011
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -836,14 +981,29 @@ nve32_t osi_hw_transmit(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
  *  - Run time: Yes
  *  - De-initialization: No
  *
- * @returns Number of descriptors (buffers) processed on success else -1.
+ * @retval >=0 Number of descriptors (buffers) processed on success else -1.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - invalid dma channel number
+ * @retval -1 on failure - invalid tx ring
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 				   nveu32_t chan, nve32_t budget);
 
 /**
- * @brief osi_process_rx_completions - Read data from rx channel descriptors
+ * @brief
+ * Description: Read data from rx channel descriptors
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - This routine will be invoked by OSD layer to get the
@@ -856,9 +1016,15 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
  *    - Re-allocate the receive buffers, populate Rx descriptor and
  *      handover to DMA.
  *
+ */
+#endif
+/**
  * @param[in, out] osi_dma: OSI DMA private data structure.
+ * - Valid range: Any valid memory address except NULL.
  * @param[in] chan: Rx DMA channel number. Max OSI_EQOS_MAX_NUM_CHANS.
+ * - Valid range: 0 to OSI_MGBE_MAX_NUM_CHANS - 1
  * @param[in] budget: Threshold for reading the packets at a time.
+ * - Valid range: >= 0
  * @param[out] more_data_avail: Pointer to more data available flag. OSI fills
  *         this flag if more rx packets available to read(1) or not(0).
  *
@@ -867,10 +1033,17 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
  *  - DMA HW init need to be completed successfully, see osi_hw_dma_init
  *  - DMA need to be started, see osi_start_dma
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETCL_012
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -883,21 +1056,40 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
  *  - Run time: Yes
  *  - De-initialization: No
  *
- * @returns Number of descriptors (buffers) processed on success else -1.
+ * @retval >=0 Number of descriptors (buffers) processed on success else -1.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - invalid dma channel number
+ * @retval -1 on failure - invalid rx ring
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 				   nveu32_t chan, nve32_t budget,
 				   nveu32_t *more_data_avail);
 
 /**
- * @brief osi_hw_dma_init - Initialize DMA
+ * @brief
+ * Description: Initialize DMA
  *
+ */
+#ifndef DOXYGEN_ICD
+/*
  * @note
  * Algorithm:
  *  - Takes care of initializing the tx, rx ring and descriptors
  *    based on the number of channels selected.
  *
+ */
+#endif
+/**
  * @param[in, out] osi_dma: OSI DMA private data.
+ * - Valid range: Any valid memory address except NULL.
  *
  * @pre
  *  - Allocate memory for osi_dma
@@ -922,10 +1114,17 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
  *  - osi_dma->use_rx_frames  ==> OSI_DISABLE/OSI_ENABLE
  *  - osi_dma->rx_frames ===> Actual value read from DT
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETCL_013
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -939,27 +1138,56 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - invalid MAC version
+ * @retval -1 on failure - invalid number of DMA channels
+ * @retval -1 on failure - invalid DMA channels
+ * @retval !=0 on failure - failure to init DMA descriptors
+ * @retval <0 on failure - failure to init tx interrupt
+ * @retval <0 on failure - failure to init rx interrupt
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma);
 
 /**
- * @brief osi_hw_dma_deinit - De initialize DMA
+ * @brief
+ * Description: De initialize DMA
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - Takes care of stopping the MAC
  *
+ */
+#endif
+/**
  * @param[in] osi_dma: OSI DMA private data.
+ * - Valid range: Any valid memory address except NULL.
  *
  * @pre
  *  - MAC needs to be out of reset and proper clocks need to be configured.
  *  - DMA HW init need to be completed successfully, see osi_hw_dma_init
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETCL_014
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -973,19 +1201,38 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma);
  *  - De-initialization: Yes
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - invalid number of DMA channels
+ * @retval -1 on failure - invalid DMA channels
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma);
 
 /**
- * @brief osi_init_dma_ops - Initialize DMA operations
+ * @brief
+ * Description: Initialize DMA operations
  *
  * @param[in, out] osi_dma: OSI DMA private data.
+ * - Valid range: Any valid memory address except NULL.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETCL_015
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1000,27 +1247,57 @@ nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma);
  *
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - invalid MAC HW type
+ * @retval -1 on failure - invalid tx ring size
+ * @retval -1 on failure - invalid rx ring size
+ * @retval -1 on failure - failed to init dma ops
+ * @retval -1 on failure - dma ops validation failed
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma);
 
 /**
- * @brief osi_dma_get_systime_from_mac - Get system time
+ * @brief
+ * Description: Get system time
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - Gets the current system time
  *
+ */
+#endif
+/**
  * @param[in] osi_dma: OSI DMA private data structure.
+ * - Valid range: Any valid memory address except NULL.
  * @param[out] sec: Value read in Seconds
+ * - Valid range: Any valid memory address except NULL.
  * @param[out] nsec: Value read in Nano seconds
+ * - Valid range: Any valid memory address except NULL.
  *
  * @pre MAC should be init and started. see osi_start_mac()
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETCL_016
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1034,26 +1311,49 @@ nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma);
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
 				     nveu32_t *sec, nveu32_t *nsec);
 
 /**
- * @brief osi_is_mac_enabled - Checks if MAC is enabled.
+ * @brief
+ * Description: Checks if MAC is enabled.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - Reads MAC MCR register for Tx and Rx enabled bits.
  *
+ */
+#endif
+/**
  * @param[in] osi_dma: OSI DMA private data structure.
+ * - Valid range: Any valid memory address except NULL.
  *
  * @pre MAC should be init and started. see osi_start_mac()
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  * - SWUD_ID: ETHERNET_NVETHERNETCL_017
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1068,24 +1368,36 @@ nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
  *
  * @retval OSI_ENABLE if MAC enabled.
  * @retval OSI_DISABLE otherwise.
+ * @retval OSI_DISABLE on error - invalid argument
  */
 nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma);
 
 /**
- * @brief osi_handle_dma_intr - Handles DMA interrupts.
+ * @brief
+ * Description: Handles DMA interrupts.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - Enables/Disables DMA CH TX/RX/VM inetrrupts.
  *
+ */
+#endif
+/**
  * @param[in] osi_dma: OSI DMA private data.
+ * - Valid range: Any valid memory address except NULL.
  * @param[in] chan: DMA Rx channel number. Max OSI_EQOS_MAX_NUM_CHANS.
+ * - Valid range: 0 to OSI_MGBE_MAX_NUM_CHANS - 1
  * @param[in] tx_rx: Indicates whether DMA channel is Tx or Rx.
  *                   OSI_DMA_CH_TX_INTR for Tx interrupt.
  *                   OSI_DMA_CH_RX_INTR for Rx interrupt.
+ * - Valid range: OSI_DMA_CH_TX_INTR or OSI_DMA_CH_RX_INTR
  * @param[in] en_dis: Enable/Disable DMA channel interrupts.
  *                    OSI_DMA_INTR_DISABLE for disabling the interrupt.
  *                    OSI_DMA_INTR_ENABLE for enabling the interrupt.
+ * - Valid range: OSI_DMA_INTR_DISABLE or OSI_DMA_INTR_ENABLE
  *
  * @pre
  *  - MAC needs to be out of reset and proper clocks need to be configured.
@@ -1093,9 +1405,16 @@ nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma);
  *  - Mapping of physical IRQ line to DMA channel need to be maintained at
  *    OS Dependent layer and pass corresponding channel number.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details: TBD
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -1109,17 +1428,23 @@ nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma);
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - failed to enable or disable interrupt
  */
 nve32_t osi_handle_dma_intr(struct osi_dma_priv_data *osi_dma,
 			    nveu32_t chan, nveu32_t tx_rx, nveu32_t en_dis);
 
 #ifdef OSI_DEBUG
 /**
- * @brief osi_dma_ioctl - OSI DMA IOCTL
+ * @brief
+ * Description: OSI DMA IOCTL
  *
  * @param[in] osi_dma: OSI DMA private data.
+ * - Valid range: Any valid memory address except NULL.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details: TBD
  * - API Group:
@@ -1127,29 +1452,48 @@ nve32_t osi_handle_dma_intr(struct osi_dma_priv_data *osi_dma,
  * - Run time: Yes
  * - De-initialization: No
  *
+ */
+#endif
+/**
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - invalid ioctl command within osi data structure
  */
 nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma);
 #endif /* OSI_DEBUG */
 #ifndef OSI_STRIPPED_LIB
 /**
- * @brief osi_clear_tx_pkt_err_stats - Clear tx packet error stats.
+ * @brief
+ * Description: Clear tx packet error stats.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - This function will be invoked by OSD layer to clear the
  *    tx stats mentioned in osi_dma->pkt_err_stats structure
  *
+ */
+#endif
+/**
  * @param[in, out] osi_dma: OSI DMA private data structure.
+ * - Valid range: Any valid memory address except NULL.
  *
  * @pre
  *  - MAC needs to be out of reset and proper clocks need to be configured.
  *  - DMA HW init need to be completed successfully, see osi_hw_dma_init
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1163,25 +1507,41 @@ nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma);
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
  */
 nve32_t osi_clear_tx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
 
 /**
- * @brief osi_config_slot_function - Configure slot function
+ * @brief
+ * Description: Configure slot function
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - Set or reset the slot function based on set input
  *
+ */
+#endif
+/**
  * @param[in, out] osi_dma: OSI DMA private data structure.
+ * - Valid range: Any valid memory address except NULL.
  * @param[in] set: Flag to set with OSI_ENABLE and reset with OSI_DISABLE
+ * - Valid range: OSI_ENABLE or OSI_DISABLE
  *
  * @pre MAC should be init and started. see osi_start_mac()
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1195,20 +1555,29 @@ nve32_t osi_clear_tx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
+ * @retval -1 on failure - invalid slot interval argument
+ * @retval -1 on failure - tx ring is full
  */
 nve32_t osi_config_slot_function(struct osi_dma_priv_data *osi_dma,
 				 nveu32_t set);
 /**
- * @brief osi_clear_rx_pkt_err_stats - Clear rx packet error stats.
+ * @brief
+ * Description: Clear rx packet error stats.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - This function will be invoked by OSD layer to clear the
  *    rx_crc_error mentioned in osi_dma->pkt_err_stats structure.
  *
+ */
+#endif
+/**
  * @param[in, out] osi_dma: OSI DMA private data structure.
- *
+ * - Valid range: Any valid memory address except NULL.
  *
  * @pre
  *  - MAC needs to be out of reset and proper clocks need to be configured.
@@ -1219,21 +1588,43 @@ nve32_t osi_config_slot_function(struct osi_dma_priv_data *osi_dma,
  * - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure.
+ * @retval -1 on failure - invalid argument
  */
 nve32_t osi_clear_rx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
 #endif /* !OSI_STRIPPED_LIB */
 
 /**
- * @brief osi_txring_empty - Check if Txring is empty.
+ * @brief
+ * Description: Check if Txring is empty.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - This function will be invoked by OSD layer to check if the Tx ring
  *    is empty or still has outstanding packets to be processed for Tx done.
  *
+ */
+#endif
+/**
+ * @note
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: Yes
+ *  - Signal handler: Yes
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ *  - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
  * @param[in] osi_dma: OSI DMA private data structure.
+ * - Valid range: Any valid memory address except NULL.
  * @param[in] chan: Channel number whose ring is to be checked.
+ * - Valid range: 0 to OSI_MGBE_MAX_NUM_CHANS - 1
  *
  * @pre
  *  - MAC needs to be out of reset and proper clocks need to be configured.
@@ -1249,18 +1640,32 @@ nve32_t osi_clear_rx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
 nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
 
 /**
- * @brief osi_get_dma - Get pointer to osi_dma data structure.
+ * @brief
+ * Description: Get pointer to osi_dma data structure.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - Returns OSI DMA data structure.
  *
+ */
+#endif
+/**
  * @pre OSD layer should use this as first API to get osi_dma pointer and
  * use the same in remaning API invocation.
  *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Traceability Details:
  *
+ */
+#endif
+/**
+ * @note
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1273,7 +1678,7 @@ nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
  *  - Run time: No
  *  - De-initialization: No
  *
- * @retval valid and unique osi_dma pointer on success
+ * @retval !=NULL Valid and unique osi_dma pointer on success
  * @retval NULL on failure.
  */
 struct osi_dma_priv_data *osi_get_dma(void);
