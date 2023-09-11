@@ -2163,6 +2163,7 @@ static void mgbe_handle_mac_intrs(struct osi_core_priv_data *osi_core)
 	nveu32_t mac_ier = 0;
 	nveu32_t tx_errors = 0;
 	nveu8_t *base = (nveu8_t *)osi_core->base;
+	nveu32_t value = 0U;
 #ifdef HSI_SUPPORT
 	nveu64_t tx_frame_err = 0;
 #endif
@@ -2173,6 +2174,15 @@ static void mgbe_handle_mac_intrs(struct osi_core_priv_data *osi_core)
 	if ((mac_isr & MGBE_MAC_ISR_LSI) == OSI_ENABLE) {
 		/* For Local fault need to stop network data and restart the LANE bringup */
 		if ((mac_isr & MGBE_MAC_ISR_LS_MASK) == MGBE_MAC_ISR_LS_LOCAL_FAULT) {
+			/* Disable the Link Status interrupt before the lane_restart_task,
+			 * so that multiple interrupts can be avoided from the HW.
+			 * The Link Status interrupt will be enabled by hw_set_speed
+			 * which is called after lane bring up task
+			 */
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
+			value &= ~MGBE_IMR_RGSMIIIE;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
+
 			osi_core->osd_ops.restart_lane_bringup(osi_core->osd, OSI_DISABLE);
 		} else if ((mac_isr & MGBE_MAC_ISR_LS_MASK) == MGBE_MAC_ISR_LS_LINK_OK) {
 			osi_core->osd_ops.restart_lane_bringup(osi_core->osd, OSI_ENABLE);
