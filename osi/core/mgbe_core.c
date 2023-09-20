@@ -3780,7 +3780,18 @@ static void mgbe_configure_eee(struct osi_core_priv_data *const osi_core,
 static void mgbe_get_hw_features(struct osi_core_priv_data *const osi_core,
 				 struct osi_hw_features *hw_feat)
 {
+	const nveu32_t addmac_addrsel_shift[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_MAC_HFR0_ADDMACADRSEL_SHIFT,
+		MGBE_T26X_MAC_HFR0_ADDMACADRSEL_SHIFT
+	};
+	const nveu32_t addmac_addrsel_mask[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_MAC_HFR0_ADDMACADRSEL_MASK,
+		MGBE_T26X_MAC_HFR0_ADDMACADRSEL_MASK
+	};
 	nveu8_t *base = (nveu8_t *)osi_core->base;
+	nveu32_t mac = osi_core->mac;
 	nveu32_t mac_hfr0 = 0;
 	nveu32_t mac_hfr1 = 0;
 	nveu32_t mac_hfr2 = 0;
@@ -3838,9 +3849,8 @@ static void mgbe_get_hw_features(struct osi_core_priv_data *const osi_core,
 			       MGBE_MAC_HFR0_TXCOESEL_MASK);
 	hw_feat->rx_coe_sel = ((mac_hfr0 >> MGBE_MAC_HFR0_RXCOESEL_SHIFT) &
 			       MGBE_MAC_HFR0_RXCOESEL_MASK);
-	hw_feat->mac_addr_sel =
-			((mac_hfr0 >> MGBE_MAC_HFR0_ADDMACADRSEL_SHIFT) &
-			 MGBE_MAC_HFR0_ADDMACADRSEL_MASK);
+	hw_feat->mac_addr_sel = ((mac_hfr0 >> addmac_addrsel_shift[mac]) &
+				 addmac_addrsel_mask[mac]);
 	hw_feat->act_phy_sel = ((mac_hfr0 >> MGBE_MAC_HFR0_PHYSEL_SHIFT) &
 				MGBE_MAC_HFR0_PHYSEL_MASK);
 	hw_feat->tsstssel = ((mac_hfr0 >> MGBE_MAC_HFR0_TSSTSSEL_SHIFT) &
