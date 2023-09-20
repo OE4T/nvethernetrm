@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -696,7 +697,7 @@ fail:
  * @param[in, out] tx_pkt_cx: Pointer to transmit packet context structure
  * @param[in, out] tx_swcx: Pointer to transmit sw packet context structure
  * @param[in, out] tx_desc: Pointer to transmit descriptor to be filled.
- * @param[in] sync_mode: PTP sync mode to indetify.
+ * @param[in] ptp_sync_flag: PTP sync mode to identify.
  * @param[in] mac: HW MAC ver
  *
  * @note
@@ -806,6 +807,8 @@ static inline nveu32_t is_ptp_onestep_and_master_mode(nveu32_t ptp_flag)
  * @param[in, out] tx_pkt_cx: Pointer to transmit packet context structure
  * @param[in, out] tx_desc: Pointer to transmit descriptor to be filled.
  * @param[in] tx_swcx: Pointer to corresponding tx descriptor software context.
+ * @param[in] ptp_flag: osi statructure variable to identify current ptp
+ *			configuration
  */
 #ifndef OSI_STRIPPED_LIB
 static inline void fill_first_desc(struct osi_tx_ring *tx_ring,
@@ -1194,8 +1197,7 @@ fail:
  *    Tx ring base address in Tx DMA registers.
  *
  * @param[in, out] osi_dma:	OSI private data structure.
- * @param[in] chan:	Rx channel number.
- * @param[in] ops:	DMA channel operations.
+ * @param[in] dma_chan:	Rx channel number.
  *
  * @note
  * API Group:
@@ -1317,7 +1319,6 @@ fail:
  *    Tx ring base address in Tx DMA registers.
  *
  * @param[in, out] osi_dma: OSI private data structure.
- * @param[in] ops: DMA channel operations.
  *
  * @note
  * API Group:
@@ -1389,7 +1390,6 @@ static inline void set_tx_ring_len_and_start_addr(const struct osi_dma_priv_data
  *    Tx ring base address in Tx DMA registers.
  *
  * @param[in, out] osi_dma: OSI DMA private data structure.
- * @param[in] ops: DMA channel operations.
  *
  * @note
  * API Group:

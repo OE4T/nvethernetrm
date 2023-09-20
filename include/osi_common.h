@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -67,7 +68,7 @@
 /** @} */
 
 /**
- * @addtogroup Helper MACROS
+ * @addtogroup helper MACROS
  *
  * @brief EQOS generic helper MACROS.
  * @{

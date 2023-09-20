@@ -770,7 +770,7 @@ nveu32_t osi_get_refill_rx_desc_cnt(const struct osi_dma_priv_data *const osi_dm
 /**
  * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETCL_008
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_007
  *
  */
 #endif
@@ -820,7 +820,7 @@ nve32_t osi_rx_dma_desc_init(struct osi_dma_priv_data *osi_dma,
 /**
  * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETCL_009
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_011
  *
  */
 #endif
@@ -894,7 +894,7 @@ nve32_t osi_set_rx_buf_len(struct osi_dma_priv_data *osi_dma);
 /**
  * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETCL_010
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_015
  *
  */
 #endif
@@ -963,7 +963,8 @@ nve32_t osi_hw_transmit(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
 /**
  * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETCL_011
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_009
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_014
  *
  */
 #endif
@@ -1038,7 +1039,7 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 /**
  * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETCL_012
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_005
  *
  */
 #endif
@@ -1119,7 +1120,8 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 /**
  * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETCL_013
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_003
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_012
  *
  */
 #endif
@@ -1182,7 +1184,7 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma);
 /**
  * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETCL_014
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_010
  *
  */
 #endif
@@ -1292,7 +1294,7 @@ nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma);
 /**
  * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETCL_016
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_008
  *
  */
 #endif
@@ -1409,7 +1411,9 @@ nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma);
 #ifndef DOXYGEN_ICD
 /**
  * @note
- * Traceability Details: TBD
+ * Traceability Details: NET_SWUD_TAG_NVETHERNETCL_004
+ * Traceability Details: NET_SWUD_TAG_NVETHERNETCL_006
+ * Traceability Details: NET_SWUD_TAG_NVETHERNETCL_013
  *
  */
 #endif

@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -186,7 +187,6 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
  *    required values so that MAC DMA can understand and act accordingly.
  *
  * @param[in, out] osi_dma: OSI DMA private data structure.
- * @param[in] ops: DMA channel operations.
  *
  * @note
  * API Group:

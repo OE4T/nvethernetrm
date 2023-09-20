@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -192,6 +193,7 @@ static void mgbe_get_rx_csum(const struct osi_rx_desc *const rx_desc,
  *	3) If yes, set a bit and update nano seconds in rx_pkt_cx so that OSD
  *	layer can extract the time by checking this bit.
  *
+ * @param[in] osi_dma: OSI DMA private data structure.
  * @param[in] rx_desc: Rx descriptor
  * @param[in] context_desc: Rx context descriptor
  * @param[in] rx_pkt_cx: Rx packet context

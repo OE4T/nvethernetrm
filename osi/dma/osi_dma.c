@@ -1,5 +1,7 @@
-/*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -742,6 +744,7 @@ fail:
  * Algorithm: Validates DMA Rx descriptor init argments.
  *
  * @param[in] osi_dma: OSI DMA private data struture.
+ * @param[in] l_dma: Local OSI DMA data structure.
  * @param[in] rx_ring: HW ring corresponding to Rx DMA channel.
  * @param[in] chan: Rx DMA channel number
  *
@@ -1024,6 +1027,7 @@ nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma)
  *  - Validate osi_dma structure pointers.
  *
  * @param[in] osi_dma: OSI DMA private data structure.
+ * @param[in] l_dma: Local OSI DMA data structure.
  * @param[in] set: Flag to set with OSI_ENABLE and reset with OSI_DISABLE
  *
  * @pre MAC should be init and started. see osi_start_mac()
