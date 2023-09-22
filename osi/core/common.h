@@ -54,12 +54,23 @@
 #define MGBE_TXQ_SIZE		131072U
 /* Rx Queue size is 192KB */
 #define MGBE_RXQ_SIZE		196608U
-/* MAX PBL value */
-#define MGBE_DMA_CHX_MAX_PBL		256U
-#define MGBE_DMA_CHX_MAX_PBL_VAL	0x200000U
+/* uFPGA config Tx Queue size is 64KB */
+#define MGBE_TXQ_SIZE_UFPGA	65536U
+
+/* PBL values */
+#define MGBE_DMA_CHX_MAX_PBL	32U
+#define MGBE_DMA_CHX_PBL_16	16U
+#define MGBE_DMA_CHX_PBL_8	8U
+#define MGBE_DMA_CHX_PBL_4	4U
+#define MGBE_DMA_CHX_PBL_1	1U
 /* AXI Data width */
-#define MGBE_AXI_DATAWIDTH		128U
+#define MGBE_AXI_DATAWIDTH	128U
 /** @} */
+
+/**
+ * @brief MTL Q size depth helper macro
+ */
+#define Q_SZ_DEPTH(x)		(((x) * 1024U) / (MGBE_AXI_DATAWIDTH / 8U))
 
 /**
  * @brief osi_readl_poll_timeout - Periodically poll an address until
@@ -383,4 +394,46 @@ static inline nve32_t osi_memcmp(const void *dest, const void *src, nve32_t n)
 fail:
 	return ret;
 }
+
+/**
+ * @brief osi_valid_pbl_value - returns the allowed pbl value.
+ * @note
+ * Algorithm:
+ *  - Check the pbl range and return allowed pbl value
+ *
+ * @param[in] pbl: Calculated PBL value
+ *
+ * @note Input parameter should be only nveu32_t type
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ *
+ * @retval allowed pbl value
+ */
+static inline nveu32_t osi_valid_pbl_value(nveu32_t pbl_value)
+{
+	nveu32_t allowed_pbl;
+	nveu32_t pbl;
+
+	/* 8xPBL mode is set */
+	pbl = pbl_value / 8U;
+
+	if (pbl >= MGBE_DMA_CHX_MAX_PBL) {
+		allowed_pbl = MGBE_DMA_CHX_MAX_PBL;
+	} else if (pbl >= MGBE_DMA_CHX_PBL_16) {
+		allowed_pbl = MGBE_DMA_CHX_PBL_16;
+	} else if (pbl >= MGBE_DMA_CHX_PBL_8) {
+		allowed_pbl = MGBE_DMA_CHX_PBL_8;
+	} else if (pbl >= MGBE_DMA_CHX_PBL_4) {
+		allowed_pbl = MGBE_DMA_CHX_PBL_4;
+	} else {
+		allowed_pbl = MGBE_DMA_CHX_PBL_1;
+	}
+
+	return allowed_pbl;
+}
+
 #endif

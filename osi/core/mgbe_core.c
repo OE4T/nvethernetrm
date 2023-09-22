@@ -1659,15 +1659,16 @@ static nve32_t mgbe_configure_mtl_queue(struct osi_core_priv_data *osi_core,
 			FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U),
 			FIFO_SZ(2U), FIFO_SZ(16U)
 		},
-
 	};
 	const nveu32_t tx_fifo_sz[OSI_MGBE_MAX_NUM_QUEUES] = {
 		TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ,
 		TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ,
 	};
 	const nveu32_t ufpga_tx_fifo_sz[OSI_MGBE_MAX_NUM_QUEUES] = {
-		FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U),
-		FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U)
+		TX_FIFO_SZ_UFPGA, TX_FIFO_SZ_UFPGA, TX_FIFO_SZ_UFPGA,
+		TX_FIFO_SZ_UFPGA, TX_FIFO_SZ_UFPGA, TX_FIFO_SZ_UFPGA,
+		TX_FIFO_SZ_UFPGA, TX_FIFO_SZ_UFPGA, TX_FIFO_SZ_UFPGA,
+		TX_FIFO_SZ_UFPGA
 	};
 	const nveu32_t ufpga_rx_fifo_sz[OSI_MGBE_MAX_NUM_QUEUES] = {
 		FIFO_SZ(40U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U),
@@ -2461,16 +2462,32 @@ static nve32_t mgbe_configure_pdma(struct osi_core_priv_data *osi_core)
 {
 	nveu32_t value = 0;
 	nve32_t ret = 0;
-
+	nveu32_t pbl = 0;
 	nveu32_t i, j, pdma_chan, vdma_chan;
-	//TBD: check values for T264
 	const nveu32_t tx_orr = (MGBE_DMA_CHX_TX_CNTRL2_ORRQ_RECOMMENDED /
 				osi_core->num_of_pdma);
-	const nveu32_t tx_pbl = ((((MGBE_TXQ_SIZE / osi_core->num_of_pdma) -
-			osi_core->mtu) / (MGBE_AXI_DATAWIDTH / 8U)) - 5U);
 	const nveu32_t rx_owrq = (MGBE_DMA_CHX_RX_CNTRL2_OWRQ_MCHAN /
 				osi_core->num_of_pdma);
-	const nveu32_t rx_pbl = ((MGBE_RXQ_SIZE / osi_core->num_of_pdma) / 2U);
+	const nveu32_t tx_pbl =
+		((((MGBE_TXQ_SIZE / OSI_MGBE_MAX_NUM_QUEUES) -
+		   osi_core->mtu) / (MGBE_AXI_DATAWIDTH / 8U)) - 5U);
+	/* Total Rx Queue size is 256KB */
+	const nveu32_t rx_pbl[OSI_MGBE_MAX_NUM_QUEUES] = {
+		Q_SZ_DEPTH(224U) / 2U, Q_SZ_DEPTH(2U) / 2U, Q_SZ_DEPTH(2U) / 2U,
+		Q_SZ_DEPTH(2U) / 2U, Q_SZ_DEPTH(2U) / 2U, Q_SZ_DEPTH(2U) / 2U,
+		Q_SZ_DEPTH(2U) / 2U, Q_SZ_DEPTH(2U) / 2U, Q_SZ_DEPTH(2U) / 2U,
+		Q_SZ_DEPTH(16U) / 2U
+	};
+	const nveu32_t tx_pbl_ufpga =
+		((((MGBE_TXQ_SIZE_UFPGA / OSI_MGBE_MAX_NUM_QUEUES) -
+		   osi_core->mtu) / (MGBE_AXI_DATAWIDTH / 8U)) - 5U);
+	/* uFPGA Rx Queue size is 64KB */
+	const nveu32_t rx_pbl_ufpga[OSI_MGBE_MAX_NUM_QUEUES] = {
+		Q_SZ_DEPTH(40U)/2U, Q_SZ_DEPTH(2U)/2U, Q_SZ_DEPTH(2U)/2U,
+		Q_SZ_DEPTH(2U)/2U, Q_SZ_DEPTH(2U)/2U, Q_SZ_DEPTH(2U),
+		Q_SZ_DEPTH(2U)/2U, Q_SZ_DEPTH(2U)/2U, Q_SZ_DEPTH(2U)/2U,
+		Q_SZ_DEPTH(8U)/2U
+	};
 
 	for (i = 0 ; i < osi_core->num_of_pdma; i++) {
 		pdma_chan = osi_core->pdma_data[i].pdma_chan;
@@ -2482,16 +2499,16 @@ static nve32_t mgbe_configure_pdma(struct osi_core_priv_data *osi_core)
 		/*
 		 * Formula for TxPBL calculation is
 		 * (TxPBL) < ((TXQSize - MTU)/(DATAWIDTH/8)) - 5
-		 * if TxPBL exceeds the value of 256 then we need to make
-		 * use of 256 as the TxPBL else we should be using the
-		 * value whcih we get after calculation by using above formula
+		 * if TxPBL exceeds the value of 256 then we need to make use of 256
+		 * as the TxPBL else we should be using the value whcih we get after
+		 * calculation by using above formula
 		 */
-		if (tx_pbl>= MGBE_PDMA_CHX_EXTCFG_MAX_PBL) {
-			value |= MGBE_PDMA_CHX_EXTCFG_MAX_PBL_VAL;
+		if (osi_core->pre_sil == OSI_ENABLE) {
+			pbl = osi_valid_pbl_value(tx_pbl_ufpga);
+			value |= (pbl << MGBE_PDMA_CHX_EXTCFG_PBL_SHIFT);
 		} else {
-			value |= ((tx_pbl / 8U) <<
-				MGBE_PDMA_CHX_TXRX_EXTCFG_PBL_SHIFT) &
-				MGBE_PDMA_CHX_TXRX_EXTCFG_PBL_MASK;
+			pbl = osi_valid_pbl_value(tx_pbl);
+			value |= (pbl << MGBE_PDMA_CHX_EXTCFG_PBL_SHIFT);
 		}
 		ret = mgbe_dma_indir_addr_write(osi_core,
 				MGBE_PDMA_CHX_TX_EXTCFG, pdma_chan, value);
@@ -2500,19 +2517,20 @@ static nve32_t mgbe_configure_pdma(struct osi_core_priv_data *osi_core)
 				"MGBE_PDMA_CHX_TX_EXTCFG failed\n", 0ULL);
 			goto done;
 		}
-
 		/* Update PDMA_CH(#i)_RxExtCfg register */
 		value = (rx_owrq << MGBE_PDMA_CHX_TXRX_EXTCFG_ORRQ_SHIFT);
 		value |= (pdma_chan << MGBE_PDMA_CHX_TXRX_EXTCFG_P2TCMP_SHIFT) &
 					MGBE_PDMA_CHX_TXRX_EXTCFG_P2TCMP_MASK;
 		value |= MGBE_PDMA_CHX_TXRX_EXTCFG_PBLX8;
-		if (rx_pbl>= MGBE_PDMA_CHX_EXTCFG_MAX_PBL) {
-			value |= MGBE_PDMA_CHX_EXTCFG_MAX_PBL_VAL;
+
+		if (osi_core->pre_sil == OSI_ENABLE) {
+			pbl = osi_valid_pbl_value(rx_pbl_ufpga[i]);
+			value |= (pbl << MGBE_PDMA_CHX_EXTCFG_PBL_SHIFT);
 		} else {
-			value |= (((rx_pbl / 8U)) <<
-				MGBE_PDMA_CHX_TXRX_EXTCFG_PBL_SHIFT) &
-				MGBE_PDMA_CHX_TXRX_EXTCFG_PBL_MASK;
+			pbl = osi_valid_pbl_value(rx_pbl[i]);
+			value |= (pbl << MGBE_PDMA_CHX_EXTCFG_PBL_SHIFT);
 		}
+
 		value |= MGBE_PDMA_CHX_RX_EXTCFG_RXPEN;
 		ret = mgbe_dma_indir_addr_write(osi_core,
 				MGBE_PDMA_CHX_RX_EXTCFG, pdma_chan, value);
@@ -2526,12 +2544,16 @@ static nve32_t mgbe_configure_pdma(struct osi_core_priv_data *osi_core)
 		 * pre-fetch threshold */
 		for (j = 0 ; j < osi_core->pdma_data[i].num_vdma_chans; j++) {
 			vdma_chan = osi_core->pdma_data[i].vdma_chans[j];
-			//TBD: check descriptor size value is correct for T264
-			value = MGBE_XDMA_CHX_TXRX_DESC_CTRL_DCSZ &
-					MGBE_XDMA_CHX_TXRX_DESC_CTRL_DCSZ_MASK;
-			value |= (MGBE_XDMA_CHX_TXRX_DESC_CTRL_DPS <<
-				MGBE_XDMA_CHX_TXRX_DESC_CTRL_DPS_SHIFT) &
-				MGBE_XDMA_CHX_TXRX_DESC_CTRL_DPS_MASK;
+			if (osi_core->pre_sil == OSI_ENABLE) {
+				value = MGBE_VDMA_CHX_TXRX_DESC_CTRL_DCSZ_UFPGA &
+					MGBE_VDMA_CHX_TXRX_DESC_CTRL_DCSZ_MASK;
+			} else {
+				value = MGBE_VDMA_CHX_TXRX_DESC_CTRL_DCSZ &
+					MGBE_VDMA_CHX_TXRX_DESC_CTRL_DCSZ_MASK;
+			}
+			value |= (MGBE_VDMA_CHX_TXRX_DESC_CTRL_DPS <<
+				MGBE_VDMA_CHX_TXRX_DESC_CTRL_DPS_SHIFT) &
+				MGBE_VDMA_CHX_TXRX_DESC_CTRL_DPS_MASK;
 			ret = mgbe_dma_indir_addr_write(osi_core,
 				MGBE_VDMA_CHX_TX_DESC_CTRL, vdma_chan, value);
 			if (ret < 0) {

@@ -33,6 +33,44 @@
 #endif /* OSI_DEBUG */
 #include "hw_common.h"
 
+#if 1 // copied from osi/core/common.h
+
+/**
+ * @brief MTL Q size depth helper macro
+ */
+#define Q_SZ_DEPTH(x)		(((x) * 1024U) / (MGBE_AXI_DATAWIDTH / 8U))
+
+/* PBL values */
+//redefined #define MGBE_DMA_CHX_MAX_PBL	32U
+#define MGBE_DMA_CHX_PBL_16	16U
+#define MGBE_DMA_CHX_PBL_8	8U
+#define MGBE_DMA_CHX_PBL_4	4U
+#define MGBE_DMA_CHX_PBL_1	1U
+
+static inline nveu32_t osi_valid_pbl_value(nveu32_t pbl_value)
+{
+	nveu32_t allowed_pbl;
+	nveu32_t pbl;
+
+	/* 8xPBL mode is set */
+	pbl = pbl_value / 8U;
+
+	if (pbl >= MGBE_DMA_CHX_MAX_PBL) {
+		allowed_pbl = MGBE_DMA_CHX_MAX_PBL;
+	} else if (pbl >= MGBE_DMA_CHX_PBL_16) {
+		allowed_pbl = MGBE_DMA_CHX_PBL_16;
+	} else if (pbl >= MGBE_DMA_CHX_PBL_8) {
+		allowed_pbl = MGBE_DMA_CHX_PBL_8;
+	} else if (pbl >= MGBE_DMA_CHX_PBL_4) {
+		allowed_pbl = MGBE_DMA_CHX_PBL_4;
+	} else {
+		allowed_pbl = MGBE_DMA_CHX_PBL_1;
+	}
+
+	return allowed_pbl;
+}
+#endif
+
 /**
  * @brief g_dma - DMA local data array.
  */
@@ -500,6 +538,7 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 			     nveu32_t dma_chan)
 {
 	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
+	nveu32_t pbl = 0;
 	nveu32_t pdma_chan = 0xFFU;
 	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
 	nveu32_t riwt = osi_dma->rx_riwt & 0xFFFU;
@@ -534,7 +573,8 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 	};
 	const nveu32_t rx_pbl[2] = {
 		EQOS_DMA_CHX_RX_CTRL_RXPBL_RECOMMENDED,
-		((MGBE_RXQ_SIZE / osi_dma->num_dma_chans) / 2U)
+		((Q_SZ_DEPTH(MGBE_RXQ_SIZE/OSI_MGBE_MAX_NUM_QUEUES) /
+		osi_dma->num_dma_chans) / 2U)
 	};
 	const nveu32_t rwt_val[OSI_MAX_MAC_IP_TYPES] = {
 		(((riwt * (EQOS_AXI_CLK_FREQ / OSI_ONE_MEGA_HZ)) /
@@ -621,12 +661,8 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 		 * as the TxPBL else we should be using the value whcih we get after
 		 * calculation by using above formula
 		 */
-		if (tx_pbl[osi_dma->mac] >= MGBE_DMA_CHX_MAX_PBL) {
-			val |= MGBE_DMA_CHX_MAX_PBL_VAL;
-		} else {
-			val |= ((tx_pbl[osi_dma->mac] / 8U) <<
-				MGBE_DMA_CHX_CTRL_PBL_SHIFT);
-		}
+		pbl = osi_valid_pbl_value(tx_pbl[osi_dma->mac]);
+		val |= (pbl << MGBE_DMA_CHX_CTRL_PBL_SHIFT);
 	} else if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
 		/* Map Tx VDMA's to TC. TC and PDMA mapped 1 to 1 */
 		val &= ~MGBE_TX_VDMA_TC_MASK;
@@ -649,12 +685,8 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 	if (osi_dma->mac == OSI_MAC_HW_EQOS) {
 		val |= rx_pbl[osi_dma->mac];
 	} else if (osi_dma->mac == OSI_MAC_HW_MGBE){
-		if (rx_pbl[osi_dma->mac] >= MGBE_DMA_CHX_MAX_PBL) {
-			val |= MGBE_DMA_CHX_MAX_PBL_VAL;
-		} else {
-			val |= ((rx_pbl[osi_dma->mac] / 8U) <<
-				MGBE_DMA_CHX_CTRL_PBL_SHIFT);
-		}
+		pbl = osi_valid_pbl_value(rx_pbl[osi_dma->mac]);
+		val |= (pbl << MGBE_DMA_CHX_CTRL_PBL_SHIFT);
 	} else if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
 	/* Map Rx VDMA's to TC. TC and PDMA mapped 1 to 1 */
 		val &= ~MGBE_RX_VDMA_TC_MASK;
