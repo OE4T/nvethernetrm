@@ -497,7 +497,7 @@ void hw_config_tscr(struct osi_core_priv_data *const osi_core, OSI_UNUSED const 
 	const nveu32_t mac_pps[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_MAC_PPS_CTL,
 		MGBE_MAC_PPS_CTL,
-		MGBE_MAC_TCR
+		MGBE_MAC_PPS_CTL
 	};
 
 	(void)ptp_filter; // unused
@@ -1320,7 +1320,7 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
 		    MAC_RQC1R[osi_core->mac & 0x1U]);
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 				MGBE_MAC_RQC4R);
 		val &= ~MGBE_MAC_RQC4R_PMCBCQ;
@@ -1698,7 +1698,7 @@ void hw_tsn_init(struct osi_core_priv_data *osi_core)
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
 			MAC_RQC1R[osi_core->mac & 0x1U]);
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 				 MGBE_MAC_RQC4R);
 		val &= ~MGBE_MAC_RQC4R_PMCBCQ;

@@ -85,6 +85,16 @@
 #define MGBE_MAC_RQC1R_PTPQ_SHIFT		24U
 #define MGBE_MAC_RQC1R_PTPQ			(OSI_BIT(27) | OSI_BIT(26) | \
 						 OSI_BIT(25) | OSI_BIT(24))
+#define MGBE_PKTID_MASK				(OSI_BIT(9) | OSI_BIT(8) | \
+						 OSI_BIT(7) | OSI_BIT(6) | \
+						 OSI_BIT(5) | OSI_BIT(4) | \
+						 OSI_BIT(3) | OSI_BIT(2) | \
+						 OSI_BIT(1) | OSI_BIT(0))
+/* T264 VDMA ID bits */
+#define MGBE_VDMAID_MASK			(OSI_BIT(23) | OSI_BIT(22) | \
+						 OSI_BIT(21) | OSI_BIT(20) | \
+						 OSI_BIT(19) | OSI_BIT(18) | \
+						 OSI_BIT(17) | OSI_BIT(16))
 #define MGBE_MAC_RMCR_LM			OSI_BIT(10)
 #define MGBE_MAC_RMCR_ARPEN			OSI_BIT(31)
 #define MGBE_MAC_QX_TX_FLW_CTRL_TFE		OSI_BIT(1)
@@ -156,6 +166,17 @@
 #define MGBE_MAC_FPE_CTS_SVER			OSI_BIT(1)
 
 #endif /* !OSI_STRIPPED_LIB */
+
+#define MGBE_PKTID_MASK				(OSI_BIT(9) | OSI_BIT(8) | \
+						 OSI_BIT(7) | OSI_BIT(6) | \
+						 OSI_BIT(5) | OSI_BIT(4) | \
+						 OSI_BIT(3) | OSI_BIT(2) | \
+						 OSI_BIT(1) | OSI_BIT(0))
+/* T264 VDMA ID bits */
+#define MGBE_VDMAID_MASK			(OSI_BIT(23) | OSI_BIT(22) | \
+						 OSI_BIT(21) | OSI_BIT(20) | \
+						 OSI_BIT(19) | OSI_BIT(18) | \
+						 OSI_BIT(17) | OSI_BIT(16))
 
 #define MGBE_MAC_PFR_DHLFRS			OSI_BIT(12)
 #define MGBE_MAC_PFR_DHLFRS_MASK		(OSI_BIT(12) | OSI_BIT(11))

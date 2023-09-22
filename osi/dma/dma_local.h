@@ -146,10 +146,13 @@ static inline void osi_dma_writel(nveu32_t val, void *addr)
  */
 #define CHAN_START_POSITION 6U
 #define PKT_ID_CNT	((nveu32_t)1 << CHAN_START_POSITION)
+#define PKT_ID_CNT_T264 ((nveu32_t)1 << 10)
 /* First 6 bytes of idx and last 4 bytes of chan(+1 to avoid pkt_id to be 0) */
 #define INC_TX_TS_PKTID(idx) ((idx) = (((idx) & 0x7FFFFFFFU) + 1U))
 #define GET_TX_TS_PKTID(idx, c) (((idx) & (PKT_ID_CNT - 1U)) | \
 				 (((c) + 1U) << CHAN_START_POSITION))
+/* T264 has saperate logic to tell vdma number so we can use all 10 bits for pktid */
+#define GET_TX_TS_PKTID_T264(idx) ((++(idx)) & (PKT_ID_CNT_T264 - 1U))
 /** @} */
 
 /**
@@ -221,8 +224,11 @@ struct dma_local {
 	 * PacketID for PTP TS.
 	 * MSB 4-bits of channel number and LSB 6-bits of local
 	 * index(PKT_ID_CNT).
+	 * In T264, it is 9 bits PKTID
 	 */
 	nveu32_t pkt_id;
+	/** VDMA number for T264 */
+	nveu32_t vdma_id;
 	/** Flag to represent OSI DMA software init done */
 	nveu32_t init_done;
 	/** Holds the MAC version of MAC controller */

@@ -1463,6 +1463,8 @@ struct osi_core_tx_ts {
 	/** Packet ID for corresponding timestamp
 	 * valid values are from 1 to 0x3FF*/
 	nveu32_t pkt_id;
+	/** vdma ID for corresponding timestamp */
+	nveu32_t vdma_id;
 	/** Time in seconds*/
 	nveu32_t sec;
 	/** Time in nano seconds */

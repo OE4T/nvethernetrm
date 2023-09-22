@@ -673,7 +673,7 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 		processed = process_last_desc(osi_dma, tx_desc, txdone_pkt_cx, processed);
 #endif
 
-		if (osi_dma->mac != OSI_MAC_HW_MGBE) {
+		if (osi_dma->mac == OSI_MAC_HW_EQOS) {
 			update_tx_done_ts(tx_desc, txdone_pkt_cx);
 		} else if (((tx_swcx->flags & OSI_PKT_CX_PTP) == OSI_PKT_CX_PTP) &&
 			   // if not master in onestep mode
@@ -682,6 +682,9 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 			    OSI_ENABLE) &&
 			   ((tx_desc->tdes3 & TDES3_CTXT) == 0U)) {
 			txdone_pkt_cx->pktid = tx_swcx->pktid;
+			if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
+				txdone_pkt_cx->vdmaid = tx_swcx->vdmaid;
+			}
 			txdone_pkt_cx->flags |= OSI_TXDONE_CX_TS_DELAYED;
 		} else {
 			/* Do nothing here */
@@ -1133,6 +1136,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	};
 	nve32_t cntx_desc_consumed;
 	nveu32_t pkt_id = 0x0U;
+	nveu32_t vdma_id = 0x0U;
 	nveu32_t desc_cnt = 0U;
 	nveu64_t tailptr;
 	nveu32_t entry = 0U;
@@ -1180,12 +1184,21 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 			    OSI_PTP_SYNC_ONESTEP) {
 				/* packet ID for Onestep is 0x0 always */
 				pkt_id = OSI_NONE;
+				if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
+					vdma_id = chan; //TODO: Need to update based on update of bug 4287805
+					tx_desc->tdes0 = (vdma_id << OSI_PTP_VDMA_SHIFT);
+				}
 			} else {
-				INC_TX_TS_PKTID(l_dma->pkt_id);
-				pkt_id = GET_TX_TS_PKTID(l_dma->pkt_id, chan);
+				if (osi_dma->mac != OSI_MAC_HW_MGBE_T26X) {
+					pkt_id = GET_TX_TS_PKTID(l_dma->pkt_id, chan);
+				} else {
+					pkt_id = GET_TX_TS_PKTID_T264(l_dma->pkt_id);
+					vdma_id = chan;
+					tx_desc->tdes0 = (vdma_id << OSI_PTP_VDMA_SHIFT);
+				}
 			}
 			/* update packet id */
-			tx_desc->tdes0 = pkt_id;
+			tx_desc->tdes0 |= pkt_id;
 		}
 		INCR_TX_DESC_INDEX(entry, osi_dma->tx_ring_sz);
 

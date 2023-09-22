@@ -1747,11 +1747,20 @@ static inline void free_tx_ts(struct osi_core_priv_data *osi_core,
 	nveu32_t count = 0U;
 
 	while ((temp != head) && (count < MAX_TX_TS_CNT)) {
-		if (((temp->pkt_id >> CHAN_START_POSITION) & chan) == chan) {
-			temp->next->prev = temp->prev;
-			temp->prev->next = temp->next;
-			/* reset in_use for temp node from the link */
-			temp->in_use = OSI_DISABLE;
+		if (osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
+			if (((temp->pkt_id >> CHAN_START_POSITION) & chan) == chan) {
+				temp->next->prev = temp->prev;
+				temp->prev->next = temp->next;
+				/* reset in_use for temp node from the link */
+				temp->in_use = OSI_DISABLE;
+			}
+		} else {
+			if (temp->vdma_id == chan) {
+				temp->next->prev = temp->prev;
+				temp->prev->next = temp->next;
+				/* reset in_use for temp node from the link */
+				temp->in_use = OSI_DISABLE;
+			}
 		}
 		count++;
 		temp = temp->next;
@@ -1841,6 +1850,7 @@ static inline nve32_t get_tx_ts(struct osi_core_priv_data *osi_core,
 			temp = temp->next;
 			continue;
 		} else if ((temp->pkt_id == ts->pkt_id) &&
+			   (temp->vdma_id == ts->vdma_id) &&
 			   (temp->in_use != OSI_NONE)) {
 			ts->sec = temp->sec;
 			ts->nsec = temp->nsec;

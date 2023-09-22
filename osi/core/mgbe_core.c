@@ -2947,6 +2947,7 @@ static void mgbe_handle_mac_intrs(struct osi_core_priv_data *osi_core)
 	nveu32_t mac_isr = 0;
 	nveu32_t tx_errors = 0;
 	nveu8_t *base = (nveu8_t *)osi_core->base;
+	nveu32_t pktid = 0U;
 #ifdef HSI_SUPPORT
 	nveu64_t tx_frame_err = 0;
 #endif
@@ -3047,7 +3048,11 @@ static void mgbe_handle_mac_intrs(struct osi_core_priv_data *osi_core)
 			l_core->ts[i].nsec = osi_readla(osi_core, base + MGBE_MAC_TSNSSEC);
 
 			l_core->ts[i].in_use = OSI_ENABLE;
-			l_core->ts[i].pkt_id = osi_readla(osi_core, base + MGBE_MAC_TSPKID);
+			pktid = osi_readla(osi_core, base + MGBE_MAC_TSPKID);
+			l_core->ts[i].pkt_id = (pktid & MGBE_PKTID_MASK);
+			if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+				l_core->ts[i].vdma_id = (pktid & MGBE_VDMAID_MASK);
+			}
 			l_core->ts[i].sec = osi_readla(osi_core, base + MGBE_MAC_TSSEC);
 			/* Add time stamp to end of list */
 			l_core->ts[i].next = head->prev->next;

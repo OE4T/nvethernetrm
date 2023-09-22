@@ -141,6 +141,9 @@
 #define OSI_PKT_CX_IP_CSUM		OSI_BIT(12)
 /** @} */
 
+/** VDMA ID in TDESC0 **/
+#define OSI_PTP_VDMA_SHIFT		10U
+
 #ifndef OSI_STRIPPED_LIB
 /**
  * @addtogroup SLOT function context fields
@@ -452,6 +455,8 @@ struct osi_tx_swcx {
 	 * Max value is NVETHERNETCL_PIF$UINT_MAX
 	 */
 	nveu32_t pktid;
+	/** VDMA id of packet for which TX packet sent for timestamp needed */
+	nveu32_t vdmaid;
 	/** dma channel number for osd use.
 	 *  Max value is NVETHERNETCL_PIF$OSI_EQOS_MAX_NUM_CHANS or
 	 *  NVETHERNETCL_PIF$OSI_MGBE_MAX_NUM_CHANS
@@ -539,6 +544,8 @@ struct osi_txdone_pkt_cx {
 	 *  Max value is NVETHERNETCL_PIF$UINT_MAX
 	 */
 	nveu32_t pktid;
+	/** Passing vdma id to map TX time to packet */
+	nveu32_t vdmaid;
 };
 
 /**
