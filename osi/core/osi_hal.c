@@ -792,7 +792,7 @@ fail:
  * - Return -1 on failure.
  *
  * @param[in] l_core: OSI local core data structure.
- * @param[in] l3_l4: Pointer to l3 l4 filter structure (#osi_l3_l4_filter)
+ * @param[in] l3_l4: Pointer to l3 l4 filter structure (osi_l3_l4_filter)
  * @param[out] filter_no: pointer to filter index
  * @param[out] free_filter_no: pointer to free filter index
  * @param[in] max_filter_no: maximum allowed filter number
@@ -859,7 +859,7 @@ static nve32_t l3l4_find_match(const struct core_local *const l_core,
  * - Return 0 on success.
  *
  * @param[in] osi_core: OSI core private data structure.
- * @param[in] l3_l4: Pointer to l3 l4 filter structure (#osi_l3_l4_filter)
+ * @param[in] l3_l4: Pointer to l3 l4 filter structure (osi_l3_l4_filter)
  *
  * @pre
  *  - MAC should be initialized and started. see osi_start_mac()
@@ -943,7 +943,7 @@ exit_func:
  *
  * @param[in] osi_core: OSI core private data structure.
  * @param[in] filter_no: pointer to filter number
- * @param[in] l3_l4: Pointer to l3 l4 filter structure (#osi_l3_l4_filter)
+ * @param[in] l3_l4: Pointer to l3 l4 filter structure (osi_l3_l4_filter)
  *
  * @pre
  *  - MAC should be initialized and started. see osi_start_mac()
@@ -1086,7 +1086,7 @@ static void l3l4_add_wildcard_filter(struct osi_core_priv_data *const osi_core,
  *  - Return 0 on success.
  *
  * @param[in] osi_core: OSI Core private data structure.
- * @param[in] l3_l4: Pointer to l3 l4 filter structure (#osi_l3_l4_filter)
+ * @param[in] l3_l4: Pointer to l3 l4 filter structure (osi_l3_l4_filter)
  *
  * @pre
  *  - MAC should be initialized and started. see osi_start_mac()

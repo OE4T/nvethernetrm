@@ -4302,7 +4302,7 @@ exit:
  *  - TraceID: ***********
  *
  * @param[in] osi_core: OSI core private data structure. used param macsec_base
- * @param[in] macsec_vf_mac: Poiner to VF MACID
+ * @param[in] macsec_vf_mac: Pointer to VF MACID
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
@@ -4619,6 +4619,7 @@ static void macsec_intr_config(struct osi_core_priv_data *const osi_core, nveu32
  *
  * @param[in] osi_core: OSI core private data structure. used param macsec_base
  * @param[in] mtu: mtu to be programmed
+ * @param[in] macsec_vf_mac: Pointer to the VF MACID on which MACSEC is enabled
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
@@ -5389,9 +5390,11 @@ exit:
  *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
  *  - TraceID: ***********
  *
+ * @param[in] osi_core: OSI core private data structure. used param macsec_base
  * @param[in] enable: parameter to enable/disable
  * @param[in] ctlr: Parameter to indicate the controller
  * @param[in] kt_idx: Pointer to kt_index
+ * @param[in] sc: Pointer to the sc that need to be added
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
@@ -5909,6 +5912,7 @@ exit:
  *
  * @param[in] osi_core: OSI core private data structure.
  * @param[in] mtu: mtu to be programmed
+ * @param[in] macsec_vf_mac: Pointer to VF MACID
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *

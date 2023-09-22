@@ -1726,7 +1726,7 @@ static void eqos_handle_hsi_intr(struct osi_core_priv_data *const osi_core)
  *  - Reads DMA ISR register
  *   - Returns if calue is 0.
  *   - Handle Non-TI/RI interrupts for all MTL queues and
- *     increments #osi_core_priv_data->stats
+ *     increments osi_core_priv_data->stats
  *     based on error detected per cahnnel.
  *  - Calls eqos_handle_mac_intrs() to handle MAC interrupts.
  *  - Refer to EQOS column of <<RM_10, (sequence diagram)>> for API details.
@@ -1878,9 +1878,10 @@ static void eqos_config_mac_tx(struct osi_core_priv_data *const osi_core,
  *
  * @param[in] osi_core: OSI core private data structure. Used param base.
  * @param[out] value: nveu32_t pointer which has value read from register.
- * @param[in] idx: Refer #osi_filter->index for details.
- * @param[in] dma_chan: Refer #osi_filter->dma_chan for details.
- * @param[in] addr_mask: Refer #osi_filter->addr_mask for details.
+ * @param[in] idx: Refer osi_filter->index for details.
+ * @param[in] dma_chan: Refer osi_filter->dma_chan for details.
+ * @param[in] dma_chansel: Refer osi_filter->dma_chansel for details.
+ * @param[in] addr_mask: Refer osi_filter->addr_mask for details.
  * @param[in] src_dest: source/destination MAC address.
  *
  * @pre
@@ -2022,7 +2023,7 @@ static void eqos_l2_filter_delete(struct osi_core_priv_data *osi_core,
  *
  * @note
  * Algorithm:
- *  - This routine validates index and addr of #osi_filter.
+ *  - This routine validates index and addr of osi_filter.
  *  - calls eqos_update_mac_addr_helper() to update DCS and MBS.
  *  dsc_en status performed before updating DCS bits.
  *  - Update MAC address to L2 filter register.
@@ -2227,7 +2228,7 @@ static nve32_t eqos_config_ptp_offload(struct osi_core_priv_data *const osi_core
  *
  * @param[in] osi_core: OSI core private data structure.
  * @param[in] filter_no_r: filter index
- * @param[in] l3_l4: Pointer to l3 l4 filter structure (#osi_l3_l4_filter)
+ * @param[in] l3_l4: Pointer to l3 l4 filter structure (osi_l3_l4_filter)
  *
  * @note 1) MAC should be init and started. see osi_start_mac()
  *	 2) osi_core->osd should be populated

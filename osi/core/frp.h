@@ -59,6 +59,7 @@
  * Algorithm: Parse give FRP command and update it on OSI data and HW.
  *
  * @param[in] osi_core: OSI core private data structure.
+ * @param[in] ops_p: Core operations data structure.
  * @param[in] cmd: OSI FRP command structure.
  *
  * @retval 0 on success.
@@ -74,6 +75,7 @@ nve32_t setup_frp(struct osi_core_priv_data *const osi_core,
  * Algorithm: Update FRP table into HW.
  *
  * @param[in] osi_core: OSI core private data structure.
+ * @param[in] ops_p: Core operations data structure.
  *
  * @retval 0 on success.
  * @retval -1 on failure.

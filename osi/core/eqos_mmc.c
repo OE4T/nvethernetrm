@@ -105,7 +105,7 @@ void eqos_reset_mmc(struct osi_core_priv_data *const osi_core)
  *
  * @note
  * Algorithm:
- *  - Read corresponding register value of #osi_core_priv_data->mmc(#osi_mmc_counters)
+ *  - Read corresponding register value of osi_core_priv_data->mmc(osi_mmc_counters)
  *    member and increment its value.
  *  - If any counter overflows, reset all Sw counters and reset HW counter register.
  *

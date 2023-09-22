@@ -529,6 +529,7 @@ static nve32_t ivc_macsec_deinit(struct osi_core_priv_data *const osi_core)
  *
  * @param[in] osi_core: OSI Core private data structure.
  * @param[in] mtu: mtu to be set.
+ * @param[in] mac_addr: device mac address.
  *
  * @retval 0 on Success
  * @retval -1 on Failure

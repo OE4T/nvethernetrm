@@ -1661,7 +1661,7 @@ void hsi_read_err(struct osi_core_priv_data *const osi_core)
  * - This sequence is used to prepare L3L4 control register for SA and DA Port Number matching.
  *
  * @param[in] osi_core: OSI core private data structure.
- * @param[in] l3_l4: Pointer to l3 l4 filter structure (#osi_l3_l4_filter)
+ * @param[in] l3_l4: Pointer to l3 l4 filter structure (osi_l3_l4_filter)
  * @param[out] ctr_reg: Pointer to L3L4 CTR register value
  *
  * @note 1) MAC should be init and started. see osi_start_mac()
@@ -1727,7 +1727,7 @@ static void prepare_l3l4_ctr_reg(const struct osi_core_priv_data *const osi_core
  *  - For IPv4, both source/destination address can be configured but
  *    for IPv6, only one of the source/destination address can be configured.
  *
- * @param[in] l3_l4: Pointer to l3 l4 filter structure (#osi_l3_l4_filter)
+ * @param[in] l3_l4: Pointer to l3 l4 filter structure (osi_l3_l4_filter)
  * @param[out] l3_addr1_reg: Pointer to L3 ADDR1 register value
  *
  * @note 1) MAC should be init and started. see osi_start_mac()
@@ -1799,7 +1799,7 @@ static void prepare_l3_addr_registers(const struct osi_l3_l4_filter *const l3_l4
  * Algorithm:
  *  - Program l4 address register with source and destination port numbers.
  *
- * @param[in] l3_l4: Pointer to l3 l4 filter structure (#osi_l3_l4_filter)
+ * @param[in] l3_l4: Pointer to l3 l4 filter structure (osi_l3_l4_filter)
  * @param[out] l4_addr_reg: Pointer to L3 ADDR0 register value
  *
  * @note 1) MAC should be init and started. see osi_start_mac()
@@ -1833,7 +1833,7 @@ static void prepare_l4_port_register(const struct osi_l3_l4_filter *const l3_l4,
  *        - Prepare l3l4 control register using prepare_l3l4_ctr_reg().
  *
  * @param[in] osi_core: OSI core private data structure.
- * @param[in] l3_l4: Pointer to l3 l4 filter structure (#osi_l3_l4_filter)
+ * @param[in] l3_l4: Pointer to l3 l4 filter structure (osi_l3_l4_filter)
  * @param[out] l3_addr1_reg: Pointer to L3 ADDR1 register value
  * @param[out] ctr_reg: Pointer to L3L4 CTR register value
  *

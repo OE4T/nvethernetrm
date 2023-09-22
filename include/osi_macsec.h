@@ -444,6 +444,7 @@ nve32_t osi_init_macsec_ops(struct osi_core_priv_data *const osi_core);
  *
  * @param[in] osi_core: OSI core private data structure.
  * @param[in] mtu: mtu to be programmed
+ * @param[in] macsec_vf_mac: Pointer to VF MACID
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *

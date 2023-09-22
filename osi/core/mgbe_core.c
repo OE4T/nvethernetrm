@@ -504,7 +504,7 @@ static nve32_t mgbe_l3l4_filter_write(struct osi_core_priv_data *osi_core,
  *
  * @param[in] osi_core: OSI core private data structure.
  * @param[in] filter_no_r: filter index
- * @param[in] l3_l4: Pointer to l3 l4 filter structure (#osi_l3_l4_filter)
+ * @param[in] l3_l4: Pointer to l3 l4 filter structure (osi_l3_l4_filter)
  *
  * @note 1) MAC should be init and started. see osi_start_mac()
  *	 2) osi_core->osd should be populated
