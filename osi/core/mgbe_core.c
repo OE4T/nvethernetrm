@@ -3113,7 +3113,7 @@ static nve32_t mgbe_pad_calibrate(OSI_UNUSED
 	return 0;
 }
 
-#if defined(MACSEC_SUPPORT) && !defined(OSI_STRIPPED_LIB)
+#if defined(MACSEC_SUPPORT)
 /**
  * @brief mgbe_config_mac_tx - Enable/Disable MAC Tx
  *
@@ -3894,7 +3894,7 @@ static void mgbe_set_mdc_clk_rate(OSI_UNUSED
 }
 #endif /* !OSI_STRIPPED_LIB */
 
-#if defined(MACSEC_SUPPORT) && !defined(OSI_STRIPPED_LIB)
+#if defined(MACSEC_SUPPORT)
 /**
  * @brief mgbe_config_for_macsec - Configure MAC according to macsec IAS
  *
@@ -4017,9 +4017,7 @@ void mgbe_init_core_ops(struct core_ops *ops)
 #ifdef MACSEC_SUPPORT
 	ops->read_macsec_reg = mgbe_read_macsec_reg;
 	ops->write_macsec_reg = mgbe_write_macsec_reg;
-#ifndef OSI_STRIPPED_LIB
 	ops->macsec_config_mac = mgbe_config_for_macsec;
-#endif /* !OSI_STRIPPED_LIB */
 #endif /*  MACSEC_SUPPORT */
 	ops->config_l3l4_filters = mgbe_config_l3l4_filters;
 #ifndef OSI_STRIPPED_LIB

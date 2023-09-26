@@ -159,10 +159,8 @@ struct core_ops {
 	nveu32_t (*write_macsec_reg)(struct osi_core_priv_data *const osi_core,
 				     const nveu32_t val,
 				     const nve32_t reg);
-#ifndef OSI_STRIPPED_LIB
 	void (*macsec_config_mac)(struct osi_core_priv_data *const osi_core,
 				  const nveu32_t enable);
-#endif /* !OSI_STRIPPED_LIB */
 #endif /*  MACSEC_SUPPORT */
 #ifndef OSI_STRIPPED_LIB
 	/** Called to configure the MTL to forward/drop tx status */

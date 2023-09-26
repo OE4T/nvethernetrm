@@ -4207,9 +4207,7 @@ static nve32_t macsec_deinit(struct osi_core_priv_data *const osi_core)
 {
 	nveu32_t i;
 	nve32_t ret = 0;
-#if defined(MACSEC_SUPPORT) && !defined(OSI_STRIPPED_LIB)
 	const struct core_local *l_core = (void *)osi_core;
-#endif
 
 	ret = macsec_enable(osi_core, OSI_DISABLE);
 	if (ret < 0) {
@@ -4222,7 +4220,6 @@ static nve32_t macsec_deinit(struct osi_core_priv_data *const osi_core)
 			   sizeof(struct osi_macsec_lut_status));
 	}
 
-#if defined(MACSEC_SUPPORT) && !defined(OSI_STRIPPED_LIB)
 	/* Update MAC as per macsec requirement */
 	if (l_core->ops_p->macsec_config_mac != OSI_NULL) {
 		l_core->ops_p->macsec_config_mac(osi_core, OSI_DISABLE);
@@ -4230,7 +4227,6 @@ static nve32_t macsec_deinit(struct osi_core_priv_data *const osi_core)
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "Failed config MAC per macsec\n", 0ULL);
 	}
-#endif
 	osi_core->macsec_initialized = OSI_DISABLE;
 
 exit:
@@ -4636,13 +4632,10 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 				 nveu8_t *const macsec_vf_mac)
 {
 	nveu32_t val = 0;
-#if defined(MACSEC_SUPPORT) && !defined(OSI_STRIPPED_LIB)
 	const struct core_local *l_core = (void *)osi_core;
-#endif
 	nveu8_t *addr = (nveu8_t *)osi_core->macsec_base;
 	nve32_t ret = 0;
 
-#if defined(MACSEC_SUPPORT) && !defined(OSI_STRIPPED_LIB)
 	/* Update MAC value as per macsec requirement */
 	if (l_core->ops_p->macsec_config_mac != OSI_NULL) {
 		l_core->ops_p->macsec_config_mac(osi_core, OSI_ENABLE);
@@ -4650,7 +4643,6 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "Failed to config mac per macsec\n", 0ULL);
 	}
-#endif
 	/* Set MTU */
 	ret = macsec_update_mtu(osi_core, mtu);
 	if (ret < 0) {
@@ -5885,6 +5877,11 @@ nve32_t osi_init_macsec_ops(struct osi_core_priv_data *const osi_core)
 #endif
 	};
 
+	if (osi_core == OSI_NULL) {
+		ret = -1;
+		goto exit;
+	}
+
 	if (osi_core->use_virtualization == OSI_ENABLE) {
 		osi_core->macsec_ops = &virt_macsec_ops;
 		ivc_init_macsec_ops(osi_core->macsec_ops);
@@ -5931,7 +5928,8 @@ nve32_t osi_macsec_init(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = -1;
 
 	if ((osi_core != OSI_NULL) && (osi_core->macsec_ops != OSI_NULL) &&
-	    (osi_core->macsec_ops->init != OSI_NULL)) {
+	    (osi_core->macsec_ops->init != OSI_NULL) &&
+	    (macsec_vf_mac != OSI_NULL)) {
 		ret = osi_core->macsec_ops->init(osi_core, mtu, macsec_vf_mac);
 	}
 
@@ -6030,7 +6028,8 @@ nve32_t osi_macsec_config_lut(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = -1;
 
 	if ((osi_core != OSI_NULL) && (osi_core->macsec_ops != OSI_NULL) &&
-	    (osi_core->macsec_ops->lut_config != OSI_NULL)) {
+	    (osi_core->macsec_ops->lut_config != OSI_NULL) &&
+	    (lut_config != OSI_NULL)) {
 		ret = osi_core->macsec_ops->lut_config(osi_core, lut_config);
 	}
 
@@ -6070,46 +6069,10 @@ nve32_t osi_macsec_get_sc_lut_key_index(struct osi_core_priv_data *const osi_cor
 	nve32_t ret = -1;
 
 	if ((osi_core != OSI_NULL) && (osi_core->macsec_ops != OSI_NULL) &&
-	    (osi_core->macsec_ops->get_sc_lut_key_index != OSI_NULL)) {
+	    (osi_core->macsec_ops->get_sc_lut_key_index != OSI_NULL) &&
+	    (sci != OSI_NULL) && (key_index != OSI_NULL)) {
 		ret = osi_core->macsec_ops->get_sc_lut_key_index(osi_core, sci, key_index,
 								  ctlr);
-	}
-
-	return ret;
-}
-
-/**
- * @brief osi_macsec_update_mtu - Update the macsec mtu in run-time
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Updates the macsec mtu
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] mtu: mtu that needs to be programmed
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_update_mtu(struct osi_core_priv_data *const osi_core,
-			      nveu32_t mtu)
-{
-	nve32_t ret = -1;
-
-	if ((osi_core != OSI_NULL) && (osi_core->macsec_ops != OSI_NULL) &&
-	    (osi_core->macsec_ops->update_mtu != OSI_NULL)) {
-		ret = osi_core->macsec_ops->update_mtu(osi_core, mtu);
 	}
 
 	return ret;
@@ -6347,7 +6310,8 @@ nve32_t osi_macsec_config_dbg_buf(
 	nve32_t ret = -1;
 
 	if ((osi_core != OSI_NULL) && (osi_core->macsec_ops != OSI_NULL) &&
-	    (osi_core->macsec_ops->dbg_buf_config != OSI_NULL)) {
+	    (osi_core->macsec_ops->dbg_buf_config != OSI_NULL) &&
+	    (dbg_buf_config != OSI_NULL)) {
 		ret = osi_core->macsec_ops->dbg_buf_config(osi_core,
 							dbg_buf_config);
 	}
@@ -6386,7 +6350,8 @@ nve32_t osi_macsec_dbg_events_config(
 	nve32_t ret = -1;
 
 	if ((osi_core != OSI_NULL) && (osi_core->macsec_ops != OSI_NULL) &&
-	    (osi_core->macsec_ops->dbg_events_config != OSI_NULL)) {
+	    (osi_core->macsec_ops->dbg_events_config != OSI_NULL) &&
+	    (dbg_buf_config != OSI_NULL)) {
 		ret = osi_core->macsec_ops->dbg_events_config(osi_core,
 							dbg_buf_config);
 	}

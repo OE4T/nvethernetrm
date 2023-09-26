@@ -767,32 +767,5 @@ nve32_t osi_macsec_get_sc_lut_key_index(
 		struct osi_core_priv_data *const osi_core,
 		nveu8_t *sci, nveu32_t *key_index, nveu16_t ctlr);
 
-/**
- * @brief osi_macsec_update_mtu - Update the macsec mtu in run-time
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Updates the macsec mtu
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] mtu: mtu that needs to be programmed
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_update_mtu(struct osi_core_priv_data *const osi_core,
-			      nveu32_t mtu);
-
 #endif /* MACSEC_SUPPORT */
 #endif /* INCLUDED_OSI_MACSEC_H */
