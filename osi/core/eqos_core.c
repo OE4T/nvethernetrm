@@ -1823,7 +1823,7 @@ static void eqos_handle_common_intr(struct osi_core_priv_data *const osi_core)
 	}
 }
 
-#if defined(MACSEC_SUPPORT) && !defined(OSI_STRIPPED_LIB)
+#if defined(MACSEC_SUPPORT)
 /**
  * @brief eqos_config_mac_tx - Enable/Disable MAC Tx
  *
@@ -4009,7 +4009,7 @@ static nve32_t eqos_config_rss(struct osi_core_priv_data *osi_core)
 }
 #endif /* !OSI_STRIPPED_LIB */
 
-#if defined(MACSEC_SUPPORT) && !defined(OSI_STRIPPED_LIB)
+#if defined(MACSEC_SUPPORT)
 /**
  * @brief eqos_config_for_macsec - Configure MAC according to macsec IAS
  *
@@ -4136,9 +4136,7 @@ void eqos_init_core_ops(struct core_ops *ops)
 #ifdef MACSEC_SUPPORT
 	ops->read_macsec_reg = eqos_read_macsec_reg;
 	ops->write_macsec_reg = eqos_write_macsec_reg;
-#ifndef OSI_STRIPPED_LIB
 	ops->macsec_config_mac = eqos_config_for_macsec;
-#endif /* !OSI_STRIPPED_LIB */
 #endif /*  MACSEC_SUPPORT */
 	ops->config_l3l4_filters = eqos_config_l3l4_filters;
 #ifndef OSI_STRIPPED_LIB
