@@ -502,7 +502,8 @@ typedef my_lint_64		nvel64_t;
 
 #define VLAN_NUM_VID		4096U
 #define OSI_DELAY_1000US	1000U
-
+#define OSI_DELAY_1US		1U
+#define RCHLIST_SIZE		48U
 /**
  * @addtogroup PTP PTP related information
  *
@@ -741,6 +742,17 @@ struct osi_filter {
 	nveu32_t src_dest;
 	/**  indicates one hot encoded DMA receive channels to program */
 	nveu32_t dma_chansel;
+	/** Indicates packet duplication enable(1) disable (0) */
+	nveu32_t pkt_dup;
+};
+
+/**
+ * @brief OSI core structure for RCHlist
+ */
+struct rchlist_index {
+	nveu8_t mac_address[OSI_ETH_ALEN];
+	nveu32_t in_use;
+	nveu64_t dch;
 };
 
 #ifndef OSI_STRIPPED_LIB
@@ -1419,8 +1431,12 @@ struct osi_core_frp_data {
 	/** Entry OK Index - Next Instruction
 	 * valid values are from 0 to 0xFF */
 	nveu8_t ok_index;
+	/** Entry dcht */
+	nveu8_t dcht;
 	/** Entry DMA Channel selection (1-bit for each channel) */
-	nveu32_t dma_chsel;
+	nveu64_t dma_chsel;
+	/** Entry RChlist index */
+	nve32_t rchlist_indx;
 };
 
 /**
@@ -1744,7 +1760,7 @@ struct osi_core_priv_data {
 #if !defined(L3L4_WILDCARD_FILTER)
 	/** L3L4 filter bit bask, set index corresponding bit for
 	 * filter if filter enabled */
-	nveu32_t l3l4_filter_bitmask;
+	nveu64_t l3l4_filter_bitmask;
 #endif /* !L3L4_WILDCARD_FILTER */
 	/** Flag which decides virtualization is enabled(1) or disabled(0) */
 	nveu32_t use_virtualization;
@@ -1787,6 +1803,8 @@ struct osi_core_priv_data {
 #endif
 	/** pre-silicon flag */
 	nveu32_t pre_sil;
+	/** rCHlist bookkeeping **/
+	struct rchlist_index rch_index[RCHLIST_SIZE];
 };
 
 /**

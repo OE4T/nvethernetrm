@@ -208,6 +208,8 @@
 #define OSI_EQOS_MAX_NUM_QUEUES		8U
 /** @brief Maximum number of L3L4 filters supported */
 #define OSI_MGBE_MAX_L3_L4_FILTER	8U
+/** @brief Maximum number of L3L4 filters supported for T264 */
+#define OSI_MGBE_MAX_L3_L4_FILTER_T264	48U
 /**
  * @brief Maximum number of channels in MGBE
  */

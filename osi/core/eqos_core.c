@@ -4022,6 +4022,43 @@ static nve32_t eqos_post_pad_calibrate(
 	return ret;
 }
 
+/**
+ * @brief eqos_free_rchlist_index - Free index.
+ *
+ * Algorithm: This function just free the Receive channel index.
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] rch_idx: Receive channel index.
+ *
+ */
+static void eqos_free_rchlist_index(struct osi_core_priv_data *osi_core,
+				    const nve32_t rch_idx)  {
+	(void) osi_core;
+	(void) rch_idx;
+	OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+		     "Free RCHLIST not supported by EQOS\n", 0ULL);
+}
+
+/**
+ * @brief eqos_rchlist_get_index - find free index
+ *
+ * Algorithm: This function gets free index for receive channel list.
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] mac_addr: Mac address.
+ *
+ * @retval -1 on failure.
+
+**/
+static nve32_t eqos_get_rchlist_index(struct osi_core_priv_data *osi_core,
+				      nveu8_t const *mac_addr)  {
+	(void) osi_core;
+	(void) mac_addr;
+	OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+		     "RCHLIST not supported by EQOS\n", 0ULL);
+	return -1;
+}
+
 #ifndef OSI_STRIPPED_LIB
 /**
  * @brief eqos_config_rss - Configure RSS
@@ -4151,6 +4188,8 @@ void eqos_init_core_ops(struct core_ops *ops)
 	ops->config_frp = eqos_config_frp;
 	ops->update_frp_entry = eqos_update_frp_entry;
 	ops->update_frp_nve = eqos_update_frp_nve;
+	ops->get_rchlist_index = eqos_get_rchlist_index;
+	ops->free_rchlist_index = eqos_free_rchlist_index;
 #if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
 	ops->read_macsec_reg = eqos_read_macsec_reg;
 	ops->write_macsec_reg = eqos_write_macsec_reg;

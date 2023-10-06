@@ -89,7 +89,18 @@ static nve32_t mgbe_mac_indir_addr_write(struct osi_core_priv_data *osi_core,
 					 nveu32_t addr_offset,
 					 nveu32_t value)
 {
+	const nveu32_t ac_msel_mask[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_MAC_INDIR_AC_MSEL,
+		MGBE_MAC_INDIR_AC_MSEL_T26X
+	};
+	const nveu32_t ac_msel_shift[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_MAC_INDIR_AC_MSEL_SHIFT,
+		MGBE_MAC_INDIR_AC_MSEL_SHIFT_T264
+	};
 	void *base = osi_core->base;
+	nveu32_t mac = osi_core->mac;
 	nveu32_t addr = 0;
 	nve32_t ret = 0;
 
@@ -100,9 +111,8 @@ static nve32_t mgbe_mac_indir_addr_write(struct osi_core_priv_data *osi_core,
 	addr = osi_readla(osi_core, (nveu8_t *)base + MGBE_MAC_INDIR_AC);
 
 	/* update Mode Select */
-	addr &= ~(MGBE_MAC_INDIR_AC_MSEL);
-	addr |= ((mc_no << MGBE_MAC_INDIR_AC_MSEL_SHIFT) &
-		  MGBE_MAC_INDIR_AC_MSEL);
+	addr &= ~ac_msel_mask[mac];
+	addr |= ((mc_no << ac_msel_shift[mac]) & ac_msel_mask[mac]);
 
 	/* update Address Offset */
 	addr &= ~(MGBE_MAC_INDIR_AC_AOFF);
@@ -148,7 +158,18 @@ static nve32_t mgbe_mac_indir_addr_read(struct osi_core_priv_data *osi_core,
 					nveu32_t addr_offset,
 					nveu32_t *value)
 {
+	const nveu32_t ac_msel_mask[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_MAC_INDIR_AC_MSEL,
+		MGBE_MAC_INDIR_AC_MSEL_T26X
+	};
+	const nveu32_t ac_msel_shift[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_MAC_INDIR_AC_MSEL_SHIFT,
+		MGBE_MAC_INDIR_AC_MSEL_SHIFT_T264
+	};
 	void *base = osi_core->base;
+	nveu32_t mac = osi_core->mac;
 	nveu32_t addr = 0;
 	nve32_t ret = 0;
 
@@ -156,9 +177,8 @@ static nve32_t mgbe_mac_indir_addr_read(struct osi_core_priv_data *osi_core,
 	addr = osi_readla(osi_core, (nveu8_t *)base + MGBE_MAC_INDIR_AC);
 
 	/* update Mode Select */
-	addr &= ~(MGBE_MAC_INDIR_AC_MSEL);
-	addr |= ((mc_no << MGBE_MAC_INDIR_AC_MSEL_SHIFT) &
-		  MGBE_MAC_INDIR_AC_MSEL);
+	addr &= ~ac_msel_mask[mac];
+	addr |= ((mc_no << ac_msel_shift[mac]) & ac_msel_mask[mac]);
 
 	/* update Address Offset */
 	addr &= ~(MGBE_MAC_INDIR_AC_AOFF);
@@ -212,7 +232,7 @@ static nve32_t mgbe_filter_args_validate(struct osi_core_priv_data *const osi_co
 	nveu32_t dma_chan = filter->dma_chan;
 	nveu32_t addr_mask = filter->addr_mask;
 	nveu32_t src_dest = filter->src_dest;
-	nveu32_t dma_chansel = filter->dma_chansel;
+	nveu64_t dma_chansel = filter->dma_chansel;
 	nve32_t ret = 0;
 
 	/* check for valid index (0 to 31) */
@@ -274,6 +294,313 @@ fail:
 }
 
 /**
+ * @brief check_mac_addr - Compare macaddress with rchannel address
+ *
+ * Algorithm: This function just validates macaddress with rchannel address.
+ *
+ * @param[in] mac_addr: Mac address.
+ * @param[in] rch_addr: Receive channel address.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+static nve32_t check_mac_addr(nveu8_t const *mac_addr, nveu8_t *rch_addr)
+{
+	nve32_t i = 0;
+	nve32_t ret = OSI_NONE;
+
+	for (i = 0; i < 6; i ++) {
+		if (*(mac_addr + i) != *(rch_addr + i)) {
+			ret = -1;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+/**
+ * @brief mgbe_free_rchlist_index - Free index.
+ *
+ * Algorithm: This function just free the Receive channel index.
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] rch_idx: Receive channel index.
+ *
+ */
+static void mgbe_free_rchlist_index(struct osi_core_priv_data *osi_core,
+				    const nve32_t rch_idx)  {
+	osi_core->rch_index[rch_idx].in_use = OSI_NONE;
+	osi_core->rch_index[rch_idx].dch = 0;
+	osi_memset(&osi_core->rch_index[rch_idx].mac_address, 0, OSI_ETH_ALEN);
+}
+
+/**
+ * @brief mgbe_get_rchlist_index - find free index
+ *
+ * Algorithm: This function gets free index for receive channel list.
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] mac_addr: Mac address.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+
+**/
+static nve32_t mgbe_get_rchlist_index(struct osi_core_priv_data *osi_core,
+				      nveu8_t const *mac_addr)  {
+	nve32_t ret = -1;
+	nveu32_t i = 0;
+
+	if (mac_addr != OSI_NULL) {
+		for (i = 0; i < RCHLIST_SIZE; i++) {
+			if (osi_core->rch_index[i].in_use == OSI_NONE) {
+				continue;
+			}
+			if (check_mac_addr(mac_addr,
+					   osi_core->rch_index[i].mac_address)
+					   == OSI_NONE) {
+				ret = i;
+				goto done;
+			}
+		}
+	}
+
+	for (i = 0;  i < RCHLIST_SIZE; i++) {
+		if (osi_core->rch_index[i].in_use == OSI_NONE) {
+			ret = i;
+			break;
+		}
+	}
+done:
+	return ret;
+
+}
+
+/**
+ * @brief mgbe_write_rchlist - add/update rchlist index with new value
+ *
+ * Algorithm: This function will write Receive channel list entry registers into HW.
+ * This function should be called 2 times, 1 for 0-31 channel update,
+ * 2nd for 32-47 channel update, data filed in 2nd read should be 0 for bit
+ * 48-63.
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] acc_mode: 1 - continuation, 0 - single acccess
+ * @param[in] addr: Rchlist register address.
+ * @param[in/out] data: Rchlist register data.
+ * @param[in] read_write: Rchlist read - 0, write - 1
+ *
+ * @note MAC should be init and started. see osi_start_mac()
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+static nve32_t mgbe_rchlist_write(struct osi_core_priv_data *osi_core,
+			          nveu32_t acc_mode, nveu32_t addr,
+			          nveu32_t *data, nveu32_t read_write)
+{
+	nve32_t ret = 0;
+	nveu8_t *base = osi_core->base;
+	nveu32_t val = 0U;
+	if ((acc_mode != OSI_ENABLE) && (acc_mode != OSI_DISABLE)) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"Invalid acc_mode argment\n",
+			acc_mode);
+		ret = -1;
+		goto done;
+	}
+
+	if ((read_write != OSI_ENABLE) && (read_write != OSI_DISABLE)) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"Invalid read_write argment\n",
+			read_write);
+		ret = -1;
+		goto done;
+	}
+
+	/* Wait for ready */
+	ret = osi_readl_poll_timeout((base + MGBE_MTL_RXP_IND_CS),
+				     (osi_core->osd_ops.udelay),
+				     (val),
+				     ((val & MGBE_MTL_RXP_IND_CS_BUSY) ==
+				      OSI_NONE),
+				     (MGBE_MTL_RCHlist_READ_UDELAY),
+				     (MGBE_MTL_RCHlist_READ_RETRY));
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			"Fail to read/write\n",
+			val);
+		ret = -1;
+		goto done;
+	}
+
+	if (read_write == OSI_ENABLE) {
+		/* Write data into MTL_RXP_Indirect_Acc_Data */
+		osi_writela(osi_core, *data, base + MGBE_MTL_RXP_IND_DATA);
+	}
+
+	/* Program MTL_RXP_Indirect_Acc_Control_Status */
+	val = osi_readla(osi_core, base + MGBE_MTL_RXP_IND_CS);
+	/* Reset ACCSEL bit */
+	val &= ~MGBE_MTL_RXP_IND_CS_ACCSEL;
+	/* ACCSEL for Rxchlist 0x2 */
+	val |= MGBE_MTL_RXP_IND_RCH_ACCSEL;
+	if (acc_mode == OSI_ENABLE){
+		val |= (MGBE_MTL_RXP_IND_CS_CRWEN | MGBE_MTL_RXP_IND_CS_CRWSEL);
+	} else {
+		val &= ~(MGBE_MTL_RXP_IND_CS_CRWEN | MGBE_MTL_RXP_IND_CS_CRWSEL);
+	}
+	/* Set WRRDN for write */
+	if (read_write == OSI_ENABLE) {
+		val |= MGBE_MTL_RXP_IND_CS_WRRDN;
+	} else {
+		val &= ~MGBE_MTL_RXP_IND_CS_WRRDN;
+	}
+
+	/* Clear and add ADDR */
+	val &= ~MGBE_MTL_RXP_IND_CS_ADDR;
+	val |= (addr & MGBE_MTL_RXP_IND_CS_ADDR);
+	/* Start write */
+	val |= MGBE_MTL_RXP_IND_CS_BUSY;
+	osi_writela(osi_core, val, base + MGBE_MTL_RXP_IND_CS);
+
+	/* Wait for complete */
+	ret = osi_readl_poll_timeout((base + MGBE_MTL_RXP_IND_CS),
+				     (osi_core->osd_ops.udelay),
+				     (val),
+				     ((val & MGBE_MTL_RXP_IND_CS_BUSY) ==
+				      OSI_NONE),
+				     (MGBE_MTL_RCHlist_READ_UDELAY),
+				     (MGBE_MTL_RCHlist_READ_RETRY));
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			"Fail to write\n",
+			ret);
+		ret = -1;
+	}
+
+	if (read_write == OSI_DISABLE) {
+		/* Write data from MTL_RXP_Indirect_Acc_Data */
+		*data = osi_readla(osi_core, base + MGBE_MTL_RXP_IND_DATA);
+	}
+
+done:
+	return ret;
+}
+
+/**
+ * @brief mgbe_rchlist_add_del - Add or delete based on the chnnel
+ *
+ * Algorithm: This function will add or delete the receive channel list.
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] filter: OSI filter structure.
+ * @param[in] add_del: Rchlist add - 1, del - 0
+ * @param[in/out] idx: Rchlist index.
+ * @param[in/out] rch: rch status
+ * if rch0_data and rch1_data is zero than rch is zero.
+ * if rch0_data and rch1_data is non zero than rch is nozero.
+ *
+ * @note MAC should be init and started. see osi_start_mac()
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+static nve32_t mgbe_rchlist_add_del(struct osi_core_priv_data *osi_core,
+				  const struct osi_filter *filter,
+			          nveu32_t add_del, nve32_t *idx, nveu32_t *rch)
+{
+	nveu32_t rch0_data = 0x0U;
+	nveu32_t rch1_data = 0x0U;
+	nve32_t rch_idx = 0;
+	nve32_t ret = 0;
+	nveu32_t dma_chan = filter->dma_chan;
+
+	rch_idx = mgbe_get_rchlist_index(osi_core, filter->mac_addr);
+	if (rch_idx < 0) {
+		/* error case */
+		ret = -1;
+		goto fail;
+	}
+
+	if (idx != OSI_NULL) {
+		*idx =  rch_idx;
+	}
+
+	/* read currentl channel in rchlist for index */
+	if (osi_core->rch_index[rch_idx].in_use != OSI_NONE) {
+		/* handle error */
+		ret = mgbe_rchlist_write(osi_core, 0,
+					 (rch_idx * 16) + 0, &rch0_data , 0);
+		if (ret != OSI_NONE) {
+			/* error case */
+			goto fail;
+		}
+		if (osi_core->num_dma_chans > 32) {
+			ret = mgbe_rchlist_write(osi_core, 0,
+						 (rch_idx * 16) + 1, &rch1_data , 0);
+			if (ret != OSI_NONE) {
+				/* error case */
+				goto fail;
+			}
+		}
+	}
+
+	if (add_del) {
+		/* add */
+		if (dma_chan < 32) {
+			rch0_data |= (nveu32_t) (1 << dma_chan);
+		} else {
+			rch1_data |= (nveu32_t) (1 << (dma_chan - 1));
+		}
+	} else {
+		/* add */
+		if (dma_chan < 32) {
+			rch0_data &= (nveu32_t) ~(1 << dma_chan);
+		} else {
+			rch1_data &= (nveu32_t) ~(1 << (dma_chan - 1));
+		}
+	}
+
+	if (rch0_data == 0U && rch1_data == 0U) {
+		*rch = OSI_DISABLE;
+	} else {
+		*rch = OSI_ENABLE;
+	}
+
+	/* coresponding to each index there will be 2 entries address 0_0 and 0_1 */
+	ret = mgbe_rchlist_write(osi_core, 0, (rch_idx * 16) + 0, &rch0_data , 1);
+	if (ret != OSI_NONE) {
+		/* error case */
+		goto fail;
+	}
+
+	if (osi_core->num_dma_chans > 32) {
+		ret = mgbe_rchlist_write(osi_core, 0, (rch_idx * 16) + 1, &rch1_data, 1);
+		if (ret != OSI_NONE) {
+			/* error case */
+			goto fail;
+		}
+	}
+
+	osi_core->rch_index[rch_idx].dch = rch1_data;
+	osi_core->rch_index[rch_idx].dch |= ((osi_core->rch_index[rch_idx].dch << 32) | rch0_data);
+	if (add_del) {
+		/* add */
+		osi_core->rch_index[rch_idx].in_use = OSI_ENABLE;
+		osi_memcpy(&osi_core->rch_index[rch_idx], filter->mac_addr, OSI_ETH_ALEN);
+	} else {
+		/* delete */
+		if (osi_core->rch_index[rch_idx].dch == 0) {
+			mgbe_free_rchlist_index(osi_core, rch_idx);
+		}
+	}
+fail:
+	return ret;
+}
+
+/**
  * @brief mgbe_update_mac_addr_low_high_reg- Update L2 address in filter
  *	  register
  *
@@ -307,9 +634,12 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 	nveu32_t src_dest = filter->src_dest;
 	const nveu8_t *addr = filter->mac_addr;
 	nveu32_t dma_chansel = filter->dma_chansel;
-	nveu32_t xdcs_dds;
+	nveu32_t dpsel_value;
 	nveu32_t value = 0x0U;
 	nve32_t ret = 0;
+	nve32_t rch_idx = 0;
+	nveu32_t rch = 0x0U;
+	nveu32_t xdcs_dds;
 
 	/* Validate filter values */
 	if (mgbe_filter_args_validate(osi_core, filter) < 0) {
@@ -332,6 +662,33 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 		goto fail;
 	}
 
+	dpsel_value = xdcs_dds;
+	/* Incase of T264
+	1. DCH filed is extended to have 48 channel number as binary in DCH field so
+	   it shhould be used by detfault for all unicast packets
+	2. XDCH and XDCHT are used to tell about 2 cases but as we have number of DMA
+	   channels as 48 , we should use XDCH as rchlistindex and XDCHT as 1
+	algo:
+	1. write DCH bit as binary representation for channel number by default
+	2. DDS bit for that index  should be 0 , xDCS/XDCT is don't care
+	3. If request to add one more channel for that index
+	   (check by seeing DCH field is not 0xffff and AE bit 0x1 or not)
+	   a) set DDS bit to 1 for that L2 index
+	   b) write hot bit representation of channel in rchlist for free index.
+	   use a 48*64 bit array for book keeping
+		set bits for earlier dch and new dch as hot bit representation
+	   c) set XDCS as rchindex and XDCST as 1
+	   d) DCH filed is don't care but we need to have non zero value
+	4. If request to delete one channel (expect all delete request one after other)
+	   a) if DDS filed is 1 for that index, if yes, it is using rxchanlist.
+	   b) read rxchlist and update bit as channel asked for delate, if only 1 channel
+		get binary repesentation of that channel, update DCH
+		reset XDCHT and XDCH to 0 for index
+		DDS filed set to 0 for index
+	   c) if DDS files is 0, do not duplication for that index
+		clear DCH files to 0xffff, AE bit set to 0x0
+	 */
+
 	/* preserve last XDCS bits */
 	xdcs_dds &= ((osi_core->mac == OSI_MAC_HW_MGBE) ?
 		     MGBE_MAC_XDCS_DMA_MAX : UINT_MAX);
@@ -340,13 +697,18 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 	 * reset DDS bit in DPCSel reg
 	 */
 	if ((filter->oper_mode & OSI_OPER_ADDR_DEL) != OSI_NONE) {
-		//TBD: T264 revisit logic for receive channel list duplication
-		xdcs_dds &= ((osi_core->mac == OSI_MAC_HW_MGBE) ?
-				~OSI_BIT(dma_chan) : ~OSI_BIT(1));
-		ret = mgbe_mac_indir_addr_write(osi_core,
-						dch_dpc_reg[osi_core->mac],
-						idx, xdcs_dds);
-		value &= ~(MGBE_MAC_ADDRH_DCS);
+		if (osi_core->mac != OSI_MAC_HW_MGBE_T26X &&
+		    filter->pkt_dup != OSI_NONE) {
+			ret = mgbe_rchlist_add_del(osi_core, filter, 0, &rch_idx, &rch);
+		}
+		if (osi_core->mac != OSI_MAC_HW_MGBE_T26X || rch == OSI_DISABLE) {
+			xdcs_dds &= ((osi_core->mac == OSI_MAC_HW_MGBE) ?
+					~OSI_BIT(dma_chan) : ~OSI_BIT(1));
+			ret = mgbe_mac_indir_addr_write(osi_core,
+							dch_dpc_reg[osi_core->mac],
+							idx, xdcs_dds);
+			value &= ~(MGBE_MAC_ADDRH_DCS);
+		}
 
 		/* XDCS values is always maintained */
 		if ((osi_core->mac == OSI_MAC_HW_MGBE) &&
@@ -365,15 +727,14 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 		/* Add DMA channel to value in binary */
 		value = OSI_NONE;
 		value |= ((dma_chan << MGBE_MAC_ADDRH_DCS_SHIFT) & MGBE_MAC_ADDRH_DCS);
-
 		if (idx != 0U) {
 			/* Add Address mask */
 			value |= ((addr_mask << MGBE_MAC_ADDRH_MBC_SHIFT) &
-				  MGBE_MAC_ADDRH_MBC);
+				 MGBE_MAC_ADDRH_MBC);
 
 			/* Setting Source/Destination Address match valid */
 			value |= ((src_dest << MGBE_MAC_ADDRH_SA_SHIFT) &
-				  MGBE_MAC_ADDRH_SA);
+				 MGBE_MAC_ADDRH_SA);
 		}
 
 		osi_writela(osi_core,
@@ -386,17 +747,60 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 			    ((nveu32_t)addr[2] << 16) | ((nveu32_t)addr[3] << 24)),
 			    (nveu8_t *)osi_core->base +  MGBE_MAC_ADDRL((idx)));
 
-		if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
-			/* reset DDS bit 1 to select DCS as channel number */
-			xdcs_dds &= ~OSI_BIT(1);
-		} else {
+		if (osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
 			/* Write XDCS configuration into MAC_DChSel_IndReg(x) */
 			/* Append DCS DMA channel to XDCS hot bit selection */
 			xdcs_dds |= (OSI_BIT(dma_chan) | dma_chansel);
+			ret = mgbe_mac_indir_addr_write(osi_core, MGBE_MAC_DCHSEL,
+							idx, xdcs_dds);
+		} else {
+			/* check for packet duplicate 0 - disable, 1 - enable */
+			if (filter->pkt_dup != OSI_NONE) {
+				dpsel_value |= MGBE_MAC_DPCSEL_DDS;
+				ret = mgbe_rchlist_add_del(osi_core, filter,
+							   1, &rch_idx, &rch);
+				if (ret < 0) {
+					OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			     			     "rchlist add del failed\n", 0ULL);
+					goto fail;
+				}
+				value = OSI_NONE;
+
+				if (idx != 0U) {
+					/* Add Address mask */
+					value |= ((addr_mask << MGBE_MAC_ADDRH_MBC_SHIFT) &
+						 MGBE_MAC_ADDRH_MBC);
+
+					/* Setting Source/Destination Address match valid */
+					value |= ((src_dest << MGBE_MAC_ADDRH_SA_SHIFT) &
+						 MGBE_MAC_ADDRH_SA);
+				}
+
+				value |= ((rch_idx << MGBE_MAC_ADDRH_DCS_SHIFT) & MGBE_MAC_ADDRH_DCS);
+				osi_writela(osi_core,
+					    ((nveu32_t)addr[4] | ((nveu32_t)addr[5] << 8) |
+					    MGBE_MAC_ADDRH_AE | value),
+					    (nveu8_t *)osi_core->base + MGBE_MAC_ADDRH((idx)));
+
+				osi_writela(osi_core,
+					    ((nveu32_t)addr[0] | ((nveu32_t)addr[1] << 8) |
+					    ((nveu32_t)addr[2] << 16) | ((nveu32_t)addr[3] << 24)),
+					    (nveu8_t *)osi_core->base +  MGBE_MAC_ADDRL((idx)));
+			} else {
+				/* No duplication */
+				xdcs_dds &= ~(MGBE_MAC_XDCS_DMA_MAX | MGBE_MAC_XDCST_DMA_MAX);
+				dpsel_value &= ~MGBE_MAC_DPCSEL_DDS;
+			}
+			/* TODO add error check */
+			ret = mgbe_mac_indir_addr_write(osi_core, MGBE_MAC_DPCSEL,
+							idx, dpsel_value);
+
+			if (osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
+				ret = mgbe_mac_indir_addr_write(osi_core,
+								MGBE_MAC_DCHSEL, idx,
+								xdcs_dds);
+			}
 		}
-		ret = mgbe_mac_indir_addr_write(osi_core,
-						dch_dpc_reg[osi_core->mac],
-						idx, xdcs_dds);
 	}
 fail:
 	return ret;
@@ -472,6 +876,11 @@ static nve32_t mgbe_l3l4_filter_write(struct osi_core_priv_data *osi_core,
 	void *base = osi_core->base;
 	nveu32_t addr = 0;
 	nve32_t ret = 0;
+	const nveu32_t fnum[OSI_MAX_MAC_IP_TYPES] = {
+		MGBE_MAC_L3L4_ADDR_CTR_IDDR_FNUM,
+		MGBE_MAC_L3L4_ADDR_CTR_IDDR_FNUM,
+		MGBE_MAC_L3L4_ADDR_CTR_IDDR_FNUM_T264,
+	};
 
 	/* Write MAC_L3_L4_Data register value */
 	osi_writela(osi_core, value,
@@ -482,9 +891,9 @@ static nve32_t mgbe_l3l4_filter_write(struct osi_core_priv_data *osi_core,
 			  (nveu8_t *)base + MGBE_MAC_L3L4_ADDR_CTR);
 
 	/* update filter number */
-	addr &= ~(MGBE_MAC_L3L4_ADDR_CTR_IDDR_FNUM);
+	addr &= ~(fnum[osi_core->mac]);
 	addr |= ((filter_no << MGBE_MAC_L3L4_ADDR_CTR_IDDR_FNUM_SHIFT) &
-		  MGBE_MAC_L3L4_ADDR_CTR_IDDR_FNUM);
+		 (fnum[osi_core->mac]));
 
 	/* update filter type */
 	addr &= ~(MGBE_MAC_L3L4_ADDR_CTR_IDDR_FTYPE);
@@ -545,9 +954,21 @@ static nve32_t mgbe_config_l3l4_filters(struct osi_core_priv_data *const osi_cor
 #endif /* !OSI_STRIPPED_LIB */
 	nveu32_t l3_addr1_reg = 0;
 	nveu32_t ctr_reg = 0;
-	nveu32_t filter_no = filter_no_r & (OSI_MGBE_MAX_L3_L4_FILTER - 1U);
+	const nveu32_t max_filter_no[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAX_L3_L4_FILTER - 1U,
+		OSI_MGBE_MAX_L3_L4_FILTER - 1U,
+		OSI_MGBE_MAX_L3_L4_FILTER_T264 - 1U,
+	};
+	nveu32_t filter_no = filter_no_r;
 	nve32_t err;
 	nve32_t ret = -1;
+
+	if (filter_no_r > max_filter_no[osi_core->mac]) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "Filter number is more than allowed\n",
+			     filter_no_r);
+		goto exit_func;
+	}
 
 	prepare_l3l4_registers(osi_core, l3_l4,
 #ifndef OSI_STRIPPED_LIB
@@ -669,11 +1090,11 @@ static nve32_t mgbe_config_vlan_filtering(struct osi_core_priv_data *osi_core,
 	}
 
 	/* Read MAC PFR value set VTFE bit */
-	value = osi_readla(osi_core, base + MGBE_MAC_PFR);
+	value = osi_readla(osi_core, base + MAC_PKT_FILTER_REG);
 	value &= ~(MGBE_MAC_PFR_VTFE);
 	value |= ((filter_enb_dis << MGBE_MAC_PFR_VTFE_SHIFT) &
 		  MGBE_MAC_PFR_VTFE);
-	osi_writela(osi_core, value, base + MGBE_MAC_PFR);
+	osi_writela(osi_core, value, base + MAC_PKT_FILTER_REG);
 
 	/* Read MAC VLAN TR register value set VTIM bit */
 	value = osi_readla(osi_core, base + MGBE_MAC_VLAN_TR);
@@ -993,6 +1414,8 @@ static nve32_t mgbe_frp_write(struct osi_core_priv_data *osi_core,
 
 	/* Program MTL_RXP_Indirect_Acc_Control_Status */
 	val = osi_readla(osi_core, base + MGBE_MTL_RXP_IND_CS);
+	/* Reset RCH bit */
+	val &= ~MGBE_MTL_RXP_IND_RCH_ACCSEL;
 
 	/* Currently acc_sel is always 0 which means FRP Indirect Access Selection
 	 * is Access FRP Instruction Table
@@ -1047,7 +1470,33 @@ static nve32_t mgbe_update_frp_entry(struct osi_core_priv_data *const osi_core,
 {
 	nveu32_t val = 0U, tmp = 0U;
 	nve32_t ret = -1;
+	nveu32_t rch0_data = 0x0U;
+	nveu32_t rch1_data = 0x0U;
+	nve32_t rch_idx = 0;
 	nveu32_t pos = (pos_val & 0xFFU);
+
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X && data->dcht == OSI_ENABLE) {
+		if (data->accept_frame == OSI_ENABLE) {
+			rch0_data  = (nveu32_t) (data->dma_chsel  & 0xFFFFFFFF);
+			rch1_data  = (nveu32_t) ((data->dma_chsel >> 32) & 0xFFFFFFFF);
+			ret = mgbe_rchlist_write(osi_core, OSI_DISABLE, (rch_idx * 16) + 0,
+						 &rch0_data, OSI_ENABLE);
+			if (ret != OSI_NONE) {
+				/* error case */
+				ret = -1;
+				goto done;
+			}
+			if (osi_core->num_dma_chans > 32) {
+				mgbe_rchlist_write(osi_core, OSI_DISABLE, (rch_idx * 16) + 1,
+						   &rch1_data, OSI_ENABLE);
+				if (ret != OSI_NONE) {
+					/* error case */
+					ret = -1;
+					goto done;
+				}
+			}
+		}
+	}
 
 	/** Write Match Data into IE0 **/
 	val = data->match_data;
@@ -1085,12 +1534,13 @@ static nve32_t mgbe_update_frp_entry(struct osi_core_priv_data *const osi_core,
 		/* Set NIC Bit */
 		val |= MGBE_MTL_FRP_IE2_NC;
 	}
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X && data->dcht == OSI_ENABLE) {
+		val |= MGBE_MTL_FRP_IE2_DCHT;
+	}
 	tmp = data->frame_offset;
 	val |= ((tmp << MGBE_MTL_FRP_IE2_FO_SHIFT) & MGBE_MTL_FRP_IE2_FO);
 	tmp = data->ok_index;
 	val |= ((tmp << MGBE_MTL_FRP_IE2_OKI_SHIFT) & MGBE_MTL_FRP_IE2_OKI);
-	tmp = data->dma_chsel;
-	val |= ((tmp << MGBE_MTL_FRP_IE2_DCH_SHIFT) & MGBE_MTL_FRP_IE2_DCH);
 	ret = mgbe_frp_write(osi_core, OSI_DISABLE, MGBE_MTL_FRP_IE2(pos), val);
 	if (ret < 0) {
 		/* FRP IE2 Write fail */
@@ -1099,13 +1549,21 @@ static nve32_t mgbe_update_frp_entry(struct osi_core_priv_data *const osi_core,
 	}
 
 	/** Write DCH into IE3 **/
-	val = (data->dma_chsel & MGBE_MTL_FRP_IE3_DCH_MASK);
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		if (data->dcht == OSI_DISABLE) {
+			val = (data->dma_chsel & MGBE_MTL_FRP_IE3_DCH_MASK);
+		} else {
+			val = 0;
+		}
+	} else {
+		val = (data->dma_chsel & MGBE_MTL_FRP_IE3_DCH_MASK);
+	}
+
 	ret = mgbe_frp_write(osi_core, OSI_DISABLE, MGBE_MTL_FRP_IE3(pos), val);
 	if (ret < 0) {
 		/* DCH Write fail */
 		ret = -1;
 	}
-
 done:
 	return ret;
 }
@@ -1860,6 +2318,15 @@ static void mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
 		    intr_en[osi_core->mac]);
 
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		/* configure L3L4 filter index to be 48 in Rx desc2 */
+		value = osi_readla(osi_core,
+				   (nveu8_t *)osi_core->base + MAC_PKT_FILTER_REG);
+		value &= ~MGBE_MAC_PFR_DHLFRS_MASK;
+		value |= MGBE_MAC_PFR_DHLFRS;
+		osi_writela(osi_core, value,
+			    (nveu8_t *)osi_core->base + MAC_PKT_FILTER_REG);
+	}
 	/* Enable VLAN configuration */
 	value = osi_readla(osi_core,
 			   (nveu8_t *)osi_core->base + MGBE_MAC_VLAN_TR);
@@ -2293,6 +2760,8 @@ static nve32_t mgbe_core_init(struct osi_core_priv_data *const osi_core)
 		//TODO: removed in tot dev-main
 		//mgbe_reset_mmc(osi_core);
 	}
+	osi_memset(&osi_core->rch_index, 0,
+		   sizeof(struct rchlist_index)*RCHLIST_SIZE);
 fail:
 	return ret;
 }
@@ -4313,6 +4782,8 @@ void mgbe_init_core_ops(struct core_ops *ops)
 	ops->config_frp = mgbe_config_frp;
 	ops->update_frp_entry = mgbe_update_frp_entry;
 	ops->update_frp_nve = mgbe_update_frp_nve;
+	ops->get_rchlist_index = mgbe_get_rchlist_index;
+	ops->free_rchlist_index = mgbe_free_rchlist_index;
 #if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
 	ops->read_macsec_reg = mgbe_read_macsec_reg;
 	ops->write_macsec_reg = mgbe_write_macsec_reg;

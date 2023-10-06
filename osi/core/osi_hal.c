@@ -969,6 +969,7 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 {
 	struct osi_l3_l4_filter *cfg_l3_l4;
 	struct core_local *const l_core = (struct core_local *)(void *)osi_core;
+	const nveu32_t filter_mask[OSI_MAX_MAC_IP_TYPES] = { 0x1F, 0x1F, 0x3F };
 	nve32_t ret;
 
 	ret = l_core->ops_p->config_l3l4_filters(osi_core, filter_no, l3_l4);
@@ -990,7 +991,8 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 
 #if !defined(L3L4_WILDCARD_FILTER)
 		/* update filter mask bit */
-		osi_core->l3l4_filter_bitmask |= ((nveu32_t)1U << (filter_no & 0x1FU));
+		osi_core->l3l4_filter_bitmask |= ((nveu64_t)1U <<
+				(filter_no & filter_mask[osi_core->mac]));
 #endif /* !L3L4_WILDCARD_FILTER */
 	} else {
 		/* Clear the filter data.
@@ -1003,7 +1005,8 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 
 #if !defined(L3L4_WILDCARD_FILTER)
 		/* update filter mask bit */
-		osi_core->l3l4_filter_bitmask &= ~((nveu32_t)1U << (filter_no & 0x1FU));
+		osi_core->l3l4_filter_bitmask &= ~((nveu64_t)1U <<
+				(filter_no & filter_mask[osi_core->mac]));
 #endif /* !L3L4_WILDCARD_FILTER */
 	}
 
@@ -1116,7 +1119,7 @@ static nve32_t configure_l3l4_filter(struct osi_core_priv_data *const osi_core,
 	const nveu32_t max_filter_no[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_MAX_L3_L4_FILTER - 1U,
 		OSI_MGBE_MAX_L3_L4_FILTER - 1U,
-		OSI_MGBE_MAX_L3_L4_FILTER - 1U,
+		OSI_MGBE_MAX_L3_L4_FILTER_T264 - 1U,
 	};
 	nve32_t ret = -1;
 
@@ -2218,8 +2221,13 @@ fail:
 static void cfg_l3_l4_filter(struct core_local *l_core)
 {
 	nveu32_t i = 0U;
+	const nveu32_t max_filter_no[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAX_L3_L4_FILTER,
+		OSI_MGBE_MAX_L3_L4_FILTER,
+		OSI_MGBE_MAX_L3_L4_FILTER_T264,
+	};
 
-	for (i = 0U; i < OSI_MGBE_MAX_L3_L4_FILTER; i++) {
+	for (i = 0U; i < max_filter_no[l_core->osi_core.mac]; i++) {
 		if (l_core->cfg.l3_l4[i].filter_enb_dis == OSI_L3L4_DISABLE) {
 			/* filter not enabled */
 			continue;

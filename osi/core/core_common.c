@@ -657,11 +657,6 @@ nve32_t hw_config_mac_pkt_filter_reg(struct osi_core_priv_data *const osi_core,
 
 	value = osi_readla(osi_core, ((nveu8_t *)osi_core->base + MAC_PKT_FILTER_REG));
 
-	/*Retain all other values */
-	value &= (MAC_PFR_DAIF | MAC_PFR_DBF  | MAC_PFR_SAIF |
-		  MAC_PFR_SAF  | MAC_PFR_PCF  | MAC_PFR_VTFE |
-		  MAC_PFR_IPFE | MAC_PFR_DNTU | MAC_PFR_RA);
-
 	if ((filter->oper_mode & OSI_OPER_EN_PERFECT) != OSI_DISABLE) {
 		value |= MAC_PFR_HPF;
 	}

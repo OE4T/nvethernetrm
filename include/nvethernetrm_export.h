@@ -137,7 +137,9 @@ struct osi_core_frp_cmd {
 	 * Bit[0] - DMA channel 0
 	 * ..
 	 * Bit [N] - DMA channel N] */
-	nveu32_t dma_sel;
+	nveu64_t dma_sel;
+	/** OSD DCHT */
+	nveu8_t dcht;
 };
 
 /**
