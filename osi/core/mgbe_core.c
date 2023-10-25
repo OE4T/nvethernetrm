@@ -1701,19 +1701,28 @@ static nve32_t mgbe_configure_mtl_queue(struct osi_core_priv_data *osi_core,
 		goto fail;
 	}
 
-	value = (tx_fifo_sz[qinx] << MGBE_MTL_TXQ_SIZE_SHIFT);
+	value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+			   MGBE_MTL_CHX_TX_OP_MODE(qinx));
+	value &= ~MGBE_MTL_Q_SIZE_MASK;
+	value |= (tx_fifo_sz[qinx] << MGBE_MTL_TXQ_SIZE_SHIFT);
 	/* Enable Store and Forward mode */
 	value |= MGBE_MTL_TSF;
 	/*TTC  not applicable for TX*/
 	/* Enable TxQ */
 	value |= MGBE_MTL_TXQEN;
-	value |= (osi_core->tc[qinx] << MGBE_MTL_CHX_TX_OP_MODE_Q2TC_SH);
+
+	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+		/* Q2TCMAP is reserved for T26x */
+		value &= ~MGBE_MTL_TX_OP_MODE_Q2TCMAP;
+		value |= (osi_core->tc[qinx] << MGBE_MTL_CHX_TX_OP_MODE_Q2TC_SH);
+	}
 	osi_writela(osi_core, value, (nveu8_t *)
 		   osi_core->base + MGBE_MTL_CHX_TX_OP_MODE(qinx));
 
 	/* read RX Q0 Operating Mode Register */
 	value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 			  MGBE_MTL_CHX_RX_OP_MODE(qinx));
+	value &= ~MGBE_MTL_Q_SIZE_MASK;
 	value |= (rx_fifo_sz[osi_core->mac][qinx] << MGBE_MTL_RXQ_SIZE_SHIFT);
 	/* Enable Store and Forward mode */
 	value |= MGBE_MTL_RSF;
@@ -3174,10 +3183,12 @@ static nve32_t mgbe_set_avb_algorithm(struct osi_core_priv_data *const osi_core,
 	/* Set TXQEN mode as per input struct after masking 3 bit */
 	value |= ((avb->oper_mode << MGBE_MTL_TX_OP_MODE_TXQEN_SHIFT) &
 		  MGBE_MTL_TX_OP_MODE_TXQEN);
-	/* Set TC mapping */
-	value &= ~MGBE_MTL_TX_OP_MODE_Q2TCMAP;
-	value |= ((tcinx << MGBE_MTL_TX_OP_MODE_Q2TCMAP_SHIFT) &
-		  MGBE_MTL_TX_OP_MODE_Q2TCMAP);
+	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+		/* Set TC mapping */
+		value &= ~MGBE_MTL_TX_OP_MODE_Q2TCMAP;
+		value |= ((tcinx << MGBE_MTL_TX_OP_MODE_Q2TCMAP_SHIFT) &
+			  MGBE_MTL_TX_OP_MODE_Q2TCMAP);
+	}
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
 		   MGBE_MTL_CHX_TX_OP_MODE(qinx));
 
@@ -3236,13 +3247,15 @@ static nve32_t mgbe_set_avb_algorithm(struct osi_core_priv_data *const osi_core,
 			    MGBE_MTL_TCQ_ETS_HCR(tcinx));
 		osi_writela(osi_core, OSI_DISABLE, (nveu8_t *)osi_core->base +
 			    MGBE_MTL_TCQ_ETS_LCR(tcinx));
-
-		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				   MGBE_MTL_CHX_TX_OP_MODE(qinx));
-		value &= ~MGBE_MTL_TX_OP_MODE_Q2TCMAP;
-		value |= (osi_core->tc[qinx] << MGBE_MTL_CHX_TX_OP_MODE_Q2TC_SH);
-		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				MGBE_MTL_CHX_TX_OP_MODE(qinx));
+		if (osi_core->mac == OSI_MAC_HW_MGBE) {
+			/* Q2TCMAP is reserved for T26x */
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+					   MGBE_MTL_CHX_TX_OP_MODE(qinx));
+			value &= ~MGBE_MTL_TX_OP_MODE_Q2TCMAP;
+			value |= (osi_core->tc[qinx] << MGBE_MTL_CHX_TX_OP_MODE_Q2TC_SH);
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+					MGBE_MTL_CHX_TX_OP_MODE(qinx));
+		}
 	}
 
 done:
@@ -3279,6 +3292,14 @@ static nve32_t mgbe_get_avb_algorithm(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = 0;
 	nveu32_t qinx = 0U;
 	nveu32_t tcinx = 0U;
+
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_OPNOTSUPP,
+			"Not supported for T26x\n",
+			0ULL);
+		ret = -1;
+		goto fail;
+	}
 
 	if ((avb->qindex >= OSI_MGBE_MAX_NUM_QUEUES) ||
 	    (avb->qindex == OSI_NONE)) {
