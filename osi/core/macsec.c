@@ -1624,7 +1624,7 @@ static void tx_sci_lut_read(struct osi_core_priv_data *const osi_core,
 		lut_config->sci_lut_out.an_valid |= OSI_AN3_VALID;
 	}
 
-	lut_config->sci_lut_out.sc_index = (lut_data[6] >> 17) & 0xFU;
+	lut_config->sci_lut_out.sc_index = (lut_data[6] >> 17) & 0x3FU;
 
 	if ((lut_data[6] & dvlan_pkt[macsec]) == dvlan_pkt[macsec]) {
 		lut_config->flags |= OSI_LUT_FLAGS_DVLAN_PKT;
@@ -1717,7 +1717,7 @@ static nve32_t sci_lut_read(struct osi_core_priv_data *const osi_core,
 		lut_config->sci_lut_out.sci[6] = (nveu8_t)((lut_data[1] >> 16) & 0xFFU);
 		lut_config->sci_lut_out.sci[7] = (nveu8_t)((lut_data[1] >> 24) & 0xFFU);
 
-		lut_config->sci_lut_out.sc_index = (lut_data[2] >> 10) & 0xFU;
+		lut_config->sci_lut_out.sc_index = (lut_data[2] >> 10) & 0x3FU;
 		if ((lut_data[2] & MACSEC_RX_SCI_LUT_PREEMPT_INACTIVE) !=
 		    MACSEC_RX_SCI_LUT_PREEMPT_INACTIVE) {
 			flags |= OSI_LUT_FLAGS_PREEMPT_VALID;
