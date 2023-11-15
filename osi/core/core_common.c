@@ -1403,10 +1403,11 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 		goto error;
 	}
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 #ifdef MACSEC_SUPPORT
 		osi_lock_irq_enabled(&osi_core->macsec_fpe_lock);
-		/* MACSEC and FPE cannot coexist on MGBE refer bug 3484034 */
+		/* MACSEC and FPE cannot coexist on MGBE of T234 refer bug 3484034
+		 * Both EQOS and MGBE of T264 cannot have macsec and fpe enabled simultaneously */
 		if (osi_core->is_macsec_enabled == OSI_ENABLE) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 				     "FPE and MACSEC cannot co-exist\n", 0ULL);
@@ -1432,7 +1433,7 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
 			    MAC_FPE_CTS[osi_core->mac & 0x1U]);
 
-		if (osi_core->mac == OSI_MAC_HW_MGBE) {
+		if (osi_core->mac != OSI_MAC_HW_EQOS) {
 #ifdef MACSEC_SUPPORT
 			osi_core->is_fpe_enabled = OSI_DISABLE;
 #endif /*  MACSEC_SUPPORT */
@@ -1446,7 +1447,7 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 	}
 done:
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 #ifdef MACSEC_SUPPORT
 		osi_unlock_irq_enabled(&osi_core->macsec_fpe_lock);
 #endif /*  MACSEC_SUPPORT */

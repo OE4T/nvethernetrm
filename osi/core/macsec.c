@@ -890,8 +890,9 @@ static nve32_t macsec_enable(struct osi_core_priv_data *const osi_core,
 
 	osi_lock_irq_enabled(&osi_core->macsec_fpe_lock);
 
-	/* MACSEC and FPE cannot coexist on MGBE refer bug 3484034 */
-	if ((osi_core->mac == OSI_MAC_HW_MGBE) &&
+	/* MACSEC and FPE cannot coexist on MGBE of T234 refer bug 3484034
+	 * Both EQOS and MGBE of T264 cannot have macsec and fpe enabled simultaneously */
+	if ((osi_core->mac != OSI_MAC_HW_EQOS) &&
 	    (enable == OSI_ENABLE) && (osi_core->is_fpe_enabled == OSI_ENABLE)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "MACSE and FPE cannot coexist on MGBE\n", 0ULL);
@@ -2304,11 +2305,11 @@ static nve32_t sc_param_lut_config(struct osi_core_priv_data *const osi_core,
 		ret = -1;
 		goto exit;
 	}
-
-	if ((entry.encrypt > 1U) || (entry.conf_offset > 2U) ||
+	/* Confidentionality offset is de-PoRed from T264, hence conf_offset cannot be non-zero */
+	if ((entry.encrypt > 1U) || (entry.conf_offset > 0U) ||
 		(entry.vlan_in_clear > 1U)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "Invalid paramters\n", 0ULL);
+			     "Invalid paramters\n", entry.conf_offset);
 		ret = -1;
 		goto exit;
 	}
@@ -6631,7 +6632,8 @@ nve32_t osi_macsec_config_dbg_buf(
 
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->dbg_buf_config != OSI_NULL) &&
-	    (dbg_buf_config != OSI_NULL)) {
+	    (dbg_buf_config != OSI_NULL) &&
+	    (osi_core->macsec != OSI_MACSEC_T26X)) {
 		ret = l_core->macsec_ops->dbg_buf_config(osi_core,
 							dbg_buf_config);
 	}
@@ -6672,7 +6674,8 @@ nve32_t osi_macsec_dbg_events_config(
 
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->dbg_events_config != OSI_NULL) &&
-	    (dbg_buf_config != OSI_NULL)) {
+	    (dbg_buf_config != OSI_NULL) &&
+	    (osi_core->macsec != OSI_MACSEC_T26X)) {
 		ret = l_core->macsec_ops->dbg_events_config(osi_core,
 							dbg_buf_config);
 	}
