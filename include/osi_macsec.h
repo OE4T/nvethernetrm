@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -405,108 +405,203 @@ struct osi_macsec_core_ops {
 //////////////////////////////////////////////////////////////////////////
 
 /**
- * @brief osi_init_macsec_ops - macsec initialize operations
+ * @brief
+ * Description: Initialize MACSEC software operations
  *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @return
+ *  - 0 on Successful initialization of MACSEC operatoions
+ *  - -1 on NVETHERNETRM_PIF#osi_init_macsec_ops/osi_core is NULL
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: No
+ *  - De-initialization: No
+ *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - If virtualization is enabled initialize virt ops
  *  - Else
  *    - If macsec base is null return -1
  *    - initialize with macsec ops
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure. used param macsec_base
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
  *
  * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_047
  *
- * @retval 0 on success
- * @retval -1 on failure
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
  */
+#endif
 nve32_t osi_init_macsec_ops(struct osi_core_priv_data *const osi_core);
 
 /**
- * @brief osi_macsec_init - Initialize the macsec controller
+ * @brief
+ * Description: Initialize MACSEC controller
  *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] mtu: MTU value
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] macsec_vf_mac: A pointer to the MACID of Virtual Function
+ *   * Range: A non-null pointer to VF MACID.
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @return
+ *  - 0 on Successful initialization of MACSEC controller
+ *  - -1 on NVETHERNETRM_PIF#osi_macsec_init/osi_core is NULL
+ *  - -1 on pointer to VF MACID is NULL
+ *  - -1 on failure in initialization of MACSEC controller
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: No
+ *  - De-initialization: No
+ *
+ */
+#ifndef DOXYGEN_ICD
+/**
  * @note
  * Algorithm:
  *  - Return -1 if osi core or ops is null
  *  - Configure MTU, controller configs, interrupts, clear all LUT's and
- *    set BYP LUT entries for MKPDU and BC packets
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure.
- * @param[in] mtu: mtu to be programmed
- * @param[in] macsec_vf_mac: Pointer to VF MACID
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
+ *    set BYP LUT entries for MKPDU and BC packets. Creates a dummy SC to
+ *    not allow traffic till actual MACSEC session is established.
  *
  * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_048
  *
- * @retval 0 on success
- * @retval -1 on failure
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
  */
+#endif
 nve32_t osi_macsec_init(struct osi_core_priv_data *const osi_core,
 			nveu32_t mtu, nveu8_t *const macsec_vf_mac);
 
 /**
- * @brief osi_macsec_deinit - De-Initialize the macsec controller
+ * @brief
+ * Description: De-Initialize the macsec controller
  *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Resets macsec global data structured and restores the mac confirguration
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
+ * @return
+ *  - 0 on Successful de-initialization of MACSEC controller
+ *  - -1 on MACSEC operations being NULL
+ *  - -1 on failure in de-initialization of MACSEC controller
  *
- * @retval 0 on success
- * @retval -1 on failure
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: No
+ *  - De-initialization: Yes
+ *
  */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *  - Return -1 if osi core or ops is null
+ *  - Configure MTU, controller configs, interrupts, clear all LUT's and
+ *    set BYP LUT entries for MKPDU and BC packets. Creates a dummy SC to
+ *    not allow traffic till actual MACSEC session is established.
+ *
+ * @note
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_048
+ *
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
 nve32_t osi_macsec_deinit(struct osi_core_priv_data *const osi_core);
 
 /**
- * @brief osi_macsec_isr - macsec irq handler
+ * @brief
+ * Description: MACSEC Interrupt Handler
  *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - handles macsec interrupts
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
+ * @return
+ *  - None
  *
- * @retval none
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
  */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *  - Handles different MACSEC interrupts and increase respective counters
+ *
+ * @note
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_062
+ *
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
 void osi_macsec_isr(struct osi_core_priv_data *const osi_core);
 
 /**
@@ -533,6 +628,55 @@ void osi_macsec_isr(struct osi_core_priv_data *const osi_core);
  * @retval 0 on success
  * @retval -1 on failure
  */
+/**
+ * @brief
+ * Description: Read or write to macsec LUTs
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] lut_config: A pointer to the lut configuration
+ *   * Range: A non-null pointer to LUT config.
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @return
+ *  - 0 on Successful initialization of MACSEC controller
+ *  - -1 on NVETHERNETRM_PIF#osi_macsec_config_lut/osi_core is NULL
+ *  - -1 on pointer to LUT config is NULL
+ *  - -1 on failure in reading or writing to MACSEC LUTs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
+ */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *  - Return -1 if osi core or ops is null
+ *  - Reads or writes to MACSEC LUTs
+ *
+ * @note
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_057
+ *
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
 nve32_t osi_macsec_config_lut(struct osi_core_priv_data *const osi_core,
 			  struct osi_macsec_lut_config *const lut_config);
 
@@ -566,29 +710,54 @@ nve32_t osi_macsec_config_kt(struct osi_core_priv_data *const osi_core,
 #endif /* MACSEC_KEY_PROGRAM */
 
 /**
- * @brief osi_macsec_cipher_config - API to update the cipher
+ * @brief
+ * Description: Configure Cipher suite in MACSEC controller
  *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Updates cipher to use
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] cipher: Cipher suit to be used
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] cipher: Cipher suite value
+ *   * Range: 0 to 1
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
+ * @return
+ *  - 0 on Successful configuration of cipher suite
+ *  - -1 on NVETHERNETRM_PIF#osi_macsec_cipher_config/osi_core is NULL
+ *  - -1 on wrong cipher value obtaioned
  *
- * @retval 0 on success
- * @retval -1 on failure
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
  */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *  - Return -1 if osi core or ops is null
+ *  - Configure Cipher suite in MACSEC controller
+ *
+ * @note
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_049
+ *
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+
 nve32_t osi_macsec_cipher_config(struct osi_core_priv_data *const osi_core,
 				 nveu32_t cipher);
 
@@ -623,61 +792,113 @@ nve32_t osi_macsec_loopback(struct osi_core_priv_data *const osi_core,
 #endif /* DEBUG_MACSEC */
 
 /**
- * @brief osi_macsec_config - Updates SC or SA in the macsec
+ * @brief
+ * Description: Enables SC or SA in MACSEC controller
  *
- * @note
- * Algorithm:
- *  - Return -1 if passed params are invalid
- *  - Return -1 if osi core or ops is null
- *  - Update/add/delete SC/SA
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] sc: Pointer to the sc that needs to be added/deleted/updated
- * @param[in] enable: macsec enable/disable selection
- * @param[in] ctlr: Controller selected
- * @param[out] kt_idx: Pointer to the kt_index passed to OSD
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] sc: A pointer to the secure channel parameters
+ *   * Range: A non-null pointer to Secure Channel parameters
+ * @param[in] enable: parameter that determines enable/disable of SC
+ *   * Range: 0 or 1
+ * @param[in] ctlr: parameter that determines Tx or Rx Controller selection
+ *   * Range: 0 or 1
+ * @param[out] kt_idx: A pointer to the key index for the give SC parameters
+ *   * Range: A non-null pointer to key index
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
+ * @return
+ *  - 0 on Successful programming of MACSEC LUTs
+ *  - -1 on NVETHERNETRM_PIF#osi_macsec_config/osi_core is NULL
+ *  - -1 on pointer to key index is NULL
+ *  - -1 on wrong controller/enable status slection
+ *  - -1 on failure in enable/disable the SC/SA
  *
- * @retval 0 on success
- * @retval -1 on failure
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
  */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *  - Return -1 if osi core or ops is null
+ *  - Return -1 if wrong controller or enable status are selected
+ *  - Return -1 if pointer to key index is null
+ *  - Configurees the MACSEC LUTs such that given SCis enabled or disabled.
+ *
+ * @note
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_050
+ *
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
 nve32_t osi_macsec_config(struct osi_core_priv_data *const osi_core,
 		      struct osi_macsec_sc_info *const sc,
 		      nveu32_t enable, nveu16_t ctlr,
 		      nveu16_t *kt_idx);
 
 /**
- * @brief osi_macsec_read_mmc - Updates the mmc counters
+ * @brief
+ * Description: Reads different MACSEC counters
  *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Updates the mcc counters in osi_core structure
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[out] osi_core: OSI core private data structure
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
+ * @return
+ *  - 0 on Successfully reading MACSEC counters
+ *  - -1 on failure in readiming MACSEC counters
  *
- * @retval 0 on success
- * @retval -1 on failure
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
  */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *  - Return -1 if osi core or ops is null
+ *  - Reads different MACSEC counters and updates in osi_core structure
+ *
+ * @note
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_060
+ *
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
 nve32_t osi_macsec_read_mmc(struct osi_core_priv_data *const osi_core);
 
 #ifdef DEBUG_MACSEC
@@ -737,32 +958,58 @@ nve32_t osi_macsec_dbg_events_config(
 		struct osi_core_priv_data *const osi_core,
 		struct osi_macsec_dbg_buf_config *const dbg_buf_config);
 #endif /* DEBUG_MACSEC */
+
 /**
- * @brief osi_macsec_get_sc_lut_key_index - API to get key index for a given SCI
+ * @brief
+ * Description: API to get key index for a given SCI
  *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - gets the key index for the given sci
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] sci: Pointer to sci that needs to be found
- * @param[out] key_index: Pointer to key_index
- * @param[in] ctlr: macsec controller selected
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] sci: A pointer to the secure channel Identifier
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[out] key_index: A pointer to the key index that will be filled by this API
+ *   * Range: A non-null pointer to key index
+ * @param[in] ctlr: Parameter that determines the controller selection
+ *   * Range: 0 or 1
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
+ * @return
+ *  - 0 on Successfully obtaining key index
+ *  - -1 on NVETHERNETRM_PIF#osi_macsec_get_sc_lut_key_index/osi_core is NULL
+ *  - -1 on failure in obtaining the key index
  *
- * @retval 0 on success
- * @retval -1 on failure
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
  */
+#ifndef DOXYGEN_ICD
+/**
+ * @note
+ * Algorithm:
+ *  - Reads different MACSEC counters and updates in osi_core structure
+ *
+ * @note
+ * Traceability Details:
+ * - SWUD_ID: ETHERNET_NVETHERNETRM_056
+ *
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
 nve32_t osi_macsec_get_sc_lut_key_index(
 		struct osi_core_priv_data *const osi_core,
 		nveu8_t *sci, nveu32_t *key_index, nveu16_t ctlr);

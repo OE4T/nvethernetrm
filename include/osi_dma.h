@@ -649,7 +649,7 @@ struct osi_dma_priv_data {
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -712,7 +712,7 @@ nveu32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -775,7 +775,7 @@ nveu32_t osi_get_refill_rx_desc_cnt(const struct osi_dma_priv_data *const osi_dm
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -825,7 +825,7 @@ nve32_t osi_rx_dma_desc_init(struct osi_dma_priv_data *osi_dma,
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -899,7 +899,7 @@ nve32_t osi_set_rx_buf_len(struct osi_dma_priv_data *osi_dma);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -968,7 +968,7 @@ nve32_t osi_hw_transmit(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -1043,7 +1043,7 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -1124,7 +1124,7 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1187,7 +1187,7 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1232,7 +1232,7 @@ nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1297,7 +1297,7 @@ nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1353,7 +1353,7 @@ nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1414,7 +1414,7 @@ nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -1431,6 +1431,14 @@ nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma);
  * @retval -1 on failure - invalid argument
  * @retval -1 on failure - failed to enable or disable interrupt
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 nve32_t osi_handle_dma_intr(struct osi_dma_priv_data *osi_dma,
 			    nveu32_t chan, nveu32_t tx_rx, nveu32_t en_dis);
 
@@ -1493,7 +1501,7 @@ nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1541,7 +1549,7 @@ nve32_t osi_clear_tx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1608,7 +1616,7 @@ nve32_t osi_clear_rx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: Yes
@@ -1665,7 +1673,7 @@ nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
  */
 #endif
 /**
- * @note
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No
@@ -1681,5 +1689,13 @@ nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
  * @retval !=NULL Valid and unique osi_dma pointer on success
  * @retval NULL on failure.
  */
+#ifdef DOXYGEN_ICD
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 struct osi_dma_priv_data *osi_get_dma(void);
 #endif /* INCLUDED_OSI_DMA_H */
