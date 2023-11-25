@@ -44,6 +44,7 @@
  */
 #define OSI_UNLOCKED		0x0U
 #define OSI_LOCKED		0x1U
+/** @brief Number of Nano seconds per second */
 #define OSI_NSEC_PER_SEC	1000000000ULL
 #ifndef OSI_STRIPPED_LIB
 #define OSI_MAX_RX_COALESCE_USEC	1020U
@@ -63,7 +64,9 @@
  * @addtogroup FC-Helper Flow control enable/disable macros.
  * @{
  */
+/** @brief flag to disable pause frames */
 #define OSI_PAUSE_FRAMES_DISABLE	0U
+/** @brief flag to enable pause frames */
 #define OSI_PAUSE_FRAMES_ENABLE		1U
 /** @} */
 
@@ -192,14 +195,25 @@
 #define EQOS_DMA_CHX_IER(x)		((0x0080U * (x)) + 0x1134U)
 
 /* FIXME add logic based on HW version */
+/**
+ * @brief Maximum number of channels in EQOS
+ */
 #define OSI_EQOS_MAX_NUM_CHANS		8U
+/** @brief Maximum number of queues in EQOS */
 #define OSI_EQOS_MAX_NUM_QUEUES		8U
+/** @brief Maximum number of L3L4 filters supported */
 #define OSI_MGBE_MAX_L3_L4_FILTER	8U
+/**
+ * @brief Maximum number of channels in MGBE
+ */
 #define OSI_MGBE_MAX_NUM_CHANS		10U
+/** @brief Maximum number of queues in MGBE */
 #define OSI_MGBE_MAX_NUM_QUEUES		10U
 #define OSI_EQOS_XP_MAX_CHANS		4U
 
-/* MACSEC max SC's supported 16*/
+/**
+ * @brief Maximum number of Secure Channels supported
+ */
 #define OSI_MACSEC_SC_INDEX_MAX		16
 
 #ifndef OSI_STRIPPED_LIB
@@ -210,7 +224,9 @@
 #define MAC_VERSION		0x110
 #define MAC_VERSION_SNVER_MASK	0x7FU
 
+/** @brief flag indicating EQOS MAC */
 #define OSI_MAC_HW_EQOS		0U
+/** @brief flag indicating MGBE MAC */
 #define OSI_MAC_HW_MGBE		1U
 #define OSI_MAX_VM_IRQS		5U
 
@@ -233,10 +249,16 @@
 #define OSI_MGBE_MAC_4_00	0x40U
 #endif /* OSI_STRIPPED_LIB */
 
+/** @brief EQOS MAC version before Orin */
 #define OSI_EQOS_MAC_5_00       0x50U
+/** @brief EQOS MAC version Orin */
 #define OSI_EQOS_MAC_5_30       0x53U
+/** @brief MGBE MAC version Orin */
 #define OSI_MGBE_MAC_3_10	0x31U
 
+/**
+ * @brief Maximum number of VM IRQs
+ */
 #define OSI_MAX_VM_IRQS              5U
 
 #ifndef OSI_STRIPPED_LIB
@@ -273,7 +295,9 @@
  * as parameter
  *
  * @param[in] last_value: last value of stat counter
+ *   * Range: 0 to UINT64_MAX
  * @param[in] incr: increment value
+ *   * Range: 0 to UINT64_MAX
  *
  * @usage
  * - Allowed context for the API call
@@ -299,14 +323,13 @@
  *
  * Traceability Details:
  * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_016
- *
- */
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_042
+ **/
 #else
 /**
  *
  * @dir
  *  - forward
- *
  */
 #endif
 static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,

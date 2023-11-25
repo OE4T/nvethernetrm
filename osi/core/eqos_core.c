@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -2847,8 +2847,9 @@ static nveu32_t eqos_read_macsec_reg(struct osi_core_priv_data *const osi_core,
 				     const nve32_t reg)
 {
 	nveu32_t ret = 0;
+	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
 
-	if (osi_core->macsec_ops != OSI_NULL) {
+	if (l_core->macsec_ops != OSI_NULL) {
 		ret = osi_readla(osi_core, (nveu8_t *)osi_core->macsec_base +
 				 reg);
 	} else {
@@ -2878,8 +2879,9 @@ static nveu32_t eqos_write_macsec_reg(struct osi_core_priv_data *const osi_core,
 				      const nveu32_t val, const nve32_t reg)
 {
 	nveu32_t ret = 0;
+	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
 
-	if (osi_core->macsec_ops != OSI_NULL) {
+	if (l_core->macsec_ops != OSI_NULL) {
 		osi_writela(osi_core, val, (nveu8_t *)osi_core->macsec_base +
 			    reg);
 	} else {

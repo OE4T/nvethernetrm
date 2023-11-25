@@ -36,70 +36,88 @@
  * @brief Helper macros for LUT programming
  * @{
  */
+/* @brief valid AN0 flag */
 #define OSI_AN0_VALID			OSI_BIT(0)
+/* @brief valid AN1 flag */
 #define OSI_AN1_VALID			OSI_BIT(1)
+/* @brief valid AN2 flag */
 #define OSI_AN2_VALID			OSI_BIT(2)
+/* @brief valid AN3 flag */
 #define OSI_AN3_VALID			OSI_BIT(3)
+/* @brief maximum number of SAs supported */
 #define OSI_MAX_NUM_SA			4U
 #ifdef DEBUG_MACSEC
 #define OSI_CURR_AN_MAX 		3
 #endif /* DEBUG_MACSEC */
+/* @brief maximum key index */
 #define OSI_KEY_INDEX_MAX		31U
+/* @brief maximum PN by default */
 #define OSI_PN_MAX_DEFAULT		0xFFFFFFFFU
+/* @brief threshold PN by default */
 #define OSI_PN_THRESHOLD_DEFAULT	0xC0000000U
+/* @brief TCI by default */
 #define OSI_TCI_DEFAULT 		0x1
+/* @brief maximum SCs index */
 #define OSI_SC_INDEX_MAX		15U
+/**
+ * @brief Length of ethernet type field
+ */
 #define OSI_ETHTYPE_LEN 		2
+/**
+ * @brief Maximum bype pattern match
+ */
 #define OSI_LUT_BYTE_PATTERN_MAX	4U
 /* LUT byte pattern offset range 0-63 */
 #define OSI_LUT_BYTE_PATTERN_MAX_OFFSET 63U
-/* VLAN PCP range 0-7 */
+/* @brief VLAN PCP range 0-7 */
 #define OSI_VLAN_PCP_MAX		7U
-/* VLAN ID range 1-4095 */
+/* @brief VLAN ID range 1-4095 */
 #define OSI_VLAN_ID_MAX 		4095U
+/* @brief flag to select BYPASS LUT */
 #define OSI_LUT_SEL_BYPASS		0U
+/* @brief flag to select SCI LUT */
 #define OSI_LUT_SEL_SCI 		1U
+/* @brief flag to select SC_PARAM LUT */
 #define OSI_LUT_SEL_SC_PARAM		2U
+/* @brief flag to select SC_STATE LUT */
 #define OSI_LUT_SEL_SC_STATE		3U
+/* @brief flag to select SA_STATE LUT */
 #define OSI_LUT_SEL_SA_STATE		4U
+/* @brief maximum LUTs to select */
 #define OSI_LUT_SEL_MAX 		4U
-/* Helper MACROS to set which LUTs to be cleared in error scenario */
-#define CLEAR_KEY_LUT			OSI_BIT(0)
-#define CLEAR_SA_STATE_LUT		OSI_BIT(1)
-#define CLEAR_SC_PARAM_LUT		OSI_BIT(2)
-#define CLEAR_SCI_LUT			OSI_BIT(3)
-#define CLEAR_SCI_LUT_FOR_VLAN		OSI_BIT(4)
-
-/* LUT input fields flags bit offsets */
-#define OSI_LUT_FLAGS_DA_BYTE0_VALID	OSI_BIT(0)
-#define OSI_LUT_FLAGS_DA_BYTE1_VALID	OSI_BIT(1)
-#define OSI_LUT_FLAGS_DA_BYTE2_VALID	OSI_BIT(2)
-#define OSI_LUT_FLAGS_DA_BYTE3_VALID	OSI_BIT(3)
-#define OSI_LUT_FLAGS_DA_BYTE4_VALID	OSI_BIT(4)
-#define OSI_LUT_FLAGS_DA_BYTE5_VALID	OSI_BIT(5)
+/* @brief Flag indicating which bytes of DA is valid */
 #define OSI_LUT_FLAGS_DA_VALID		(OSI_BIT(0) | OSI_BIT(1) | OSI_BIT(2) |\
 					 OSI_BIT(3) | OSI_BIT(4) | OSI_BIT(5))
-#define OSI_LUT_FLAGS_SA_BYTE0_VALID	OSI_BIT(6)
-#define OSI_LUT_FLAGS_SA_BYTE1_VALID	OSI_BIT(7)
-#define OSI_LUT_FLAGS_SA_BYTE2_VALID	OSI_BIT(8)
-#define OSI_LUT_FLAGS_SA_BYTE3_VALID	OSI_BIT(9)
-#define OSI_LUT_FLAGS_SA_BYTE4_VALID	OSI_BIT(10)
-#define OSI_LUT_FLAGS_SA_BYTE5_VALID	OSI_BIT(11)
+/* @brief Flag indicating which bytes of SA is valid */
 #define OSI_LUT_FLAGS_SA_VALID		(OSI_BIT(6) | OSI_BIT(7) | OSI_BIT(8) |\
 					 OSI_BIT(9) | OSI_BIT(10) | OSI_BIT(11))
+/* @brief Flag indicating ethernet type is valid */
 #define OSI_LUT_FLAGS_ETHTYPE_VALID	OSI_BIT(12)
+/* @brief Flag indicating vlan PCP is valid */
 #define OSI_LUT_FLAGS_VLAN_PCP_VALID	OSI_BIT(13)
+/* @brief Flag indicating vlan ID is valid */
 #define OSI_LUT_FLAGS_VLAN_ID_VALID	OSI_BIT(14)
+/* @brief Flag indicating vlan is present */
 #define OSI_LUT_FLAGS_VLAN_VALID	OSI_BIT(15)
+/* @brief Flag indicating BYTE0 pattern is present */
 #define OSI_LUT_FLAGS_BYTE0_PATTERN_VALID	OSI_BIT(16)
+/* @brief Flag indicating BYTE1 pattern is present */
 #define OSI_LUT_FLAGS_BYTE1_PATTERN_VALID	OSI_BIT(17)
+/* @brief Flag indicating BYTE2 pattern is present */
 #define OSI_LUT_FLAGS_BYTE2_PATTERN_VALID	OSI_BIT(18)
+/* @brief Flag indicating BYTE3 pattern is present */
 #define OSI_LUT_FLAGS_BYTE3_PATTERN_VALID	OSI_BIT(19)
+/* @brief Flag indicating preemptable frame */
 #define OSI_LUT_FLAGS_PREEMPT		OSI_BIT(20)
+/* @brief Flag indicating preemptable field is valid */
 #define OSI_LUT_FLAGS_PREEMPT_VALID	OSI_BIT(21)
+/* @brief Flag indicating controlled port */
 #define OSI_LUT_FLAGS_CONTROLLED_PORT	OSI_BIT(22)
+/* @brief Flag indicating Double VLAN packet */
 #define OSI_LUT_FLAGS_DVLAN_PKT		OSI_BIT(23)
+/* @brief Flag indicating Double VLAN INNER tag select */
 #define OSI_LUT_FLAGS_DVLAN_OUTER_INNER_TAG_SEL	OSI_BIT(24)
+/* @brief Flag indicating flags entry is valid */
 #define OSI_LUT_FLAGS_ENTRY_VALID	OSI_BIT(31)
 /** @} */
 
@@ -109,14 +127,21 @@
  * @brief Helper macros for generic table CONFIG register programming
  * @{
  */
+/* @brief TX MACSEC controller */
 #define OSI_CTLR_SEL_TX		0U
+/* @brief RX MACSEC controller */
 #define OSI_CTLR_SEL_RX		1U
 #define OSI_CTLR_SEL_MAX	1U
+/* @brief LUT read operation */
 #define OSI_LUT_READ		0U
+/* @brief LUT write operation */
 #define OSI_LUT_WRITE		1U
 #define OSI_RW_MAX		1U
+/* @brief Maximum table index */
 #define OSI_TABLE_INDEX_MAX	31U
+/* @brief Maximum bypass lut table index */
 #define OSI_BYP_LUT_MAX_INDEX	OSI_TABLE_INDEX_MAX
+/* @brief Maximum number of SCs */
 #define OSI_SC_LUT_MAX_INDEX	15U
 #define OSI_SA_LUT_MAX_INDEX	OSI_TABLE_INDEX_MAX
 /** @} */
@@ -154,7 +179,9 @@
  * @brief Helper macro's for AES ciphers
  * @{
  */
+/* @brief select CIPHER AES128 */
 #define OSI_MACSEC_CIPHER_AES128	0U
+/* @brief select CIPHER AES256 */
 #define OSI_MACSEC_CIPHER_AES256	1U
 /** @} */
 
@@ -162,43 +189,21 @@
  * @brief Indicates different operations on MACSEC SA
  */
 #ifdef MACSEC_KEY_PROGRAM
+/* @brief Command to create SA */
 #define OSI_CREATE_SA           1U
 #endif /* MACSEC_KEY_PROGRAM */
+/* @brief Command to enable SA */
 #define OSI_ENABLE_SA           2U
-
-/**
- * @addtogroup MACROS to increment
- *
- * @brief Helper macros to increment without MISRA errors
- * @{
- */
-#define INC_BYP_LUT_IDX(x)\
-	(x) = ((nveu16_t)(((x) & 0xFFU) + 1U))
-/* To Obtained the SCI LUT Index SC index is multiplied by 2 because
- * For each SC 2 SCI LUTs are added one for VLAN and another for non-VLAN
- */
-#define GET_SCI_LUT_IDX(x)	((nveu16_t)((((x) & 0xFFU) * 2U) & 0xFFU))
-#define GET_SCI_LUT_VLAN_IDX(x)	((nveu16_t)(((((x) & 0xFFU) * 2U) + 1U) & 0xFFU))
-/** @} */
-
-
-/**
- * @addtogroup AES ciphers
- *
- * @brief Helper macro's for SC setup
- * @{
- */
-#define OSI_MACSEC_SC_VALID		0U
-#define OSI_MACSEC_SC_DUMMY		1U
-/** @} */
 
 /**
  * @brief MACSEC SA State LUT entry outputs structure
  */
 struct osi_sa_state_outputs {
-	/** Indicates next PN to use */
+	/** Indicates next PN to use
+	 * valid values are from 1 to UINT32_MAX */
 	nveu32_t next_pn;
-	/** Indicates lowest PN to use */
+	/** Indicates lowest PN to use
+	 * valid values are from 0 to UINT32_MAX */
 	nveu32_t lowest_pn;
 };
 
@@ -206,7 +211,8 @@ struct osi_sa_state_outputs {
  * @brief MACSEC SC State LUT entry outputs structure
  */
 struct osi_sc_state_outputs {
-	/** Indicates current AN to use */
+	/** Indicates current AN to use
+	 * valid values are from 0 to NVETHERNETRM_PIF$OSI_MAX_NUM_SA-1*/
 	nveu32_t curr_an;
 };
 
@@ -214,21 +220,27 @@ struct osi_sc_state_outputs {
  * @brief MACSEC SC Param LUT entry outputs structure
  */
 struct osi_sc_param_outputs {
-	/** Indicates Key index start */
+	/** Indicates Key index start
+	 * valid values are from 0 to NVETHERNETRM_PIF$OSI_KEY_INDEX_MAX */
 	nveu32_t key_index_start;
-	/** PN max for given AN, after which HW will roll over to next AN */
+	/** PN max for given AN, after which HW will roll over to next AN
+	 * valid values are from 1 to NVETHERNETRM_PIF$OSI_PN_MAX_DEFAULT */
 	nveu32_t pn_max;
-	/** PN threshold to trigger irq when threshold is reached */
+	/** PN threshold to trigger irq when threshold is reached
+	 * valid values are from 1 to NVETHERNETRM_PIF$OSI_PN_MAX_DEFAULT */
 	nveu32_t pn_threshold;
-	/** Indidate PN window for engress packets */
+	/** Indidate PN window for engress packets
+	 * valid values are from 1 to NVETHERNETRM_PIF$OSI_PN_MAX_DEFAULT */
 	nveu32_t pn_window;
-	/** SC identifier */
+	/** SC identifier
+	 * valid values are from 0 to 0xFF for each array element*/
 	nveu8_t sci[OSI_SCI_LEN];
 	/** Indicates SECTAG 3 TCI bits V, ES, SC
 	 * Default TCI value V=1, ES=0, SC = 1
-	 */
+	 * valid range is from 0 to 7 */
 	nveu8_t tci;
-	/** Indicates 1 bit VLAN IN CLEAR config */
+	/** Indicates 1 bit VLAN IN CLEAR config
+	 * vlaid values are 0(vlan not in clear) and 1(vlan in clear) */
 	nveu8_t vlan_in_clear;
 };
 
@@ -236,11 +248,15 @@ struct osi_sc_param_outputs {
  * @brief MACSEC SCI LUT entry outputs structure
  */
 struct osi_sci_lut_outputs {
-	/** Indicates SC index to use */
+	/** Indicates SC index to use
+	 * valid values are rom NVETHERNETRM_PIF$OSI_SC_INDEX_MAX */
 	nveu32_t sc_index;
-	/** SC identifier */
+	/** SC identifier
+	 * valid values are from 0 to 0xFF for each array element */
 	nveu8_t sci[OSI_SCI_LEN];
-	/** AN's valid */
+	/** AN's valid bitmap
+	 * valid map contains NVETHERNETRM_PIF$OSI_AN0_VALID to
+	 * NVETHERNETRM_PIF$OSI_AN3_VALID */
 	nveu32_t an_valid;
 };
 
@@ -248,11 +264,16 @@ struct osi_sci_lut_outputs {
  * @brief MACSEC LUT config data structure
  */
 struct osi_macsec_table_config {
-	/** Indicates controller select, Tx=0, Rx=1 */
+	/** Indicates controller select
+	 * valid values are NVETHERNETRM_PIF$OSI_CTLR_SEL_RX and
+	 * NVETHERNETRM_PIF$OSI_CTLR_SEL_TX */
 	nveu16_t ctlr_sel;
-	/** Read or write operation select, Read=0, Write=1 */
+	/** Read or write operation select
+	 * valid values are NVETHERNETRM_PIF$OSI_LUT_READ and
+	 * NVETHERNETRM_PIF$OSI_LUT_WRITE */
 	nveu16_t rw;
-	/** LUT entry index */
+	/** LUT entry index
+	 * valid values are from 0 to NVETHERNETRM_PIF$OSI_TABLE_INDEX_MAX */
 	nveu16_t index;
 };
 
@@ -272,19 +293,26 @@ struct osi_kt_entry {
  * @brief MACSEC BYP/SCI LUT entry inputs structure
  */
 struct osi_lut_inputs {
-	/** MAC DA to compare */
+	/** MAC DA to compare
+	 * valid values are from 0 to 0xFF for each array element */
 	nveu8_t da[OSI_ETH_ALEN];
-	/** MAC SA to compare */
+	/** MAC SA to compare
+	 * valid values are from 0 to 0xFF for each array element */
 	nveu8_t sa[OSI_ETH_ALEN];
-	/** Ethertype to compare */
+	/** Ethertype to compare
+	 * valid values are from 0 to 0xFF for each array element */
 	nveu8_t ethtype[OSI_ETHTYPE_LEN];
-	/** 4-Byte pattern to compare */
+	/** 4-Byte pattern to compare
+	 * valid values are from 0 to 0xFF for each array element */
 	nveu8_t byte_pattern[OSI_LUT_BYTE_PATTERN_MAX];
-	/** Offset for 4-Byte pattern to compare */
+	/** Offset for 4-Byte pattern to compare
+	 * valid values are from 0 to 0xFF for each array element */
 	nveu32_t byte_pattern_offset[OSI_LUT_BYTE_PATTERN_MAX];
-	/** VLAN PCP to compare */
+	/** VLAN PCP to compare
+	 * valid vaues are from 0 to NVETHERNETRM_PIF$OSI_VLAN_PCP_MAX */
 	nveu32_t vlan_pcp;
-	/** VLAN ID to compare */
+	/** VLAN ID to compare
+	 * valid vaues are from 0 to NVETHERNETRM_PIF$OSI_VLAN_ID_MAX */
 	nveu32_t vlan_id;
 };
 
@@ -292,27 +320,35 @@ struct osi_lut_inputs {
  * @brief MACSEC LUT config data structure
  */
 struct osi_macsec_lut_config {
-	/** Generic table config */
+	/** Generic table config
+	 * refer NVETHERNETRM_PIF$osi_macsec_table_config data for more info*/
 	struct osi_macsec_table_config table_config;
 	/** Indicates LUT to select
-	 * 0: Bypass LUT
-	 * 1: SCI LUT
-	 * 2: SC PARAM LUT
-	 * 3: SC STATE LUT
-	 * 4: SA STATE LUT
+	 * NVETHERNETRM_PIF$OSI_LUT_SEL_BYPASS: Bypass LUT
+	 * NVETHERNETRM_PIF$OSI_LUT_SEL_SCI: SCI LUT
+	 * NVETHERNETRM_PIF$OSI_LUT_SEL_SC_PARAM: SC PARAM LUT
+	 * NVETHERNETRM_PIF$OSI_LUT_SEL_SC_STATE: SC STATE LUT
+	 * NVETHERNETRM_PIF$OSI_LUT_SEL_SA_STATE: SA STATE LUT
 	 */
 	nveu16_t lut_sel;
-	/** flag - encoding various valid LUT bits for above fields */
+	/** flag - encoding various valid LUT bits for above fields
+	 * this is a bit map with ma value as UINT32_MAX
+	 * for more details refer from NVETHERNETRM_PIF$OSI_LUT_FLAGS_DA_VALID to
+	 * NVETHERNETRM_PIF$OSI_LUT_FLAGS_ENTRY_VALID */
 	nveu32_t flags;
 	/** LUT inputs to use */
 	struct osi_lut_inputs lut_in;
-	/** SCI LUT outputs */
+	/** SCI LUT outputs
+	 * for more details refer NVETHERNETRM_PIF$osi_sci_lut_outputs */
 	struct osi_sci_lut_outputs sci_lut_out;
-	/** SC Param LUT outputs */
+	/** SC Param LUT outputs
+	 * for more details refer NVETHERNETRM_PIF$osi_sc_param_outputs */
 	struct osi_sc_param_outputs sc_param_out;
-	/** SC State LUT outputs */
+	/** SC State LUT outputs
+	 * for more details refer NVETHERNETRM_PIF$osi_sc_state_outputs */
 	struct osi_sc_state_outputs sc_state_out;
-	/** SA State LUT outputs */
+	/** SA State LUT outputs
+	 * for more details refer NVETHERNETRM_PIF$osi_sa_state_outputs */
 	struct osi_sa_state_outputs sa_state_out;
 };
 
@@ -330,75 +366,30 @@ struct osi_macsec_kt_config {
 };
 #endif /* MACSEC_KEY_PROGRAM */
 
+#ifdef DEBUG_MACSEC
 /**
  * @brief MACSEC Debug buffer config data structure
  */
 struct osi_macsec_dbg_buf_config {
-	/** Indicates Controller select, Tx=0, Rx=1 */
+	/** Indicates Controller select
+	 * valid values are NVETHERNETRM_PIF$OSI_CTLR_SEL_RX and
+	 * NVETHERNETRM_PIF$OSI_CTLR_SEL_TX*/
 	nveu16_t ctlr_sel;
-	/** Read or write operation select, Read=0, Write=1 */
+	/** Read or write operation select
+	 * valid values are NVETHERNETRM_PIF$OSI_LUT_READ and
+	 * NVETHERNETRM_PIF$OSI_LUT_WRITE*/
 	nveu16_t rw;
-	/** Indicates debug data buffer */
+	/** Indicates debug data buffer
+	 * valid values are from 0 to 0xFF for each array element*/
 	nveu32_t dbg_buf[4];
-	/** flag - encoding various debug event bits */
+	/** flag - encoding various debug event bits
+	 * valid values are from OSI_BIT(0) to OSI_BIT(11)*/
 	nveu32_t flags;
-	/** Indicates debug buffer index */
+	/** Indicates debug buffer index
+	 * valid values are from 0 to NVETHERNETRM_PIF$OSI_TABLE_INDEX_MAX */
 	nveu32_t index;
 };
-
-/**
- * @brief MACSEC core operations structure
- */
-struct osi_macsec_core_ops {
-	/** macsec init */
-	nve32_t (*init)(struct osi_core_priv_data *const osi_core,
-			nveu32_t mtu, nveu8_t *const mac_addr);
-	/** macsec de-init */
-	nve32_t (*deinit)(struct osi_core_priv_data *const osi_core);
-	/** Macsec irq handler */
-	void (*handle_irq)(struct osi_core_priv_data *const osi_core);
-	/** macsec lut config */
-	nve32_t (*lut_config)(struct osi_core_priv_data *const osi_core,
-			  struct osi_macsec_lut_config *const lut_config);
-#ifdef MACSEC_KEY_PROGRAM
-	/** macsec kt config */
-	nve32_t (*kt_config)(struct osi_core_priv_data *const osi_core,
-			 struct osi_macsec_kt_config *const kt_config);
-#endif /* MACSEC_KEY_PROGRAM */
-	/** macsec cipher config */
-	nve32_t (*cipher_config)(struct osi_core_priv_data *const osi_core,
-			     nveu32_t cipher);
-#ifdef DEBUG_MACSEC
-	/** macsec loopback config */
-	nve32_t (*loopback_config)(struct osi_core_priv_data *const osi_core,
-			       nveu32_t enable);
-#endif /* DEBUG_MACSEC */
-	/** macsec config SA in HW LUT */
-	nve32_t (*config)(struct osi_core_priv_data *const osi_core,
-		      struct osi_macsec_sc_info *const sc,
-		      nveu32_t enable, nveu16_t ctlr,
-		      nveu16_t *kt_idx);
-	/** macsec read mmc counters */
-	void (*read_mmc)(struct osi_core_priv_data *const osi_core);
-#ifdef DEBUG_MACSEC
-	/** macsec debug buffer config */
-	nve32_t (*dbg_buf_config)(struct osi_core_priv_data *const osi_core,
-		struct osi_macsec_dbg_buf_config *const dbg_buf_config);
-	/** macsec debug buffer config */
-	nve32_t (*dbg_events_config)(struct osi_core_priv_data *const osi_core,
-		 struct osi_macsec_dbg_buf_config *const dbg_buf_config);
-#endif /* DEBUG_MACSEC */
-	/** macsec get Key Index start for a given SCI */
-	nve32_t (*get_sc_lut_key_index)(struct osi_core_priv_data *const osi_core,
-		 nveu8_t *sci, nveu32_t *key_index, nveu16_t ctlr);
-	/** macsec set MTU size */
-	nve32_t (*update_mtu)(struct osi_core_priv_data *const osi_core,
-			      nveu32_t mtu);
-#ifdef DEBUG_MACSEC
-	/** macsec interrupts configuration */
-	void (*intr_config)(struct osi_core_priv_data *const osi_core, nveu32_t enable);
-#endif /* DEBUG_MACSEC */
-};
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 	/* MACSEC OSI interface API prototypes */
@@ -432,16 +423,9 @@ struct osi_macsec_core_ops {
  */
 #ifndef DOXYGEN_ICD
 /**
- * @note
- * Algorithm:
- *  - If virtualization is enabled initialize virt ops
- *  - Else
- *    - If macsec base is null return -1
- *    - initialize with macsec ops
  *
- * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_047
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_033
  *
  **/
 #else
@@ -487,16 +471,9 @@ nve32_t osi_init_macsec_ops(struct osi_core_priv_data *const osi_core);
  */
 #ifndef DOXYGEN_ICD
 /**
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Configure MTU, controller configs, interrupts, clear all LUT's and
- *    set BYP LUT entries for MKPDU and BC packets. Creates a dummy SC to
- *    not allow traffic till actual MACSEC session is established.
  *
- * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_048
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_034
  *
  **/
 #else
@@ -538,16 +515,9 @@ nve32_t osi_macsec_init(struct osi_core_priv_data *const osi_core,
  */
 #ifndef DOXYGEN_ICD
 /**
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Configure MTU, controller configs, interrupts, clear all LUT's and
- *    set BYP LUT entries for MKPDU and BC packets. Creates a dummy SC to
- *    not allow traffic till actual MACSEC session is established.
  *
- * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_048
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_035
  *
  **/
 #else
@@ -586,13 +556,9 @@ nve32_t osi_macsec_deinit(struct osi_core_priv_data *const osi_core);
  */
 #ifndef DOXYGEN_ICD
 /**
- * @note
- * Algorithm:
- *  - Handles different MACSEC interrupts and increase respective counters
  *
- * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_062
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_036
  *
  **/
 #else
@@ -604,30 +570,6 @@ nve32_t osi_macsec_deinit(struct osi_core_priv_data *const osi_core);
 #endif
 void osi_macsec_isr(struct osi_core_priv_data *const osi_core);
 
-/**
- * @brief osi_macsec_config_lut - Read or write to macsec LUTs
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Reads or writes to MACSEC LUTs
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[out] lut_config: Pointer to the lut configuration
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
 /**
  * @brief
  * Description: Read or write to macsec LUTs
@@ -660,14 +602,9 @@ void osi_macsec_isr(struct osi_core_priv_data *const osi_core);
  */
 #ifndef DOXYGEN_ICD
 /**
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Reads or writes to MACSEC LUTs
  *
- * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_057
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_037
  *
  **/
 #else
@@ -683,13 +620,6 @@ nve32_t osi_macsec_config_lut(struct osi_core_priv_data *const osi_core,
 #ifdef MACSEC_KEY_PROGRAM
 /**
  * @brief osi_macsec_config_kt - API to read or update the keys
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Read or write the keys
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
  *
  * @param[in] osi_core: OSI core private data structure
  * @param[in] kt_config: Keys that needs to be programmed
@@ -740,14 +670,9 @@ nve32_t osi_macsec_config_kt(struct osi_core_priv_data *const osi_core,
  */
 #ifndef DOXYGEN_ICD
 /**
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Configure Cipher suite in MACSEC controller
  *
- * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_049
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_038
  *
  **/
 #else
@@ -764,13 +689,6 @@ nve32_t osi_macsec_cipher_config(struct osi_core_priv_data *const osi_core,
 #ifdef DEBUG_MACSEC
 /**
  * @brief osi_macsec_loopback - API to enable/disable macsec loopback
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Enables/disables macsec loopback
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
  *
  * @param[in] osi_core: OSI core private data structure
  * @param[in] enable: parameter to enable or disable
@@ -830,16 +748,9 @@ nve32_t osi_macsec_loopback(struct osi_core_priv_data *const osi_core,
  */
 #ifndef DOXYGEN_ICD
 /**
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Return -1 if wrong controller or enable status are selected
- *  - Return -1 if pointer to key index is null
- *  - Configurees the MACSEC LUTs such that given SCis enabled or disabled.
  *
- * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_050
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_039
  *
  **/
 #else
@@ -882,14 +793,9 @@ nve32_t osi_macsec_config(struct osi_core_priv_data *const osi_core,
  */
 #ifndef DOXYGEN_ICD
 /**
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Reads different MACSEC counters and updates in osi_core structure
  *
- * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_060
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_040
  *
  **/
 #else
@@ -904,13 +810,6 @@ nve32_t osi_macsec_read_mmc(struct osi_core_priv_data *const osi_core);
 #ifdef DEBUG_MACSEC
 /**
  * @brief osi_macsec_config_dbg_buf - Reads the debug buffer captured
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Reads the dbg buffers captured
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
  *
  * @param[in] osi_core: OSI core private data structure
  * @param[out] dbg_buf_config: dbg buffer data captured
@@ -932,13 +831,6 @@ nve32_t osi_macsec_config_dbg_buf(
 
 /**
  * @brief osi_macsec_dbg_events_config - Enables debug buffer events
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Enables specific events to capture debug buffers
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
  *
  * @param[in] osi_core: OSI core private data structure
  * @param[in] dbg_buf_config: dbg buffer data captured
@@ -994,13 +886,9 @@ nve32_t osi_macsec_dbg_events_config(
  */
 #ifndef DOXYGEN_ICD
 /**
- * @note
- * Algorithm:
- *  - Reads different MACSEC counters and updates in osi_core structure
  *
- * @note
  * Traceability Details:
- * - SWUD_ID: ETHERNET_NVETHERNETRM_056
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_041
  *
  **/
 #else

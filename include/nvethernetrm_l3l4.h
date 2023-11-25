@@ -35,7 +35,6 @@
  * @brief L3/L4 filter function dependent parameter
  */
 struct osi_l3_l4_filter {
-	/** filter data */
 	struct {
 #ifndef OSI_STRIPPED_LIB
 		/** udp (OSI_TRUE) or tcp (OSI_FALSE) */
@@ -43,9 +42,9 @@ struct osi_l3_l4_filter {
 		/** ipv6 (OSI_TRUE) or ipv4 (OSI_FALSE) */
 		nveu32_t is_ipv6;
 #endif /* !OSI_STRIPPED_LIB */
-		/** destination ip address information */
 		struct {
-			/** ipv4 address */
+			/** ipv4 address
+			 * valid values from 0 to 0xFF in each array element */
 			nveu8_t ip4_addr[4];
 #ifndef OSI_STRIPPED_LIB
 			/** ipv6 address */
@@ -86,7 +85,9 @@ struct osi_l3_l4_filter {
 	/** Represents whether DMA routing enabled (OSI_TRUE) or not (OSI_FALSE) */
 	nveu32_t dma_routing_enable;
 #endif /* !OSI_STRIPPED_LIB */
-	/** DMA channel number of routing enabled */
+	/** DMA channel number if routing enabled
+	 * valid values are from 0 to NVETHERNETRM_PIF$OSI_EQOS_MAX_NUM_CHANS for EQOS
+	 * and 0 to NVETHERNETRM_PIF$OSI_MGBE_MAX_NUM_CHANS for MGBE */
 	nveu32_t dma_chan;
 	/** filter enable (OSI_TRUE) or disable (OSI_FALSE) */
 	nveu32_t filter_enb_dis;

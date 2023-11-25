@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -169,6 +169,28 @@
 #define MACSEC_COMMON_SR_TX			OSI_BIT(0)
 /** @} */
 
+/* Helper MACROS to set which LUTs to be cleared in error scenario */
+#define CLEAR_KEY_LUT                   OSI_BIT(0)
+#define CLEAR_SA_STATE_LUT              OSI_BIT(1)
+#define CLEAR_SC_PARAM_LUT              OSI_BIT(2)
+#define CLEAR_SCI_LUT                   OSI_BIT(3)
+#define CLEAR_SCI_LUT_FOR_VLAN          OSI_BIT(4)
+
+/* LUT input fields flags bit offsets */
+#define OSI_LUT_FLAGS_DA_BYTE0_VALID    OSI_BIT(0)
+#define OSI_LUT_FLAGS_DA_BYTE1_VALID    OSI_BIT(1)
+#define OSI_LUT_FLAGS_DA_BYTE2_VALID    OSI_BIT(2)
+#define OSI_LUT_FLAGS_DA_BYTE3_VALID    OSI_BIT(3)
+#define OSI_LUT_FLAGS_DA_BYTE4_VALID    OSI_BIT(4)
+#define OSI_LUT_FLAGS_DA_BYTE5_VALID    OSI_BIT(5)
+
+#define OSI_LUT_FLAGS_SA_BYTE0_VALID    OSI_BIT(6)
+#define OSI_LUT_FLAGS_SA_BYTE1_VALID    OSI_BIT(7)
+#define OSI_LUT_FLAGS_SA_BYTE2_VALID    OSI_BIT(8)
+#define OSI_LUT_FLAGS_SA_BYTE3_VALID    OSI_BIT(9)
+#define OSI_LUT_FLAGS_SA_BYTE4_VALID    OSI_BIT(10)
+#define OSI_LUT_FLAGS_SA_BYTE5_VALID    OSI_BIT(11)
+
 /**
  * @addtogroup MACSEC_CONTROL0 register
  *
@@ -184,6 +206,30 @@
 #define MACSEC_RX_EN				OSI_BIT(16)
 #define MACSEC_TX_LKUP_MISS_BYPASS		OSI_BIT(3)
 #define MACSEC_TX_EN				OSI_BIT(0)
+/** @} */
+
+/**
+ * @addtogroup MACROS to increment
+ *
+ * @brief Helper macros to increment without MISRA errors
+ * @{
+ */
+#define INC_BYP_LUT_IDX(x) ((x) = ((nveu16_t)(((x) & (0xFFU)) + (1U))))
+/* To Obtained the SCI LUT Index SC index is multiplied by 2 because
+ * For each SC 2 SCI LUTs are added one for VLAN and another for non-VLAN
+ */
+#define GET_SCI_LUT_IDX(x)      ((nveu16_t)((((x) & 0xFFU) * 2U) & 0xFFU))
+#define GET_SCI_LUT_VLAN_IDX(x) ((nveu16_t)(((((x) & 0xFFU) * 2U) + 1U) & 0xFFU))
+/** @} */
+
+/**
+ * @addtogroup AES ciphers
+ *
+ * @brief Helper macro's for SC setup
+ * @{
+ */
+#define OSI_MACSEC_SC_VALID             0U
+#define OSI_MACSEC_SC_DUMMY             1U
 /** @} */
 
 /**

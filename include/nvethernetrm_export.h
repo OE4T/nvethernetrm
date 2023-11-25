@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -31,21 +31,24 @@
  * @brief EQOS generic helper MACROS.
  * @{
  */
+/**
+ * @brief size of GCL-256
+ */
 #define OSI_GCL_SIZE_256		256U
+/**
+ * @brief Maximum Traffic Classes supported
+ */
 #define OSI_MAX_TC_NUM			8U
-/* Ethernet Address length */
+/**
+ * @brief Ethernet Address length
+ */
 #define OSI_ETH_ALEN			6U
 /** @} */
 
 /**
- * @addtogroup Flexible Receive Parser related information
- *
- * @brief Flexible Receive Parser commands, table size and other defines
- * @{
- */
-/* Match data defines */
+* @brief Maximum data matching length
+*/
 #define OSI_FRP_MATCH_DATA_MAX		12U
-/** @} */
 
 /**
  * @addtogroup MTL queue operation mode
@@ -53,7 +56,10 @@
  * @brief MTL queue operation mode options
  * @{
  */
+/** @brief MTL queue operation mode is AVB */
 #define OSI_MTL_QUEUE_AVB	0x1U
+/** @brief MTL queue operation mode is enable and
+ * credit control is disabled */
 #define OSI_MTL_QUEUE_ENABLE	0x2U
 #define OSI_MTL_QUEUE_MODEMAX	0x3U
 #ifndef OSI_STRIPPED_LIB
@@ -67,7 +73,9 @@
  * @brief MTL AVB queue algorithm type
  * @{
  */
+/** @brief AVB algorithm mode is CBS */
 #define OSI_MTL_TXQ_AVALG_CBS	1U
+/** @brief AVB algorithm mode is Strict Priority */
 #define OSI_MTL_TXQ_AVALG_SP	0U
 /** @} */
 
@@ -82,10 +90,6 @@
 #define OSI_OPER_EN_L2_DA_INV		OSI_BIT(4)
 #define OSI_OPER_DIS_L2_DA_INV		OSI_BIT(5)
 #endif /* !OSI_STRIPPED_LIB */
-
-/* Ethernet Address length */
-#define OSI_ETH_ALEN			6U
-#define OSI_MAX_TC_NUM			8U
 /** @} */
 
 #pragma pack(push, 1)
@@ -93,21 +97,31 @@
  * @brief FRP command structure for OSD to OSI
  */
 struct osi_core_frp_cmd {
-	/** FRP Command type */
+	/** FRP Command type
+	 * Valid values are NVETHERNETRM_PIF$OSI_FRP_CMD_ADD or
+	 * NVETHERNETRM_PIF$OSI_FRP_CMD_UPDATE or
+	 * NVETHERNETRM_PIF$OSI_FRP_CMD_DEL */
 	nveu32_t cmd;
-	/** OSD FRP ID */
+	/** OSD FRP ID, valid values are from 0 to 0xFF */
 	nve32_t frp_id;
-	/** OSD match data type */
+	/** OSD match data type
+	 * valid values are from NVETHERNETRM_PIF$OSI_FRP_MATCH_NORMAL
+	 * to NVETHERNETRM_PIF$OSI_FRP_MATCH_VLAN*/
 	nveu8_t match_type;
 	/** OSD match data */
 	nveu8_t match[OSI_FRP_MATCH_DATA_MAX];
-	/** OSD match data length */
+	/** OSD match data length 
+	 * valid value is from 1 to NVETHERNETRM_PIF$OSI_FRP_MATCH_DATA_MAX */
 	nveu8_t match_length;
-	/** OSD Offset */
+	/** OSD Offset
+	 * Valid values are from 1 to NVETHERNETRM_PIF$OSI_FRP_OFFSET_MAX*/
 	nveu8_t offset;
-	/** OSD FRP filter mode flag */
+	/** OSD FRP filter mode flag
+	 * Valid values are from NVETHERNETRM_PIF$OSI_FRP_MODE_ROUTE
+	 * to NVETHERNETRM_PIF$OSI_FRP_MODE_IM_LINK*/
 	nveu8_t filter_mode;
-	/** OSD FRP Link ID */
+	/** OSD FRP Link ID
+	 * valid values are from 0 to 0xFF*/
 	nve32_t next_frp_id;
 	/** OSD DMA Channel Selection
 	 * Bit selection of DMA channels to route the frame
@@ -121,9 +135,12 @@ struct osi_core_frp_cmd {
  * @brief OSI Core avb data structure per queue.
  */
 struct  osi_core_avb_algorithm {
-	/** TX Queue/TC index */
+	/** TX Queue/TC index
+	 * valid range  0 to NVETHERNETRM_PIF$OSI_MGBE_MAX_NUM_QUEUES for MGBE
+	 * valid range 0 to NVETHERNETRM_PIF$OSI_EQOS_MAX_NUM_CHANS for EQOS */
 	nveu32_t qindex;
-	/** CBS Algorithm enable(1) or disable(0) */
+	/** CBS Algorithm is either NVETHERNETRM_PIF$OSI_MTL_TXQ_AVALG_CBS or
+	 * NVETHERNETRM_PIF$OSI_MTL_TXQ_AVALG_SP */
 	nveu32_t algo;
 	/** When this bit is set, the accumulated credit parameter in the
 	 * credit-based shaper algorithm logic is not reset to zero when
@@ -146,15 +163,10 @@ struct  osi_core_avb_algorithm {
 	 * Max value - 0x1FFFFFFFU */
 	nveu32_t low_credit;
 	/** Transmit queue operating mode
-	 *
-	 * 00: disable
-	 *
-	 * 01: avb
-	 *
-	 * 10: enable */
+	 * either disable(0) or NVETHERNETRM_PIF$OSI_MTL_QUEUE_AVB or
+	 * NVETHERNETRM_PIF$OSI_MTL_QUEUE_AVB*/
 	nveu32_t oper_mode;
-	/** TC index
-	 * value 0 to 7 represent 8 TC */
+	/** Traffic Classes from 0 to NVETHERNETRM_PIF$OSI_MAX_TC_NUM-1 */
 	nveu32_t tcindex;
 };
 
@@ -162,11 +174,13 @@ struct  osi_core_avb_algorithm {
  * @brief OSI Core EST structure
  */
 struct osi_est_config {
-	/** enable/disable */
+	/** Valid values ate 0 and 1
+	 * o to disable EST and 1 to enable EST */
 	nveu32_t en_dis;
 	/** 64 bit base time register
 	 * if both values are 0, take ptp time to avoid BTRE
 	 * index 0 for nsec, index 1 for sec
+	 * Valid values are from 0 to UNIT32_MAX for each index
 	 */
 	nveu32_t btr[2];
 	/** 64 bit base time offset index 0 for nsec, index 1 for sec
@@ -176,7 +190,8 @@ struct osi_est_config {
 	 * 8 bits for Seconds, 32 bits for nanoseconds (max 10^9) */
 	nveu32_t ctr[2];
 	/** Configured Time Interval width(24 bits) + 7 bits
-	 * extension register */
+	 * extension register
+	 * Valid values are from 1 to 0x7FFFFFFFU*/
 	nveu32_t ter;
 	/** size of the gate control list Max 256 entries
 	 * valid value range (1-255)*/
@@ -191,12 +206,13 @@ struct osi_est_config {
  */
 struct osi_fpe_config {
 	/** Queue Mask 1 - preemption 0 - express
-	 * bit representation*/
+	 * bit representation for each queue
+	 * valud values are from 1 to 0xFF*/
 	nveu32_t tx_queue_preemption_enable;
-	/** RQ for all preemptable packets  which are not filtered
+	/** residual queues for all preemptable packets  which are not filtered
 	 * based on user priority or SA-DA
-	 * Value range for EQOS 1-7
-	 * Value range for MGBE 1-9 */
+	 * Value range for EQOS 1 to NVETHERNETRM_PIF$OSI_EQOS_MAX_NUM_QUEUES-1
+	 * Value range for MGBE 1 to NVETHERNETRM_PIF$OSI_MGBE_MAX_NUM_QUEUES-1 */
 	nveu32_t rq;
 };
 
@@ -204,19 +220,26 @@ struct osi_fpe_config {
  * @brief OSI Core error stats structure
  */
 struct osi_stats {
-	/** Constant Gate Control Error */
+	/** Constant Gate Control Error
+	 * Valid values are from 0 to UINT64_MAX */
 	nveu64_t const_gate_ctr_err;
-	/** Head-Of-Line Blocking due to Scheduling */
+	/** Head-Of-Line Blocking due to Scheduling
+	 * Valid values are from 0 to UINT64_MAX */
 	nveu64_t head_of_line_blk_sch;
-	/** Per TC Schedule Error */
+	/** Per TC Schedule Error
+	 * Valid values are from 0 to UINT64_MAX */
 	nveu64_t hlbs_q[OSI_MAX_TC_NUM];
-	/** Head-Of-Line Blocking due to Frame Size */
+	/** Head-Of-Line Blocking due to Frame Size
+	 * Valid values are from 0 to UINT64_MAX */
 	nveu64_t head_of_line_blk_frm;
-	/** Per TC Frame Size Error */
+	/** Per TC Frame Size Error/
+	 * Valid values are from 0 to UINT64_MAX */
 	nveu64_t hlbf_q[OSI_MAX_TC_NUM];
-	/** BTR Error */
+	/** BTR Error
+	 * Valid values are from 0 to UINT64_MAX */
 	nveu64_t base_time_reg_err;
-	/** Switch to Software Owned List Complete */
+	/** Switch to Software Owned List Complete
+	 * Valid values are from 0 to UINT64_MAX */
 	nveu64_t sw_own_list_complete;
 #ifndef OSI_STRIPPED_LIB
 	/** IP Header Error */

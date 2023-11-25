@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -2979,9 +2979,9 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 	case OSI_CMD_MAC_MTU:
 		ret = 0;
 #ifdef MACSEC_SUPPORT
-		if ((osi_core->macsec_ops != OSI_NULL) &&
-		    (osi_core->macsec_ops->update_mtu != OSI_NULL)) {
-			ret = osi_core->macsec_ops->update_mtu(osi_core, data->arg1_u32);
+		if ((l_core->macsec_ops != OSI_NULL) &&
+		    (l_core->macsec_ops->update_mtu != OSI_NULL)) {
+			ret = l_core->macsec_ops->update_mtu(osi_core, data->arg1_u32);
 		}
 #endif /*  MACSEC_SUPPORT */
 		break;
@@ -3022,7 +3022,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #ifdef OSI_DEBUG
 	case OSI_CMD_DEBUG_INTR_CONFIG:
 #ifdef DEBUG_MACSEC
-		osi_core->macsec_ops->intr_config(osi_core, data->arg1_u32);
+		l_core->macsec_ops->intr_config(osi_core, data->arg1_u32);
 #endif
 		ret = 0;
 		break;

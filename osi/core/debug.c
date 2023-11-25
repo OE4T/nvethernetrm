@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -78,13 +78,13 @@ void core_structs_dump(struct osi_core_priv_data *osi_core)
 	osi_core->osd_ops.printf(osi_core, OSI_DEBUG_TYPE_STRUCTS,
 				 "MACSEC ops size = %lu",
 				 sizeof(struct osi_macsec_core_ops));
-	core_dump_struct(osi_core, (nveu8_t *)osi_core->macsec_ops,
+	core_dump_struct(osi_core, (nveu8_t *)l_core->macsec_ops,
 			 sizeof(struct osi_macsec_core_ops));
 
 	osi_core->osd_ops.printf(osi_core, OSI_DEBUG_TYPE_STRUCTS,
 				 "MACSEC LUT status size = %lu",
 				 sizeof(struct osi_macsec_lut_status));
-	core_dump_struct(osi_core, (nveu8_t *)osi_core->macsec_ops,
+	core_dump_struct(osi_core, (nveu8_t *)l_core->macsec_ops,
 			 sizeof(struct osi_macsec_lut_status));
 #endif
 	osi_core->osd_ops.printf(osi_core, OSI_DEBUG_TYPE_STRUCTS,
