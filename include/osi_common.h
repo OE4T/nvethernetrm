@@ -148,6 +148,7 @@
 #define OSI_PTP_REQ_CLK_FREQ		250000000U
 #define OSI_POLL_COUNT			1000U
 #ifndef UINT_MAX
+/** Max value of uint */
 #define UINT_MAX			(~0U)
 #endif
 #ifndef INT_MAX
@@ -179,7 +180,7 @@
 #define OSI_LOG_ARG_INVALID		2U
 #define OSI_LOG_ARG_HW_FAIL		4U
 #define OSI_LOG_ARG_OPNOTSUPP		3U
-/* Default maximum Giant Packet Size Limit is 16K */
+/** Default maximum Giant Packet Size Limit is 16383 */
 #define OSI_MAX_MTU_SIZE	16383U
 
 /* MAC Tx/Rx Idle retry and delay count */
@@ -214,9 +215,11 @@
 #define OSI_MAX_VM_IRQS		5U
 
 #define OSI_NULL                ((void *)0)
+/** Enable Flag */
 #define OSI_ENABLE		1U
 #define OSI_NONE		0U
 #define OSI_NONE_SIGNED		0
+/** Disable Flag */
 #define OSI_DISABLE		0U
 #define OSI_H_DISABLE		0x10101010U
 #define OSI_H_ENABLE		(~OSI_H_DISABLE)
@@ -265,26 +268,47 @@
 #define OSI_UNUSED  __attribute__((__unused__))
 
 /**
- * @brief osi_update_stats_counter - update value by increment passed
- *	as parameter
- * @note
- * Algorithm:
- *  - Check for boundary and return sum
+ * @brief
+ * Description: osi_update_stats_counter - update value by increment passed
+ * as parameter
  *
  * @param[in] last_value: last value of stat counter
  * @param[in] incr: increment value
  *
- * @note Input parameter should be only nveu64_t type
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: Yes
+ *  - Signal handler: Yes
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ *  - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
  *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
+ * @pre
+ *  - MAC needs to be out of reset and proper clocks need to be configured.
+ *  - DMA HW init need to be completed successfully, see osi_hw_dma_init
  *
  * @retval 0 on sucess
  * @retval -1 on failure
  */
+#ifndef DOXYGEN_ICD
+/**
+ *
+ * Traceability Details:
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_016
+ *
+ */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ *
+ */
+#endif
 static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,
 						nveu64_t incr)
 {
