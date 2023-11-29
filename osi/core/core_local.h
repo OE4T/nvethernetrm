@@ -447,7 +447,7 @@ struct core_local {
 };
 
 /**
- * @brief update_counter_u - Increment nveu32_t counter
+ * @brief update_counter_u_local - Increment nveu32_t counter
  *
  * @param[out] value: Pointer to value to be incremented.
  * @param[in] incr: increment value
@@ -458,7 +458,7 @@ struct core_local {
  * - Run time: No
  * - De-initialization: No
  */
-static inline void update_counter_u(nveu32_t *value, nveu32_t incr)
+static inline void update_counter_u_local(nveu32_t *value, nveu32_t incr)
 {
 	nveu32_t temp = *value + incr;
 

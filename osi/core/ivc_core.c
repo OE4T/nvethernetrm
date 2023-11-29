@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -149,15 +149,14 @@ static nve32_t ivc_write_phy_reg(struct osi_core_priv_data *const osi_core,
 				 const nveu16_t phydata)
 {
 	ivc_msg_common_t msg;
-	nveu32_t index = 0;
 
 	osi_memset(&msg, 0, sizeof(msg));
 
 	msg.cmd = write_phy_reg;
-	msg.args.arguments[index++] = phyaddr;
-	msg.args.arguments[index++] = phyreg;
-	msg.args.arguments[index++] = phydata;
-	msg.args.count = index;
+	msg.args.arguments[0] = phyaddr;
+	msg.args.arguments[1] = phyreg;
+	msg.args.arguments[2] = phydata;
+	msg.args.count = 3;
 
 	return osi_core->osd_ops.ivc_send(osi_core, &msg, sizeof(msg));
 }
@@ -180,14 +179,13 @@ static nve32_t ivc_read_phy_reg(struct osi_core_priv_data *const osi_core,
 				const nveu32_t phyreg)
 {
 	ivc_msg_common_t msg;
-	nveu32_t index = 0;
 
 	osi_memset(&msg, 0, sizeof(msg));
 
 	msg.cmd = read_phy_reg;
-	msg.args.arguments[index++] = phyaddr;
-	msg.args.arguments[index++] = phyreg;
-	msg.args.count = index;
+	msg.args.arguments[0] = phyaddr;
+	msg.args.arguments[1] = phyreg;
+	msg.args.count = 2;
 
 	return osi_core->osd_ops.ivc_send(osi_core, &msg, sizeof(msg));
 }
@@ -500,8 +498,8 @@ done:
 static void ivc_macsec_handle_irq(OSI_UNUSED
 				    struct osi_core_priv_data *const osi_core)
 {
-	OSI_CORE_INFO(osi_core->osd, OSI_LOG_ARG_INVALID,
-		      "Nothing to handle \n", 0ULL);
+	OSI_CORE_INFO((osi_core->osd), (OSI_LOG_ARG_INVALID),
+		      ("Nothing to handle\n"), (0ULL));
 }
 
 /**
@@ -613,6 +611,7 @@ static nve32_t vir_ivc_init_core_ops(OSI_UNUSED
 	/* This API should not do anything as ethernet_server maintain ops
 	 * locally
 	 */
+	(void)osi_core; // unused
 	return 0;
 }
 

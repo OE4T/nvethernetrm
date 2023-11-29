@@ -228,7 +228,6 @@
 #define OSI_MAC_HW_EQOS		0U
 /** @brief flag indicating MGBE MAC */
 #define OSI_MAC_HW_MGBE		1U
-#define OSI_MAX_VM_IRQS		5U
 
 #define OSI_NULL                ((void *)0)
 /** Enable Flag */
@@ -240,7 +239,7 @@
 #define OSI_H_DISABLE		0x10101010U
 #define OSI_H_ENABLE		(~OSI_H_DISABLE)
 
-#define OSI_BIT(nr)             ((nveu32_t)1 << (nr))
+#define OSI_BIT(nr)             ((nveu32_t)1 << (((nveu32_t)nr) & 0x1FU))
 
 #ifndef OSI_STRIPPED_LIB
 #define OSI_MGBE_MAC_3_00	0x30U
@@ -288,6 +287,9 @@
  * @brief unused function attribute
  */
 #define OSI_UNUSED  __attribute__((__unused__))
+
+/** @brief macro for 1 micro second delay */
+#define OSI_DELAY_1US			1U
 
 /**
  * @brief

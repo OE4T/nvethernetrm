@@ -41,7 +41,6 @@
 #define OSI_PTP_SYNC_ONESTEP		OSI_BIT(2)
 /** Bit used to indicate as PTP two step mode */
 #define OSI_PTP_SYNC_TWOSTEP		OSI_BIT(3)
-#define OSI_DELAY_1US			1U
 /** @} */
 
 /**
@@ -70,8 +69,8 @@
  * @brief Chanel mask for Tx and Rx interrupts
  * @{
  */
-#define OSI_VM_IRQ_TX_CHAN_MASK(x)	OSI_BIT((x) * 2U)
-#define OSI_VM_IRQ_RX_CHAN_MASK(x)	OSI_BIT(((x) * 2U) + 1U)
+#define OSI_VM_IRQ_TX_CHAN_MASK(x)	OSI_BIT((x) << 1U)
+#define OSI_VM_IRQ_RX_CHAN_MASK(x)	OSI_BIT(((x) << 1U) + 1U)
 /** @} */
 
 #ifdef LOG_OSI

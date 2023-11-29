@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -474,8 +474,8 @@ static nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
 		ret = -1;
 		goto fail;
 	} else {
-		OSI_CORE_INFO(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			      "PCS block lock SUCCESS\n", 0ULL);
+		OSI_CORE_INFO((osi_core->osd), (OSI_LOG_ARG_HW_FAIL),
+			      ("PCS block lock SUCCESS\n"), (0ULL));
 		l_core->lane_status = OSI_ENABLE;
 	}
 fail:

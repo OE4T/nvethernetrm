@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -110,6 +110,7 @@ static nveu8_t frp_req_entries(nveu8_t offset,
 {
 	nveu8_t req = 0U;
 	nveu8_t temp_match_length = match_length;
+	nveu8_t frp_offset_bytes_u8 = (nveu8_t)FRP_OFFSET_BYTES(offset);
 
 	/* Validate for temp_match_length */
 	if ((temp_match_length == OSI_NONE) ||
@@ -119,15 +120,14 @@ static nveu8_t frp_req_entries(nveu8_t offset,
 	}
 
 	/* Check does the given length can fit in fist entry */
-	if (temp_match_length <= (nveu8_t)FRP_OFFSET_BYTES(offset)) {
+	if (temp_match_length <= frp_offset_bytes_u8) {
 		/* Require one entry */
 		req = 1U;
 		goto done;
 	}
 	/* Initialize req as 1U and decrement length by FRP_OFFSET_BYTES */
 	req = 1U;
-	temp_match_length = (nveu8_t)(temp_match_length -
-				      (nveu8_t)FRP_OFFSET_BYTES(offset));
+	temp_match_length = (nveu8_t)(temp_match_length - frp_offset_bytes_u8);
 	if ((temp_match_length / FRP_MD_SIZE) < OSI_FRP_MATCH_DATA_MAX) {
 		req = (nveu8_t)(req + (temp_match_length /  FRP_MD_SIZE));
 		if ((temp_match_length % FRP_MD_SIZE) != OSI_NONE) {
@@ -395,15 +395,16 @@ nve32_t frp_hw_write(struct osi_core_priv_data *const osi_core,
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			"HW Fail on FRP update\n",
 			OSI_NONE);
-		goto hw_write_enable_frp;
+		tmp = ops_p->config_frp(osi_core, OSI_ENABLE);
+		goto frp_hw_write_error;
 	}
 
 	/* Check space for XCS BYPASS rule */
-	if ((frp_cnt + 1U) > OSI_FRP_MAX_ENTRY) {
+	if (frp_cnt > (OSI_FRP_MAX_ENTRY - 1U)) {
 		ret = -1;
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "No space for rules\n", OSI_NONE);
-		goto error;
+		goto frp_hw_write_error;
 	}
 
 	/* Check HW table size for non-zero */
@@ -446,7 +447,8 @@ hw_write_enable_frp:
 		tmp = ops_p->config_frp(osi_core, OSI_ENABLE);
 	}
 
-error:
+frp_hw_write_error:
+
 	return (ret < 0) ? ret : tmp;
 }
 
@@ -814,7 +816,7 @@ static nve32_t frp_add(struct osi_core_priv_data *const osi_core,
 	}
 
 	/* Add Match data FRP Entry */
-	ret = frp_entry_add(osi_core, frp_id, (nveu8_t)nve,
+	ret = frp_entry_add(osi_core, frp_id, (nveu8_t)(nve & 0xFFU),
 			    cmd->match, cmd->match_length,
 			    cmd->offset, cmd->filter_mode,
 			    cmd->next_frp_id, cmd->dma_sel);
@@ -874,9 +876,9 @@ nve32_t setup_frp(struct osi_core_priv_data *const osi_core,
 		break;
 	}
 
-	OSI_CORE_INFO(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-		      "FRP instrctions count\n",
-		      osi_core->frp_cnt);
+	OSI_CORE_INFO((osi_core->osd), (OSI_LOG_ARG_HW_FAIL),
+		      ("FRP instrctions count\n"),
+		      (osi_core->frp_cnt));
 
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,

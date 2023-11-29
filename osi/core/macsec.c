@@ -3176,8 +3176,8 @@ static inline void handle_safety_err_irq(
 				const struct osi_core_priv_data *const osi_core)
 {
 	(void) osi_core;
-	OSI_CORE_INFO(osi_core->osd, OSI_LOG_ARG_INVALID,
-		      "Safety Error Handler \n", 0ULL);
+	OSI_CORE_INFO((osi_core->osd), (OSI_LOG_ARG_INVALID),
+		      ("Safety Error Handler\n"), (0ULL));
 	MACSEC_LOG("%s()\n", __func__);
 }
 
@@ -5353,7 +5353,7 @@ static nve32_t add_upd_sc(struct osi_core_priv_data *const osi_core,
 		/* 5. SC state LUT */
 		lut_config.flags = OSI_NONE;
 		lut_config.lut_sel = OSI_LUT_SEL_SC_STATE;
-		table_config->index = (nveu16_t)(sc->sc_idx_start);
+		table_config->index = (nveu16_t)(sc->sc_idx_start & 0xFFFFU);
 		lut_config.sc_state_out.curr_an = sc->curr_an;
 		ret = macsec_lut_config(osi_core, &lut_config);
 		if (ret < 0) {
@@ -5544,7 +5544,7 @@ static nve32_t add_new_sc(struct osi_core_priv_data *const osi_core,
 
 	new_sc->sc_idx_start = avail_sc_idx;
 	if (is_sc_valid == OSI_MACSEC_SC_VALID) {
-		new_sc->an_valid |= OSI_BIT((sc->curr_an & 0xFU));
+		new_sc->an_valid |= OSI_BIT((((nveu32_t)sc->curr_an) & 0xFU));
 	}
 
 	if (add_upd_sc(osi_core, new_sc, ctlr, kt_idx) !=

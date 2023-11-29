@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES.
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION. All rights reserved.
  * All rights reserved.
  *
  *
@@ -89,6 +89,8 @@ static inline nve32_t enable_intr(struct osi_dma_priv_data const *osi_dma,
 				  nveu32_t intr_ctrl, OSI_UNUSED nveu32_t intr_status,
 				  OSI_UNUSED nveu32_t dma_status, nveu32_t val)
 {
+	(void)intr_status; // unused
+	(void)dma_status; // unused
 	return intr_en_dis_retry((nveu8_t *)osi_dma->base, intr_ctrl,
 				 val, OSI_DMA_INTR_ENABLE);
 }
@@ -395,7 +397,7 @@ static inline void start_dma(const struct osi_dma_priv_data *const osi_dma, nveu
 	osi_writel(val, (nveu8_t *)osi_dma->base + rx_dma_reg[osi_dma->mac]);
 }
 
-static void init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
+static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 			     nveu32_t dma_chan)
 {
 	nveu32_t chan = dma_chan & 0xFU;
@@ -420,10 +422,9 @@ static void init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 		EQOS_DMA_CHX_RX_WDT(chan),
 		MGBE_DMA_CHX_RX_WDT(chan)
 	};
-	const nveu32_t tx_pbl[2] = {
+	nveu32_t tx_pbl[2] = {
 		EQOS_DMA_CHX_TX_CTRL_TXPBL_RECOMMENDED,
-		((((MGBE_TXQ_SIZE / osi_dma->num_dma_chans) -
-		   osi_dma->mtu) / (MGBE_AXI_DATAWIDTH / 8U)) - 5U)
+		EQOS_DMA_CHX_TX_CTRL_TXPBL_RECOMMENDED
 	};
 	const nveu32_t rx_pbl[2] = {
 		EQOS_DMA_CHX_RX_CTRL_RXPBL_RECOMMENDED,
@@ -449,6 +450,24 @@ static void init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 		owrq, owrq, owrq, owrq, owrq, owrq
 	};
 	nveu32_t val;
+	nveu32_t temp_tx_pbl;
+	nve32_t ret = -1;
+
+	temp_tx_pbl = (MGBE_TXQ_SIZE / osi_dma->num_dma_chans);
+	if (temp_tx_pbl <= osi_dma->mtu) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "temp_tx_pbl is lower than mtu!!!\n", temp_tx_pbl);
+		goto exit_func;
+	}
+	temp_tx_pbl -= osi_dma->mtu;
+	temp_tx_pbl /= (MGBE_AXI_DATAWIDTH / 8U);
+	if (temp_tx_pbl <= 5U) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "Error in distributing queues!!!\n", temp_tx_pbl);
+		goto exit_func;
+	}
+	temp_tx_pbl -= 5U;
+	tx_pbl[1] = temp_tx_pbl;
 
 	/* Enable Transmit/Receive interrupts */
 	val = osi_readl((nveu8_t *)osi_dma->base + intr_en_reg[osi_dma->mac]);
@@ -527,6 +546,13 @@ static void init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 		val |= (owrq_arr[osi_dma->num_dma_chans - 1U] << MGBE_DMA_CHX_RX_CNTRL2_OWRQ_SHIFT);
 		osi_writel(val, (nveu8_t *)osi_dma->base + MGBE_DMA_CHX_RX_CNTRL2(chan));
 	}
+
+	/* success */
+	ret = 0;
+
+exit_func:
+
+	return ret;
 }
 
 nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma)
@@ -575,7 +601,12 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma)
 	for (i = 0; i < osi_dma->num_dma_chans; i++) {
 		chan = osi_dma->dma_chans[i];
 
-		init_dma_channel(osi_dma, chan);
+		ret = init_dma_channel(osi_dma, chan);
+		if (ret < 0) {
+			OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+				    "Init DMA channel failed\n", 0ULL);
+			goto fail;
+		}
 
 		ret = intr_fn[OSI_DMA_INTR_ENABLE](osi_dma,
 				VIRT_INTR_CHX_CNTRL(chan),

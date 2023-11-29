@@ -1909,6 +1909,8 @@ static inline nve32_t eqos_update_mac_addr_helper(
 	nveu32_t temp;
 	nve32_t ret = 0;
 
+	(void)src_dest; // unused
+
 	/* PDC bit of MAC_Ext_Configuration register is set so binary
 	 * value representation form index 32-127 else hot-bit
 	 * representation.
@@ -2856,7 +2858,7 @@ static nveu32_t eqos_read_macsec_reg(struct osi_core_priv_data *const osi_core,
 		/* macsec is not supported or not enabled in DT */
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "read reg failed", 0ULL);
-		ret = 0xffffffff;
+		ret = 0xffffffffU;
 	}
 	return ret;
 }
@@ -2888,7 +2890,7 @@ static nveu32_t eqos_write_macsec_reg(struct osi_core_priv_data *const osi_core,
 		/* macsec is not supported or not enabled in DT */
 		OSI_CORE_ERR(osi_core->osd,
 			     OSI_LOG_ARG_HW_FAIL, "write reg failed", 0ULL);
-		ret = 0xffffffff;
+		ret = 0xffffffffU;
 	}
 	return ret;
 }

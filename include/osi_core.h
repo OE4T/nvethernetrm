@@ -177,7 +177,6 @@ typedef my_lint_64		nvel64_t;
  * @brief EQOS generic helper MACROS.
  * @{
  */
-#define EQOS_DMA_CHX_IER(x)		((0x0080U * (x)) + 0x1134U)
 #define EQOS_MAX_MAC_ADDRESS_FILTER	128U
 #define EQOS_MAX_MAC_5_3_ADDRESS_FILTER	32U
 #define EQOS_MAX_L3_L4_FILTER		8U
@@ -468,7 +467,6 @@ typedef my_lint_64		nvel64_t;
 
 #define VLAN_NUM_VID		4096U
 #define OSI_DELAY_1000US	1000U
-#define OSI_DELAY_1US		1U
 
 /**
  * @addtogroup PTP PTP related information

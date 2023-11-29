@@ -432,6 +432,8 @@ static nve32_t osi_ptp_configuration(struct osi_core_priv_data *const osi_core,
 	nveu64_t temp = 0, temp1 = 0, temp2 = 0;
 	nveu64_t ssinc = 0;
 
+	(void)enable; // unused
+
 #ifndef OSI_STRIPPED_LIB
 	if (enable == OSI_DISABLE) {
 		/* disable hw time stamping */
@@ -898,7 +900,7 @@ static nve32_t configure_l3l4_filter_valid_params(const struct osi_core_priv_dat
 	     l3_l4->data.dst.port_match_inv |
 	     l3_l4->data.dst.addr_match_inv
 #endif /* !OSI_STRIPPED_LIB */
-	     ) > OSI_TRUE) {
+	     ) > ((nveu32_t)OSI_TRUE)) {
 		OSI_CORE_ERR((osi_core->osd), (OSI_LOG_ARG_OUTOFBOUND),
 			("L3L4: one of the enb param > OSI_TRUE: "), 0);
 		goto exit_func;
@@ -1819,7 +1821,9 @@ static inline nve32_t get_tx_ts(struct osi_core_priv_data *osi_core,
 	struct osi_core_tx_ts const *head = &l_core->tx_ts_head;
 	nve32_t ret = -1;
 	nveu32_t count = 0U;
-	nveu32_t nsec, sec, temp_nsec;
+	nveu32_t nsec = 0;
+	nveu32_t sec = 0;
+	nveu32_t temp_nsec;
 	nveul64_t temp_val = 0ULL;
 	nveul64_t ts_val = 0ULL;
 
@@ -1848,9 +1852,9 @@ static inline nve32_t get_tx_ts(struct osi_core_priv_data *osi_core,
 			temp->prev->next =  temp->next;
 			/* Clear in_use fields */
 			temp->in_use = OSI_DISABLE;
-			OSI_CORE_INFO(osi_core->osd, OSI_LOG_ARG_INVALID,
-				      "Removing stale TS from queue pkt_id\n",
-				      (nveul64_t)temp->pkt_id);
+			OSI_CORE_INFO((osi_core->osd), (OSI_LOG_ARG_INVALID),
+				      ("Removing stale TS from queue pkt_id\n"),
+				      ((nveul64_t)temp->pkt_id));
 			count++;
 			temp = temp->next;
 			continue;
@@ -2163,6 +2167,7 @@ static inline nve32_t freq_offset_calculate(struct osi_core_priv_data *sec_osi_c
 		}
 		break;
 	default:
+		/* for misra */
 		break;
 	}
 
@@ -2323,7 +2328,7 @@ static void apply_dynamic_cfg(struct osi_core_priv_data *osi_core)
 		}
 
 		flags = flags >> 1U;
-		update_counter_u(&i, 1U);
+		update_counter_u_local(&i, 1U);
 	}
 }
 
@@ -2778,7 +2783,6 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		}
 
 		if (l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) {
-			drift_value = 0x0;
 			drift_value = drift_calculation(osi_core, sec_osi_core,
 							&primary_time,
 							&secondary_time,

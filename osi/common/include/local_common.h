@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,8 @@
 #define CHAN_START_POSITION 6U
 #define PKT_ID_CNT	((nveu32_t)1 << CHAN_START_POSITION)
 /* First 6 bytes of idx and last 4 bytes of chan(+1 to avoid pkt_id to be 0) */
-#define GET_TX_TS_PKTID(idx, c) (((++(idx)) & (PKT_ID_CNT - 1U)) | \
+#define INC_TX_TS_PKTID(idx) ((idx) = (((idx) & 0x7FFFFFFFU) + 1U))
+#define GET_TX_TS_PKTID(idx, c) (((idx) & (PKT_ID_CNT - 1U)) | \
 				 (((c) + 1U) << CHAN_START_POSITION))
 /** @} */
 

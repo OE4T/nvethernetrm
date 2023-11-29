@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -2269,9 +2269,9 @@ static void mgbe_handle_mac_intrs(struct osi_core_priv_data *osi_core)
 				/* Remove oldest stale TS from list to make
 				 * space for new TS
 				 */
-				OSI_CORE_INFO(osi_core->osd, OSI_LOG_ARG_INVALID,
-					      "Removing TS from queue pkt_id\n",
-					      temp->pkt_id);
+				OSI_CORE_INFO((osi_core->osd), (OSI_LOG_ARG_INVALID),
+					      ("Removing TS from queue pkt_id\n"),
+					      (temp->pkt_id));
 
 				temp->in_use = OSI_DISABLE;
 				/* remove temp node from the link */
@@ -3110,6 +3110,7 @@ done:
 static nve32_t mgbe_pad_calibrate(OSI_UNUSED
 				  struct osi_core_priv_data *const osi_core)
 {
+	(void)osi_core; // unused
 	return 0;
 }
 

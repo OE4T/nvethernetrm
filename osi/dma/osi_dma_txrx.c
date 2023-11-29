@@ -824,6 +824,10 @@ static inline void fill_first_desc(OSI_UNUSED struct osi_tx_ring *tx_ring,
 				   nveu32_t ptp_flag)
 #endif /* !OSI_STRIPPED_LIB */
 {
+#ifndef OSI_STRIPPED_LIB
+	(void)tx_ring; // unused
+#endif /* !OSI_STRIPPED_LIB */
+
 	tx_desc->tdes0 = L32(tx_swcx->buf_phy_addr);
 	tx_desc->tdes1 = H32(tx_swcx->buf_phy_addr);
 	tx_desc->tdes2 = tx_swcx->len;
@@ -1062,6 +1066,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 				/* packet ID for Onestep is 0x0 always */
 				pkt_id = OSI_NONE;
 			} else {
+				INC_TX_TS_PKTID(l_dma->pkt_id);
 				pkt_id = GET_TX_TS_PKTID(l_dma->pkt_id, chan);
 			}
 			/* update packet id */

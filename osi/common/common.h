@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -215,6 +215,7 @@ static inline void osi_writel(nveu32_t val, void *addr)
  */
 static inline nveu32_t osi_readla(OSI_UNUSED void *priv, void *addr)
 {
+	(void)priv; // unused
 	return *(volatile nveu32_t *)addr;
 }
 
@@ -234,6 +235,7 @@ static inline nveu32_t osi_readla(OSI_UNUSED void *priv, void *addr)
  */
 static inline void osi_writela(OSI_UNUSED void *priv, nveu32_t val, void *addr)
 {
+	(void)priv; // unused
 	*(volatile nveu32_t *)addr = val;
 }
 

@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,10 +26,10 @@
 #include <nvethernet_type.h>
 
 /** helper macro for enable */
-#define OSI_TRUE  ((nveu32_t)1U)
+#define OSI_TRUE  ((nveu32_t)1)
 
 /** helper macro to disable */
-#define OSI_FALSE ((nveu32_t)0U)
+#define OSI_FALSE ((nveu32_t)0)
 
 /**
  * @brief L3/L4 filter function dependent parameter
