@@ -217,6 +217,7 @@ typedef my_lint_64		nvel64_t;
 #define EQOS_MAX_MAC_5_3_ADDRESS_FILTER	32U
 #define EQOS_MAX_L3_L4_FILTER		8U
 #define OSI_MGBE_MAX_MAC_ADDRESS_FILTER	32U
+#define OSI_MGBE_MAX_MAC_ADDRESS_FILTER_T26X	48U
 #define OSI_DA_MATCH			0U
 #ifndef OSI_STRIPPED_LIB
 #define OSI_INV_MATCH			1U
@@ -741,7 +742,7 @@ struct osi_filter {
 	/** src_dest: SA(1) or DA(0) */
 	nveu32_t src_dest;
 	/**  indicates one hot encoded DMA receive channels to program */
-	nveu32_t dma_chansel;
+	nveu64_t dma_chansel;
 	/** Indicates packet duplication enable(1) disable (0) */
 	nveu32_t pkt_dup;
 };

@@ -2072,7 +2072,7 @@ static nve32_t eqos_update_mac_addr_low_high_reg(
 	nveu32_t idx = filter->index;
 	nveu32_t dma_routing_enable = filter->dma_routing;
 	nveu32_t dma_chan = filter->dma_chan;
-	nveu32_t dma_chansel = filter->dma_chansel;
+	nveu64_t dma_chansel = filter->dma_chansel;
 	nveu32_t addr_mask = filter->addr_mask;
 	nveu32_t src_dest = filter->src_dest;
 	nveu32_t value = OSI_DISABLE;

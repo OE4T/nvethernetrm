@@ -227,6 +227,17 @@ static nve32_t mgbe_filter_args_validate(struct osi_core_priv_data *const osi_co
 					 const struct osi_filter *filter)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	const nveu32_t idx_max[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		OSI_MGBE_MAX_MAC_ADDRESS_FILTER,
+		OSI_MGBE_MAX_MAC_ADDRESS_FILTER_T26X
+	};
+	const nveu64_t chansel_max[OSI_MAX_MAC_IP_TYPES] = {
+		0,
+		MGBE_MAC_XDCS_DMA_MAX,
+		MGBE_MAC_XDCS_DMA_MAX_T26X
+	};
+	nveu32_t mac = osi_core->mac;
 	nveu32_t idx = filter->index;
 	nveu32_t dma_routing_enable = filter->dma_routing;
 	nveu32_t dma_chan = filter->dma_chan;
@@ -235,8 +246,8 @@ static nve32_t mgbe_filter_args_validate(struct osi_core_priv_data *const osi_co
 	nveu64_t dma_chansel = filter->dma_chansel;
 	nve32_t ret = 0;
 
-	/* check for valid index (0 to 31) */
-	if (idx >= OSI_MGBE_MAX_MAC_ADDRESS_FILTER) {
+	/* check for valid index */
+	if (idx >= idx_max[mac]) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			"invalid MAC filter index\n",
 			idx);
@@ -255,7 +266,7 @@ static nve32_t mgbe_filter_args_validate(struct osi_core_priv_data *const osi_co
 	}
 
 	/* validate dma_chansel argument */
-	if (dma_chansel > MGBE_MAC_XDCS_DMA_MAX) {
+	if (dma_chansel > chansel_max[mac]) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_OUTOFBOUND,
 			"invalid dma_chansel value\n",
 			dma_chansel);
@@ -633,7 +644,7 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 	nveu32_t addr_mask = filter->addr_mask;
 	nveu32_t src_dest = filter->src_dest;
 	const nveu8_t *addr = filter->mac_addr;
-	nveu32_t dma_chansel = filter->dma_chansel;
+	nveu64_t dma_chansel = filter->dma_chansel;
 	nveu32_t dpsel_value;
 	nveu32_t value = 0x0U;
 	nve32_t ret = 0;
