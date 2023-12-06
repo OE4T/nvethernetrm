@@ -210,7 +210,7 @@ static nve32_t validate_frp_args(struct osi_core_priv_data *const osi_core,
 				 nveu32_t *req_entries)
 {
 	nve32_t ret = 0;
-	nveu32_t dma_sel_val[MAX_MAC_IP_TYPES] = {0xFFU, 0x3FF};
+	nveu32_t dma_sel_val[MAX_MAC_IP_TYPES] = {0xFFU, 0x3FFU};
 	nveu8_t temp_pos = pos;
 
 	/* Validate length */
@@ -325,6 +325,7 @@ static nve32_t frp_entry_add(struct osi_core_priv_data *const osi_core,
 		ok_index = i;
 		break;
 	default:
+		/* Do Nothing */
 		break;
 	}
 
@@ -372,7 +373,9 @@ static nve32_t frp_entry_add(struct osi_core_priv_data *const osi_core,
 			data->next_ins_ctrl = OSI_ENABLE;
 
 			/* Init next FRP entry */
-			temp_pos++;
+			if (temp_pos < OSI_UCHAR_MAX) {
+				temp_pos++;
+			}
 			fo_t++;
 			fp_t = OSI_NONE;
 			data->ok_index = temp_pos;
@@ -383,11 +386,16 @@ static nve32_t frp_entry_add(struct osi_core_priv_data *const osi_core,
 	}
 
 	/* Check and fill final OKI */
-	if ((filter_mode == OSI_FRP_MODE_LINK) ||
-	    (filter_mode == OSI_FRP_MODE_IM_LINK)) {
+	switch (filter_mode) {
+	case OSI_FRP_MODE_LINK:
+	case OSI_FRP_MODE_IM_LINK:
 		/* Update NIC and OKI in final entry */
 		data->next_ins_ctrl = OSI_ENABLE;
 		data->ok_index = ok_index;
+		break;
+	default:
+		/* Do Nothing */
+		break;
 	}
 
 	ret = 0;
@@ -853,8 +861,11 @@ static nve32_t frp_add(struct osi_core_priv_data *const osi_core,
 			nve);
 		goto done;
 	}
-	osi_core->frp_cnt = nve + frp_req_entries(cmd->offset,
-						  cmd->match_length);
+
+	if ((UINT_MAX - nve) > frp_req_entries(cmd->offset, cmd->match_length)) {
+		osi_core->frp_cnt = nve + frp_req_entries(cmd->offset,
+							  cmd->match_length);
+	}
 
 	/* Write FRP Table into HW */
 	ret = frp_hw_write(osi_core, ops_p);

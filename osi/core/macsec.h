@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,14 +33,14 @@
 
 #define MAX_U64_VAL			0xFFFFFFFFFFFFFFFFU
 
-#define CERT_C__POST_INC__U64(a)\
-	{\
-		if ((a) < MAX_U64_VAL) {\
-			(a)++;\
-		} else {\
-			(a) = 0;\
-		} \
-	} \
+static inline void  CERT_C__POST_INC__U64(nveu64_t *a)
+{
+	if ((*a) < MAX_U64_VAL) {
+		(*a)++;
+	} else {
+		(*a) = 0;
+	}
+}
 
 /**
  * @addtogroup MACsec AMAP

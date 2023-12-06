@@ -1019,10 +1019,11 @@ nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
 
 	if (dma_validate_args(osi_dma, l_dma) < 0) {
 		ret = -1;
+		goto fail;
 	}
 
 	common_get_systime_from_mac(osi_dma->base, osi_dma->mac, sec, nsec);
-
+fail:
 	return ret;
 }
 

@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2018-2024, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,6 +26,7 @@
 #include "core_local.h"
 #include "../osi/common/common.h"
 
+/** core local data structure used within RM unit */
 static struct core_local g_core[MAX_CORE_INSTANCES];
 
 /**

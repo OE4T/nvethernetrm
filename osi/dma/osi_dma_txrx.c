@@ -31,6 +31,7 @@
 #include "debug.h"
 #endif /* OSI_DEBUG */
 
+/** DMA descriptor operations */
 static struct desc_ops d_ops[MAX_MAC_IP_TYPES];
 
 #if defined OSI_DEBUG && !defined OSI_STRIPPED_LIB

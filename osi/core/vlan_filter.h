@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VLAN_FILTER_H
-#define VLAN_FILTER_H
+#ifndef INCLUDED_VLAN_FILTER_H
+#define INCLUDED_VLAN_FILTER_H
 
 #include <osi_core.h>
 #include "core_local.h"
@@ -74,4 +75,4 @@
 nve32_t update_vlan_id(struct osi_core_priv_data *osi_core,
 		       struct core_ops *ops_p, nveu32_t vid);
 #endif /* !OSI_STRIPPED_LIB */
-#endif /* VLAN_FILTER_H */
+#endif /* INCLUDED_VLAN_FILTER_H */

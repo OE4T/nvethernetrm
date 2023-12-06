@@ -861,14 +861,6 @@ static nve32_t mgbe_config_frp(struct osi_core_priv_data *const osi_core,
 	nveu32_t op_mode = 0U, val = 0U;
 	nve32_t ret = 0;
 
-	if ((enabled != OSI_ENABLE) && (enabled != OSI_DISABLE)) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"Invalid enable input\n",
-			enabled);
-		ret = -1;
-		goto done;
-	}
-
 	op_mode = osi_readla(osi_core, base + MGBE_MTL_OP_MODE);
 	if (enabled == OSI_ENABLE) {
 		/* Set FRPE bit of MTL_Operation_Mode register */
@@ -957,14 +949,6 @@ static nve32_t mgbe_frp_write(struct osi_core_priv_data *osi_core,
 	nve32_t ret = 0;
 	nveu8_t *base = osi_core->base;
 	nveu32_t val = 0U;
-
-	if ((acc_sel != OSI_ENABLE) && (acc_sel != OSI_DISABLE)) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"Invalid acc_sel argment\n",
-			acc_sel);
-		ret = -1;
-		goto done;
-	}
 
 	/* Wait for ready */
 	ret = osi_readl_poll_timeout((base + MGBE_MTL_RXP_IND_CS),

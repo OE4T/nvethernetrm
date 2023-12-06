@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef IVC_CORE_H
-#define IVC_CORE_H
+#ifndef INCLUDED_IVC_CORE_H
+#define INCLUDED_IVC_CORE_H
 
 #include <osi_macsec.h>
 
@@ -193,4 +193,4 @@ typedef struct ivc_msg_common {
 	}data;
 } ivc_msg_common_t;
 
-#endif /* IVC_CORE_H */
+#endif /* INCLUDED_IVC_CORE_H */

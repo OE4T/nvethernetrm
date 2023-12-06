@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef INCLUDED_TYPE_H
-#define INCLUDED_TYPE_H
+#ifndef INCLUDED_NVETHERNET_TYPE_H
+#define INCLUDED_NVETHERNET_TYPE_H
 /*
  * @addtogroup typedef related info
  *
@@ -63,5 +64,5 @@ typedef my_ulint_64		nveul64_t;
 typedef my_uint64_t		nveu64_t;
 /** @} */
 
-#endif /* INCLUDED_TYPE_H */
+#endif /* INCLUDED_NVETHERNET_TYPE_H */
 

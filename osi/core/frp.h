@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef FRP_H
-#define FRP_H
+#ifndef INCLUDED_FRP_H
+#define INCLUDED_FRP_H
 
 #include <osi_common.h>
 #include <osi_core.h>
@@ -82,4 +83,4 @@ nve32_t setup_frp(struct osi_core_priv_data *const osi_core,
  */
 nve32_t frp_hw_write(struct osi_core_priv_data *const osi_core,
 		     struct core_ops *const ops_p);
-#endif /* FRP_H */
+#endif /* INCLUDED_FRP_H */

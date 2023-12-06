@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef XPCS_H_
-#define XPCS_H_
+#ifndef INCLUDED_XPCS_H_
+#define INCLUDED_XPCS_H_
 
 #include "../osi/common/common.h"
 #include <osi_core.h>
@@ -193,4 +194,4 @@ static inline nve32_t xpcs_write_safety(struct osi_core_priv_data *osi_core,
 
 	return ret;
 }
-#endif
+#endif /* INCLUDED_XPCS_H_ */

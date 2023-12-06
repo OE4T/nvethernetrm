@@ -629,7 +629,7 @@ static nve32_t macsec_dbg_events_config(
 	if ((flags != OSI_NONE) && (dbg_buf_config->rw == OSI_LUT_WRITE)) {
 		for (i = 0; i < 32U; i++) {
 			if ((flags & ((nveu32_t)(1U) << i)) != OSI_NONE) {
-				CERT_C__POST_INC__U64(events);
+				CERT_C__POST_INC__U64(&events);
 			}
 		}
 		if (events > 1U) {
@@ -3422,7 +3422,7 @@ static inline void handle_macsec_tx_mac_crc_error(struct osi_core_priv_data *con
 	nveu64_t tx_crc_err = 0;
 #endif
 	if ((tx_isr & MACSEC_TX_MAC_CRC_ERROR) == MACSEC_TX_MAC_CRC_ERROR) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_mac_crc_error);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.tx_mac_crc_error);
 		*clear |= MACSEC_TX_MAC_CRC_ERROR;
 #ifdef HSI_SUPPORT
 		if (osi_core->hsi.enabled == OSI_ENABLE) {
@@ -3480,22 +3480,22 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 	if ((tx_isr & MACSEC_TX_DBG_BUF_CAPTURE_DONE) ==
 	    MACSEC_TX_DBG_BUF_CAPTURE_DONE) {
 		handle_dbg_evt_capture_done(osi_core, OSI_CTLR_SEL_TX);
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_dbg_capture_done);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.tx_dbg_capture_done);
 		clear |= MACSEC_TX_DBG_BUF_CAPTURE_DONE;
 	}
 
 	if ((tx_isr & MACSEC_TX_MTU_CHECK_FAIL) == MACSEC_TX_MTU_CHECK_FAIL) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_mtu_check_fail);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.tx_mtu_check_fail);
 		clear |= MACSEC_TX_MTU_CHECK_FAIL;
 	}
 
 	if ((tx_isr & MACSEC_TX_AES_GCM_BUF_OVF) == MACSEC_TX_AES_GCM_BUF_OVF) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_aes_gcm_buf_ovf);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.tx_aes_gcm_buf_ovf);
 		clear |= MACSEC_TX_AES_GCM_BUF_OVF;
 	}
 
 	if ((tx_isr & MACSEC_TX_SC_AN_NOT_VALID) == MACSEC_TX_SC_AN_NOT_VALID) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_sc_an_not_valid);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.tx_sc_an_not_valid);
 		handle_tx_sc_err(osi_core);
 		clear |= MACSEC_TX_SC_AN_NOT_VALID;
 	}
@@ -3503,13 +3503,13 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 	handle_macsec_tx_mac_crc_error(osi_core, tx_isr, &clear);
 
 	if ((tx_isr & MACSEC_TX_PN_THRSHLD_RCHD) == MACSEC_TX_PN_THRSHLD_RCHD) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_pn_threshold);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.tx_pn_threshold);
 		handle_tx_pn_threshold(osi_core);
 		clear |= MACSEC_TX_PN_THRSHLD_RCHD;
 	}
 
 	if ((tx_isr & MACSEC_TX_PN_EXHAUSTED) == MACSEC_TX_PN_EXHAUSTED) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_pn_exhausted);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.tx_pn_exhausted);
 		handle_tx_pn_exhausted(osi_core);
 		clear |= MACSEC_TX_PN_EXHAUSTED;
 	}
@@ -3522,23 +3522,23 @@ static inline void handle_macsec_rx_irqs(struct osi_core_priv_data *const osi_co
 					 nveu32_t rx_isr, nveu32_t *clear)
 {
 	if ((rx_isr & MACSEC_RX_REPLAY_ERROR) == MACSEC_RX_REPLAY_ERROR) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_replay_error);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.rx_replay_error);
 		handle_rx_sc_replay_err(osi_core);
 		*clear |= MACSEC_RX_REPLAY_ERROR;
 	}
 
 	if ((rx_isr & MACSEC_RX_MTU_CHECK_FAIL) == MACSEC_RX_MTU_CHECK_FAIL) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_mtu_check_fail);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.rx_mtu_check_fail);
 		*clear |= MACSEC_RX_MTU_CHECK_FAIL;
 	}
 
 	if ((rx_isr & MACSEC_RX_AES_GCM_BUF_OVF) == MACSEC_RX_AES_GCM_BUF_OVF) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_aes_gcm_buf_ovf);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.rx_aes_gcm_buf_ovf);
 		*clear |= MACSEC_RX_AES_GCM_BUF_OVF;
 	}
 
 	if ((rx_isr & MACSEC_RX_PN_EXHAUSTED) == MACSEC_RX_PN_EXHAUSTED) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_pn_exhausted);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.rx_pn_exhausted);
 		handle_rx_pn_exhausted(osi_core);
 		*clear |= MACSEC_RX_PN_EXHAUSTED;
 	}
@@ -3590,12 +3590,12 @@ static inline void handle_rx_irq(struct osi_core_priv_data *const osi_core)
 	if ((rx_isr & MACSEC_RX_DBG_BUF_CAPTURE_DONE) ==
 	    MACSEC_RX_DBG_BUF_CAPTURE_DONE) {
 		handle_dbg_evt_capture_done(osi_core, OSI_CTLR_SEL_RX);
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_dbg_capture_done);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.rx_dbg_capture_done);
 		clear |= MACSEC_RX_DBG_BUF_CAPTURE_DONE;
 	}
 
 	if ((rx_isr & MACSEC_RX_ICV_ERROR) == MACSEC_RX_ICV_ERROR) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_icv_err_threshold);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.rx_icv_err_threshold);
 		clear |= MACSEC_RX_ICV_ERROR;
 #ifdef HSI_SUPPORT
 		if (osi_core->hsi.enabled == OSI_ENABLE) {
@@ -3617,7 +3617,7 @@ static inline void handle_rx_irq(struct osi_core_priv_data *const osi_core)
 	handle_macsec_rx_irqs(osi_core, rx_isr, &clear);
 
 	if ((rx_isr & MACSEC_RX_MAC_CRC_ERROR) == MACSEC_RX_MAC_CRC_ERROR) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_mac_crc_error);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.rx_mac_crc_error);
 		clear |= MACSEC_RX_MAC_CRC_ERROR;
 #ifdef HSI_SUPPORT
 		if (osi_core->hsi.enabled == OSI_ENABLE) {
@@ -3674,7 +3674,7 @@ static inline void handle_common_irq(struct osi_core_priv_data *const osi_core)
 	MACSEC_LOG("%s(): common_isr 0x%x\n", __func__, common_isr);
 
 	if ((common_isr & MACSEC_SECURE_REG_VIOL) == MACSEC_SECURE_REG_VIOL) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.secure_reg_viol);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.secure_reg_viol);
 		clear |= MACSEC_SECURE_REG_VIOL;
 #ifdef HSI_SUPPORT
 		if (osi_core->hsi.enabled == OSI_ENABLE) {
@@ -3687,25 +3687,25 @@ static inline void handle_common_irq(struct osi_core_priv_data *const osi_core)
 
 	if ((common_isr & MACSEC_RX_UNINIT_KEY_SLOT) ==
 	    MACSEC_RX_UNINIT_KEY_SLOT) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_uninit_key_slot);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.rx_uninit_key_slot);
 		clear |= MACSEC_RX_UNINIT_KEY_SLOT;
 		handle_rx_sc_invalid_key(osi_core);
 	}
 
 	if ((common_isr & MACSEC_RX_LKUP_MISS) == MACSEC_RX_LKUP_MISS) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_lkup_miss);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.rx_lkup_miss);
 		clear |= MACSEC_RX_LKUP_MISS;
 	}
 
 	if ((common_isr & MACSEC_TX_UNINIT_KEY_SLOT) ==
 	    MACSEC_TX_UNINIT_KEY_SLOT) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_uninit_key_slot);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.tx_uninit_key_slot);
 		clear |= MACSEC_TX_UNINIT_KEY_SLOT;
 		handle_tx_sc_invalid_key(osi_core);
 	}
 
 	if ((common_isr & MACSEC_TX_LKUP_MISS) == MACSEC_TX_LKUP_MISS) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_lkup_miss);
+		CERT_C__POST_INC__U64(&osi_core->macsec_irq_stats.tx_lkup_miss);
 		clear |= MACSEC_TX_LKUP_MISS;
 	}
 	if (clear != OSI_NONE) {

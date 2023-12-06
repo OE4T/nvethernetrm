@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MGBE_CORE_H_
-#define MGBE_CORE_H_
+#ifndef INCLUDED_MGBE_CORE_H_
+#define INCLUDED_MGBE_CORE_H_
 
 #ifndef OSI_STRIPPED_LIB
 #define MGBE_MAC_PFR				0x0008
@@ -993,4 +994,4 @@
 /** @} */
 #endif
 
-#endif /* MGBE_CORE_H_ */
+#endif /* INCLUDED_MGBE_CORE_H_ */

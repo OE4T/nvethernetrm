@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MGBE_MMC_H_
-#define MGBE_MMC_H_
+#ifndef INCLUDED_MGBE_MMC_H_
+#define INCLUDED_MGBE_MMC_H_
 
 /**
  * @addtogroup MGBE-MMC MMC HW register offsets
@@ -209,4 +210,4 @@ void mgbe_read_mmc(struct osi_core_priv_data *const osi_core);
  *	2) osi_core->osd should be populated
  */
 void mgbe_reset_mmc(struct osi_core_priv_data *const osi_core);
-#endif
+#endif /* INCLUDED_MGBE_MMC_H */
