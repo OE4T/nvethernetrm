@@ -1665,6 +1665,14 @@ static nve32_t mgbe_configure_mtl_queue(struct osi_core_priv_data *osi_core,
 		TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ,
 		TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ, TX_FIFO_SZ,
 	};
+	const nveu32_t ufpga_tx_fifo_sz[OSI_MGBE_MAX_NUM_QUEUES] = {
+		FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U),
+		FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U), FIFO_SZ(6U)
+	};
+	const nveu32_t ufpga_rx_fifo_sz[OSI_MGBE_MAX_NUM_QUEUES] = {
+		FIFO_SZ(40U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U),
+		FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(2U), FIFO_SZ(8U),
+	};
 	const nveu32_t rfd_rfa[OSI_MGBE_MAX_NUM_QUEUES] = {
 		FULL_MINUS_32_K,
 		FULL_MINUS_1_5K,
@@ -1715,7 +1723,11 @@ static nve32_t mgbe_configure_mtl_queue(struct osi_core_priv_data *osi_core,
 	value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 			   MGBE_MTL_CHX_TX_OP_MODE(qinx));
 	value &= ~MGBE_MTL_Q_SIZE_MASK;
-	value |= (tx_fifo_sz[qinx] << MGBE_MTL_TXQ_SIZE_SHIFT);
+	if (osi_core->pre_sil == OSI_ENABLE) {
+		value |= (ufpga_tx_fifo_sz[qinx] << MGBE_MTL_TXQ_SIZE_SHIFT);
+	} else {
+		value |= (tx_fifo_sz[qinx] << MGBE_MTL_TXQ_SIZE_SHIFT);
+	}
 	/* Enable Store and Forward mode */
 	value |= MGBE_MTL_TSF;
 	/*TTC  not applicable for TX*/
@@ -1734,7 +1746,11 @@ static nve32_t mgbe_configure_mtl_queue(struct osi_core_priv_data *osi_core,
 	value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 			  MGBE_MTL_CHX_RX_OP_MODE(qinx));
 	value &= ~MGBE_MTL_Q_SIZE_MASK;
-	value |= (rx_fifo_sz[osi_core->mac][qinx] << MGBE_MTL_RXQ_SIZE_SHIFT);
+	if (osi_core->pre_sil == OSI_ENABLE) {
+		value |= (ufpga_rx_fifo_sz[qinx] << MGBE_MTL_RXQ_SIZE_SHIFT);
+	} else {
+		value |= (rx_fifo_sz[osi_core->mac][qinx] << MGBE_MTL_RXQ_SIZE_SHIFT);
+	}
 	/* Enable Store and Forward mode */
 	value |= MGBE_MTL_RSF;
 	/* Enable HW flow control */
