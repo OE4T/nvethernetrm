@@ -223,8 +223,10 @@ static inline nveu32_t compltd_rx_desc_cnt(struct osi_dma_priv_data *osi_dma,
 	/* completed desc write back offset */
 	rx_desc_wr_idx = ((value >> MGBE_RX_DESC_WR_RNG_RWDC_SHIFT ) &
 			  (osi_dma->rx_ring_sz - 1));
-	descr_compltd = (rx_desc_wr_idx - (rx_ring->cur_rx_idx - 1U))
-			 & (osi_dma->rx_ring_sz - 1U);
+	descr_compltd = (rx_desc_wr_idx - rx_ring->cur_rx_idx) &
+			 (osi_dma->rx_ring_sz - 1U);
+	/* offset/index start from 0, so add 1 to get final count */
+	descr_compltd += 1U;
 	return descr_compltd;
 }
 
