@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -2100,14 +2100,14 @@ static nve32_t eqos_update_mac_addr_low_high_reg(
 				 EQOS_MAC_ADDRH_SA));
 		}
 
-		osi_writela(osi_core, ((nveu32_t)filter->mac_address[4] |
-			    ((nveu32_t)filter->mac_address[5] << 8) | value),
+		osi_writela(osi_core, ((nveu32_t)filter->mac_addr[4] |
+			    ((nveu32_t)filter->mac_addr[5] << 8) | value),
 			    (nveu8_t *)osi_core->base + EQOS_MAC_ADDRH((idx)));
 
-		osi_writela(osi_core, ((nveu32_t)filter->mac_address[0] |
-			    ((nveu32_t)filter->mac_address[1] << 8) |
-			    ((nveu32_t)filter->mac_address[2] << 16) |
-			    ((nveu32_t)filter->mac_address[3] << 24)),
+		osi_writela(osi_core, ((nveu32_t)filter->mac_addr[0] |
+			    ((nveu32_t)filter->mac_addr[1] << 8) |
+			    ((nveu32_t)filter->mac_addr[2] << 16) |
+			    ((nveu32_t)filter->mac_addr[3] << 24)),
 			    (nveu8_t *)osi_core->base +  EQOS_MAC_ADDRL((idx)));
 	}
 fail:

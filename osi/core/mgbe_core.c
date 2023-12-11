@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -300,7 +300,7 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 	nveu32_t dma_chan = filter->dma_chan;
 	nveu32_t addr_mask = filter->addr_mask;
 	nveu32_t src_dest = filter->src_dest;
-	const nveu8_t *addr = filter->mac_address;
+	const nveu8_t *addr = filter->mac_addr;
 	nveu32_t dma_chansel = filter->dma_chansel;
 	nveu32_t xdcs_check;
 	nveu32_t value = 0x0U;

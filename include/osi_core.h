@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -688,7 +688,7 @@ struct osi_filter {
 	 * Filter index must be between 0 - 127 */
 	nveu32_t index;
 	/** Ethernet MAC address to be added */
-	nveu8_t mac_address[OSI_ETH_ALEN];
+	nveu8_t mac_addr[OSI_ETH_ALEN];
 	/** Indicates dma channel routing enable(1) disable (0) */
 	nveu32_t dma_routing;
 	/**  indicates dma channel number to program */
