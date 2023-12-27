@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -119,6 +119,12 @@ static void eqos_get_rx_hash(OSI_UNUSED struct osi_rx_desc *rx_desc,
 static void eqos_get_rx_csum(const struct osi_rx_desc *const rx_desc,
 			     struct osi_rx_pkt_cx *rx_pkt_cx)
 {
+	const nveu32_t rx_csum_ipv4[8U] = {
+		0U, OSI_CHECKSUM_UDPv4, OSI_CHECKSUM_TCPv4, 0U, 0U, 0U, 0U, 0U
+	};
+	const nveu32_t rx_csum_ipv6[8U] = {
+		0U, OSI_CHECKSUM_UDPv6, OSI_CHECKSUM_TCPv6, 0U, 0U, 0U, 0U, 0U
+	};
 	nveu32_t pkt_type;
 
 	/* Set rxcsum flags based on RDES1 values. These are required
@@ -127,8 +133,7 @@ static void eqos_get_rx_csum(const struct osi_rx_desc *const rx_desc,
 	 * take proper actions.
 	 */
 	if ((rx_desc->rdes3 & RDES3_RS1V) == RDES3_RS1V) {
-		if ((rx_desc->rdes1 &
-		    (RDES1_IPCE | RDES1_IPCB | RDES1_IPHE)) == OSI_DISABLE) {
+		if ((rx_desc->rdes1 & (RDES1_IPCE | RDES1_IPCB | RDES1_IPHE)) == OSI_DISABLE) {
 			rx_pkt_cx->rxcsum |= OSI_CHECKSUM_UNNECESSARY;
 		}
 
@@ -140,26 +145,11 @@ static void eqos_get_rx_csum(const struct osi_rx_desc *const rx_desc,
 
 			pkt_type = rx_desc->rdes1 & RDES1_PT_MASK;
 			if ((rx_desc->rdes1 & RDES1_IPV4) == RDES1_IPV4) {
-				if (pkt_type == RDES1_PT_UDP) {
-					rx_pkt_cx->rxcsum |= OSI_CHECKSUM_UDPv4;
-				} else if (pkt_type == RDES1_PT_TCP) {
-					rx_pkt_cx->rxcsum |= OSI_CHECKSUM_TCPv4;
-
-				} else {
-					/* Do nothing */
-				}
+				rx_pkt_cx->rxcsum |= rx_csum_ipv4[pkt_type];
 			} else if ((rx_desc->rdes1 & RDES1_IPV6) == RDES1_IPV6) {
-				if (pkt_type == RDES1_PT_UDP) {
-					rx_pkt_cx->rxcsum |= OSI_CHECKSUM_UDPv6;
-				} else if (pkt_type == RDES1_PT_TCP) {
-					rx_pkt_cx->rxcsum |= OSI_CHECKSUM_TCPv6;
-
-				} else {
-					/* Do nothing */
-				}
-
+				rx_pkt_cx->rxcsum |= rx_csum_ipv6[pkt_type];
 			} else {
-				/* Do nothing */
+					/* Do nothing */
 			}
 
 			if ((rx_desc->rdes1 & RDES1_IPCE) == RDES1_IPCE) {
