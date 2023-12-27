@@ -188,16 +188,11 @@ static nve32_t eqos_get_rx_hwstamp(const struct osi_dma_priv_data *const osi_dma
 
 	/* Check for RS1V/TSA/TD valid */
 	if (((rx_desc->rdes3 & RDES3_RS1V) == RDES3_RS1V) &&
-	    ((rx_desc->rdes1 & RDES1_TSA) == RDES1_TSA) &&
-	    ((rx_desc->rdes1 & RDES1_TD) == 0U)) {
+	    ((rx_desc->rdes1 & (RDES1_TSA | RDES1_TD)) == RDES1_TSA)) {
 		for (retry = 0; retry < 10; retry++) {
-			if (((context_desc->rdes3 & RDES3_OWN) == 0U) &&
-			    ((context_desc->rdes3 & RDES3_CTXT) ==
-			     RDES3_CTXT)) {
-				if ((context_desc->rdes0 ==
-				     OSI_INVALID_VALUE) &&
-				    (context_desc->rdes1 ==
-				     OSI_INVALID_VALUE)) {
+			if ((context_desc->rdes3 & (RDES3_OWN | RDES3_CTXT)) == RDES3_CTXT) {
+				if ((context_desc->rdes0 == OSI_INVALID_VALUE) &&
+				    (context_desc->rdes1 == OSI_INVALID_VALUE)) {
 					ret = -1;
 					goto fail;
 				}
