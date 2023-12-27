@@ -672,9 +672,7 @@ static inline nve32_t need_cntx_desc(const struct osi_tx_pkt_cx *const tx_pkt_cx
 {
 	nve32_t ret = 0;
 
-	if (((tx_pkt_cx->flags & OSI_PKT_CX_VLAN) == OSI_PKT_CX_VLAN) ||
-	    ((tx_pkt_cx->flags & OSI_PKT_CX_TSO) == OSI_PKT_CX_TSO) ||
-	    ((tx_pkt_cx->flags & OSI_PKT_CX_PTP) == OSI_PKT_CX_PTP)) {
+	if ((tx_pkt_cx->flags & (OSI_PKT_CX_VLAN | OSI_PKT_CX_TSO | OSI_PKT_CX_PTP)) != 0U) {
 		if ((tx_pkt_cx->flags & OSI_PKT_CX_VLAN) == OSI_PKT_CX_VLAN) {
 			/* Set context type */
 			tx_desc->tdes3 |= TDES3_CTXT;
