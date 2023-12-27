@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -215,10 +215,8 @@ static nve32_t mgbe_get_rx_hwstamp(const struct osi_dma_priv_data *const osi_dma
 	}
 
 	for (retry = 0; retry < 10; retry++) {
-		if (((context_desc->rdes3 & RDES3_OWN) == 0U) &&
-		    ((context_desc->rdes3 & RDES3_CTXT) == RDES3_CTXT) &&
-		    ((context_desc->rdes3 & RDES3_TSA) == RDES3_TSA) &&
-		    ((context_desc->rdes3 & RDES3_TSD) != RDES3_TSD)) {
+		if ((context_desc->rdes3 & (RDES3_OWN | RDES3_CTXT | RDES3_TSA | RDES3_TSD)) ==
+		    (RDES3_CTXT | RDES3_TSA)) {
 			if ((context_desc->rdes0 == OSI_INVALID_VALUE) &&
 			    (context_desc->rdes1 == OSI_INVALID_VALUE)) {
 				/* Invalid time stamp */
