@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -201,6 +201,69 @@ static void frp_entry_mode_parse(nveu8_t filter_mode,
 	}
 }
 
+static nve32_t validate_frp_args(struct osi_core_priv_data *const osi_core,
+				 nveu8_t length,
+				 nveu8_t offset,
+				 nveu8_t filter_mode,
+				 nveu32_t dma_sel,
+				 nveu8_t pos,
+				 nveu32_t *req_entries)
+{
+	nve32_t ret = 0;
+	nveu32_t dma_sel_val[MAX_MAC_IP_TYPES] = {0xFFU, 0x3FF};
+	nveu8_t temp_pos = pos;
+
+	/* Validate length */
+	if (length > OSI_FRP_MATCH_DATA_MAX) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_OUTOFBOUND,
+			"Invalid match length\n",
+			length);
+		ret = -1;
+		goto done;
+	}
+
+	/* Validate filter_mode */
+	if (filter_mode >= OSI_FRP_MODE_MAX) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"Invalid filter mode argment\n",
+			filter_mode);
+		ret = -1;
+		goto done;
+	}
+
+	/* Validate offset */
+	if (offset >= OSI_FRP_OFFSET_MAX) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"Invalid offset value\n",
+			offset);
+		ret = -1;
+		goto done;
+	}
+
+	/* Validate channel selection */
+	if (dma_sel > dma_sel_val[osi_core->mac]) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			     "Invalid DMA selection\n",
+			     (nveu64_t)dma_sel);
+		ret = -1;
+		goto done;
+	}
+
+	/* Check for avilable space */
+	*req_entries = frp_req_entries(offset, length);
+	if ((*req_entries >= OSI_FRP_MAX_ENTRY) ||
+	    ((*req_entries + temp_pos) >= OSI_FRP_MAX_ENTRY)) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"No space to update FRP ID\n",
+			OSI_NONE);
+		ret = -1;
+		goto done;
+	}
+
+done:
+	return ret;
+}
+
 /**
  * @brief frp_entry_add - Add new FRP entries in table.
  *
@@ -240,58 +303,19 @@ static nve32_t frp_entry_add(struct osi_core_priv_data *const osi_core,
 	nveu8_t i = 0U, j = 0U, md_pos = 0U;
 	nveu8_t temp_pos = pos;
 	nve32_t ret;
-	nveu32_t dma_sel_val[MAX_MAC_IP_TYPES] = {0xFFU, 0x3FF};
 
-	/* Validate length */
-	if (length > OSI_FRP_MATCH_DATA_MAX) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_OUTOFBOUND,
-			"Invalid match length\n",
-			length);
-		ret = -1;
-		goto done;
-	}
-
-	/* Validate filter_mode */
-	if (filter_mode >= OSI_FRP_MODE_MAX) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"Invalid filter mode argment\n",
-			filter_mode);
-		ret = -1;
-		goto done;
-	}
-
-	/* Validate offset */
-	if (offset >= OSI_FRP_OFFSET_MAX) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"Invalid offset value\n",
-			offset);
-		ret = -1;
-		goto done;
-	}
-
-	/* Validate channel selection */
-	if (dma_sel > dma_sel_val[osi_core->mac]) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "Invalid DMA selection\n",
-			     (nveu64_t)dma_sel);
-		ret = -1;
-		goto done;
-	}
-
-	/* Check for avilable space */
-	req_entries = frp_req_entries(offset, length);
-	if ((req_entries >= OSI_FRP_MAX_ENTRY) ||
-	    ((req_entries + temp_pos) >= OSI_FRP_MAX_ENTRY)) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"No space to update FRP ID\n",
-			OSI_NONE);
-		ret = -1;
+	/* Validate FRP arguments */
+	ret = validate_frp_args(osi_core, length, offset, filter_mode,
+				dma_sel, pos, &req_entries);
+	if (ret < 0)
+	{
 		goto done;
 	}
 
 	/* Validate next_frp_id index ok_index */
-	if ((filter_mode == OSI_FRP_MODE_LINK) ||
-	    (filter_mode == OSI_FRP_MODE_IM_LINK)) {
+	switch(filter_mode) {
+	case OSI_FRP_MODE_LINK:
+	case OSI_FRP_MODE_IM_LINK:
 		if (frp_entry_find(osi_core, next_frp_id, &i, &j) < 0) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				"No Link FRP ID index found\n",
@@ -299,6 +323,9 @@ static nve32_t frp_entry_add(struct osi_core_priv_data *const osi_core,
 			i = (nveu8_t)next_frp_id;
 		}
 		ok_index = i;
+		break;
+	default:
+		break;
 	}
 
 	/* Start data fill from 0U ... (length - 1U) */
