@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -37,6 +37,13 @@
 /**
  * @brief g_ops - Static core operations array.
  */
+
+/** \cond DO_NOT_DOCUMENT */
+static inline nve32_t convert_to_s32_with_same_hex(const void *data)
+{
+	return (*((const nve32_t *)data));
+}
+/** \endcond */
 
 /**
  * @brief Function to validate input arguments of API.
@@ -2524,6 +2531,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 	nve32_t freq_adj_value = 0x0;
 	nvel64_t secondary_time = 0x0;
 	nvel64_t primary_time = 0x0;
+	nveu32_t ret_u32;
 
 	ops_p = l_core->ops_p;
 
@@ -2963,12 +2971,14 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 #ifdef MACSEC_SUPPORT
 	case OSI_CMD_READ_MACSEC_REG:
-		ret = (nve32_t) ops_p->read_macsec_reg(osi_core, (nve32_t) data->arg1_u32);
+		ret_u32 = ops_p->read_macsec_reg(osi_core, (nve32_t) data->arg1_u32);
+		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 
 	case OSI_CMD_WRITE_MACSEC_REG:
-		ret = (nve32_t) ops_p->write_macsec_reg(osi_core, (nveu32_t) data->arg1_u32,
+		ret_u32 = ops_p->write_macsec_reg(osi_core, (nveu32_t) data->arg1_u32,
 				       (nve32_t) data->arg2_u32);
+		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 #endif /*  MACSEC_SUPPORT */
 	case OSI_CMD_GET_TX_TS:
