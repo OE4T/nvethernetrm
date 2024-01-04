@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -131,6 +131,30 @@ fail:
 	return ret;
 }
 
+static nve32_t xpcs_init_start(struct osi_core_priv_data *const osi_core)
+{
+	nve32_t  ret = 0;
+	nveu32_t  value;
+
+	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+		ret = xpcs_init(osi_core);
+		if (ret < 0) {
+			goto fail;
+		}
+
+		ret = xpcs_start(osi_core);
+		if (ret < 0) {
+			goto fail;
+		}
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
+		/* Enable Link Status interrupt only after lane bring up success */
+		value |= MGBE_IMR_RGSMIIIE;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
+	}
+fail:
+	return ret;
+}
+
 nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t speed)
 {
 	nveu32_t  value;
@@ -183,22 +207,9 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 	}
 	osi_writela(osi_core, value, ((nveu8_t *)osi_core->base + mac_mcr[osi_core->mac]));
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
-		ret = xpcs_init(osi_core);
-		if (ret < 0) {
-			goto fail;
-		}
+	/* Validate PCS initialization */
+	ret = xpcs_init_start(osi_core);
 
-		ret = xpcs_start(osi_core);
-		if (ret < 0) {
-			goto fail;
-		}
-
-		value = osi_readla(osi_core, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
-		/* Enable Link Status interrupt only after lane bring up success */
-		value |= MGBE_IMR_RGSMIIIE;
-		osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
-	}
 fail:
 	return ret;
 }

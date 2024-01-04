@@ -221,16 +221,10 @@ static nve32_t osi_hal_read_phy_reg(struct osi_core_priv_data *const osi_core,
 	return l_core->ops_p->read_phy_reg(osi_core, phyaddr, phyreg);
 }
 
-static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
+static nve32_t validate_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
 {
 	nve32_t ret = -1;
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	typedef void (*init_core_ops_arr)(struct core_ops *local_ops);
-	static struct core_ops g_ops[MAX_MAC_IP_TYPES];
-	init_core_ops_arr i_ops[MAX_MAC_IP_TYPES][MAX_MAC_IP_TYPES] = {
-		{ eqos_init_core_ops, OSI_NULL },
-		{ mgbe_init_core_ops, OSI_NULL }
-	};
 
 	if (osi_core == OSI_NULL) {
 		goto exit;
@@ -260,6 +254,27 @@ static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
 	if (osi_core->use_virtualization > OSI_ENABLE) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "Invalid use_virtualization value\n", 0ULL);
+		goto exit;
+	}
+	ret = 0;
+exit:
+	return ret;
+}
+
+static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	typedef void (*init_core_ops_arr)(struct core_ops *local_ops);
+	static struct core_ops g_ops[MAX_MAC_IP_TYPES];
+	init_core_ops_arr i_ops[MAX_MAC_IP_TYPES][MAX_MAC_IP_TYPES] = {
+		{ eqos_init_core_ops, OSI_NULL },
+		{ mgbe_init_core_ops, OSI_NULL }
+	};
+	nve32_t ret;
+
+	/* Validate hal initialization ops */
+	ret = validate_hal_init_core_ops(osi_core);
+	if (ret < 0) {
 		goto exit;
 	}
 

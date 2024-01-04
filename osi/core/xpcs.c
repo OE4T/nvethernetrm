@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -135,6 +135,40 @@ static inline nve32_t xpcs_set_speed(struct osi_core_priv_data *osi_core,
 	return xpcs_write_safety(osi_core, XPCS_SR_MII_CTRL, ctrl);
 }
 
+static nve32_t xpcs_poll_rx_link(struct osi_core_priv_data *osi_core)
+{
+	void *xpcs_base = osi_core->xpcs_base;
+	nve32_t cond = COND_NOT_MET;
+	nveu32_t retry = RETRY_COUNT;
+	nveu32_t count = 0;
+	nve32_t ret = 0;
+	nveu32_t ctrl = 0;
+
+	/* poll for Rx link up */
+	while (cond == COND_NOT_MET) {
+		if (count > retry) {
+			ret = -1;
+			break;
+		}
+
+		count++;
+
+		ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_STS1);
+		if ((ctrl & XPCS_SR_XS_PCS_STS1_RLU) == XPCS_SR_XS_PCS_STS1_RLU) {
+			cond = COND_MET;
+		} else {
+			/* Maximum wait delay as per HW team is 1msec.
+			 * So add a loop for 1000 iterations with 1usec delay,
+			 * so that if check get satisfies before 1msec will come
+			 * out of loop and it can save some boot time
+			 */
+			osi_core->osd_ops.udelay(1U);
+		}
+	}
+
+	return ret;
+}
+
 /**
  * @brief xpcs_start - Start XPCS
  *
@@ -201,29 +235,8 @@ nve32_t xpcs_start(struct osi_core_priv_data *osi_core)
 	}
 
 	/* poll for Rx link up */
-	cond = COND_NOT_MET;
-	count = 0;
-	while (cond == COND_NOT_MET) {
-		if (count > retry) {
-			ret = -1;
-			break;
-		}
+	ret = xpcs_poll_rx_link(osi_core);
 
-		count++;
-
-		ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_STS1);
-		if ((ctrl & XPCS_SR_XS_PCS_STS1_RLU) ==
-		    XPCS_SR_XS_PCS_STS1_RLU) {
-			cond = COND_MET;
-		} else {
-			/* Maximum wait delay as per HW team is 1msec.
-			 * So add a loop for 1000 iterations with 1usec delay,
-			 * so that if check get satisfies before 1msec will come
-			 * out of loop and it can save some boot time
-			 */
-			osi_core->osd_ops.udelay(1U);
-		}
-	}
 fail:
 	return ret;
 }

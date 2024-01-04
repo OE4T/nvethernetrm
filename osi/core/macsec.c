@@ -3518,6 +3518,32 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 	}
 }
 
+static inline void handle_macsec_rx_irqs(struct osi_core_priv_data *const osi_core,
+					 nveu32_t rx_isr, nveu32_t *clear)
+{
+	if ((rx_isr & MACSEC_RX_REPLAY_ERROR) == MACSEC_RX_REPLAY_ERROR) {
+		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_replay_error);
+		handle_rx_sc_replay_err(osi_core);
+		*clear |= MACSEC_RX_REPLAY_ERROR;
+	}
+
+	if ((rx_isr & MACSEC_RX_MTU_CHECK_FAIL) == MACSEC_RX_MTU_CHECK_FAIL) {
+		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_mtu_check_fail);
+		*clear |= MACSEC_RX_MTU_CHECK_FAIL;
+	}
+
+	if ((rx_isr & MACSEC_RX_AES_GCM_BUF_OVF) == MACSEC_RX_AES_GCM_BUF_OVF) {
+		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_aes_gcm_buf_ovf);
+		*clear |= MACSEC_RX_AES_GCM_BUF_OVF;
+	}
+
+	if ((rx_isr & MACSEC_RX_PN_EXHAUSTED) == MACSEC_RX_PN_EXHAUSTED) {
+		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_pn_exhausted);
+		handle_rx_pn_exhausted(osi_core);
+		*clear |= MACSEC_RX_PN_EXHAUSTED;
+	}
+}
+
 /**
  * @brief handle_rx_irq - Handles all Rx interrupts
  *
@@ -3587,21 +3613,8 @@ static inline void handle_rx_irq(struct osi_core_priv_data *const osi_core)
 #endif
 	}
 
-	if ((rx_isr & MACSEC_RX_REPLAY_ERROR) == MACSEC_RX_REPLAY_ERROR) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_replay_error);
-		handle_rx_sc_replay_err(osi_core);
-		clear |= MACSEC_RX_REPLAY_ERROR;
-	}
-
-	if ((rx_isr & MACSEC_RX_MTU_CHECK_FAIL) == MACSEC_RX_MTU_CHECK_FAIL) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_mtu_check_fail);
-		clear |= MACSEC_RX_MTU_CHECK_FAIL;
-	}
-
-	if ((rx_isr & MACSEC_RX_AES_GCM_BUF_OVF) == MACSEC_RX_AES_GCM_BUF_OVF) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_aes_gcm_buf_ovf);
-		clear |= MACSEC_RX_AES_GCM_BUF_OVF;
-	}
+	/* split handling of irq to reduce complexity */
+	handle_macsec_rx_irqs(osi_core, rx_isr, &clear);
 
 	if ((rx_isr & MACSEC_RX_MAC_CRC_ERROR) == MACSEC_RX_MAC_CRC_ERROR) {
 		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_mac_crc_error);
@@ -3622,11 +3635,6 @@ static inline void handle_rx_irq(struct osi_core_priv_data *const osi_core)
 #endif
 	}
 
-	if ((rx_isr & MACSEC_RX_PN_EXHAUSTED) == MACSEC_RX_PN_EXHAUSTED) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.rx_pn_exhausted);
-		handle_rx_pn_exhausted(osi_core);
-		clear |= MACSEC_RX_PN_EXHAUSTED;
-	}
 	if (clear != OSI_NONE) {
 		osi_writela(osi_core, clear, addr + MACSEC_RX_ISR);
 	}
