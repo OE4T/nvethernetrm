@@ -1121,6 +1121,37 @@ static void eqos_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
 	}
 }
 
+static void eqos_configure_asid(struct osi_core_priv_data *const osi_core)
+{
+	if (osi_core->use_virtualization == OSI_DISABLE) {
+#ifndef OSI_STRIPPED_LIB
+		if (osi_core->hv_base != OSI_NULL) {
+			osi_writela(osi_core, EQOS_5_30_ASID_CTRL_VAL,
+				    (nveu8_t *)osi_core->hv_base +
+				    EQOS_AXI_ASID_CTRL);
+
+			osi_writela(osi_core, EQOS_5_30_ASID1_CTRL_VAL,
+				    (nveu8_t *)osi_core->hv_base +
+				    EQOS_AXI_ASID1_CTRL);
+		}
+#endif
+
+		if (osi_core->mac_ver < OSI_EQOS_MAC_5_30) {
+			/* AXI ASID CTRL for channel 0 to 3 */
+			osi_writela(osi_core, EQOS_AXI_ASID_CTRL_VAL,
+				    (nveu8_t *)osi_core->base +
+				    EQOS_AXI_ASID_CTRL);
+
+			/* AXI ASID1 CTRL for channel 4 to 7 */
+			if (osi_core->mac_ver > OSI_EQOS_MAC_5_00) {
+				osi_writela(osi_core, EQOS_AXI_ASID1_CTRL_VAL,
+					    (nveu8_t *)osi_core->base +
+					    EQOS_AXI_ASID1_CTRL);
+			}
+		}
+	}
+}
+
 /**
  * @brief eqos_core_init - EQOS MAC, MTL and common DMA Initialization
  *
@@ -1170,33 +1201,8 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 	osi_writela(osi_core, EQOS_MMC_CNTRL_CNTRST,
 		    (nveu8_t *)osi_core->base + EQOS_MMC_CNTRL);
 
-	if (osi_core->use_virtualization == OSI_DISABLE) {
-#ifndef OSI_STRIPPED_LIB
-		if (osi_core->hv_base != OSI_NULL) {
-			osi_writela(osi_core, EQOS_5_30_ASID_CTRL_VAL,
-				    (nveu8_t *)osi_core->hv_base +
-				    EQOS_AXI_ASID_CTRL);
-
-			osi_writela(osi_core, EQOS_5_30_ASID1_CTRL_VAL,
-				    (nveu8_t *)osi_core->hv_base +
-				    EQOS_AXI_ASID1_CTRL);
-		}
-#endif
-
-		if (osi_core->mac_ver < OSI_EQOS_MAC_5_30) {
-			/* AXI ASID CTRL for channel 0 to 3 */
-			osi_writela(osi_core, EQOS_AXI_ASID_CTRL_VAL,
-				    (nveu8_t *)osi_core->base +
-				    EQOS_AXI_ASID_CTRL);
-
-			/* AXI ASID1 CTRL for channel 4 to 7 */
-			if (osi_core->mac_ver > OSI_EQOS_MAC_5_00) {
-				osi_writela(osi_core, EQOS_AXI_ASID1_CTRL_VAL,
-					    (nveu8_t *)osi_core->base +
-					    EQOS_AXI_ASID1_CTRL);
-			}
-		}
-	}
+	/* Configure ASID */
+	eqos_configure_asid(osi_core);
 
 	/* Mapping MTL Rx queue and DMA Rx channel */
 	if (osi_core->dcs_en == OSI_ENABLE) {
@@ -1501,50 +1507,14 @@ static inline void update_dma_sr_stats(
 /** \endcond */
 #endif /* !OSI_STRIPPED_LIB */
 
-/**
- * @brief eqos_handle_mtl_intrs - Handle MTL interrupts
- *
- * Algorithm: Code to handle interrupt for MTL EST error and status.
- * There are possible 4 errors which can be part of common interrupt in case of
- * MTL_EST_SCH_ERR (sheduling error)- HLBS
- * MTL_EST_FRMS_ERR (Frame size error) - HLBF
- * MTL_EST_FRMC_ERR (frame check error) - HLBF
- * Constant Gate Control Error - when time interval in less
- * than or equal to cycle time, llr = 1
- * There is one status interrupt which says swich to SWOL complete.
- *
- * @param[in] osi_core: osi core priv data structure
- *
- * @note MAC should be init and started. see osi_start_mac()
- */
-static void eqos_handle_mtl_intrs(struct osi_core_priv_data *osi_core)
+static void eqos_handle_head_of_line_bloking(struct osi_core_priv_data *const osi_core, nveu32_t val)
 {
-	nveu32_t val = 0U;
+	nveul64_t stat_val = 0U;
 	nveu32_t sch_err = 0U;
 	nveu32_t frm_err = 0U;
 	nveu32_t temp = 0U;
-	nveu32_t i = 0;
-	nveul64_t stat_val = 0U;
 	nveu32_t value = 0U;
-
-	val = osi_readla(osi_core,
-			 (nveu8_t *)osi_core->base + EQOS_MTL_EST_STATUS);
-	val &= (EQOS_MTL_EST_STATUS_CGCE | EQOS_MTL_EST_STATUS_HLBS |
-		EQOS_MTL_EST_STATUS_HLBF | EQOS_MTL_EST_STATUS_BTRE |
-		EQOS_MTL_EST_STATUS_SWLC);
-
-	/* return if interrupt is not related to EST */
-	if (val == OSI_DISABLE) {
-		goto done;
-	}
-
-	/* increase counter write 1 back will clear */
-	if ((val & EQOS_MTL_EST_STATUS_CGCE) == EQOS_MTL_EST_STATUS_CGCE) {
-		osi_core->est_ready = OSI_DISABLE;
-		stat_val = osi_core->stats.const_gate_ctr_err;
-		osi_core->stats.const_gate_ctr_err =
-				osi_update_stats_counter(stat_val, 1U);
-	}
+	nveu32_t i = 0;
 
 	if ((val & EQOS_MTL_EST_STATUS_HLBS) == EQOS_MTL_EST_STATUS_HLBS) {
 		osi_core->est_ready = OSI_DISABLE;
@@ -1614,6 +1584,50 @@ static void eqos_handle_mtl_intrs(struct osi_core_priv_data *osi_core)
 				     OSI_NONE);
 		}
 	}
+}
+
+/**
+ * @brief eqos_handle_mtl_intrs - Handle MTL interrupts
+ *
+ * Algorithm: Code to handle interrupt for MTL EST error and status.
+ * There are possible 4 errors which can be part of common interrupt in case of
+ * MTL_EST_SCH_ERR (sheduling error)- HLBS
+ * MTL_EST_FRMS_ERR (Frame size error) - HLBF
+ * MTL_EST_FRMC_ERR (frame check error) - HLBF
+ * Constant Gate Control Error - when time interval in less
+ * than or equal to cycle time, llr = 1
+ * There is one status interrupt which says swich to SWOL complete.
+ *
+ * @param[in] osi_core: osi core priv data structure
+ *
+ * @note MAC should be init and started. see osi_start_mac()
+ */
+static void eqos_handle_mtl_intrs(struct osi_core_priv_data *osi_core)
+{
+	nveu32_t val = 0U;
+	nveul64_t stat_val = 0U;
+
+	val = osi_readla(osi_core,
+			 (nveu8_t *)osi_core->base + EQOS_MTL_EST_STATUS);
+	val &= (EQOS_MTL_EST_STATUS_CGCE | EQOS_MTL_EST_STATUS_HLBS |
+		EQOS_MTL_EST_STATUS_HLBF | EQOS_MTL_EST_STATUS_BTRE |
+		EQOS_MTL_EST_STATUS_SWLC);
+
+	/* return if interrupt is not related to EST */
+	if (val == OSI_DISABLE) {
+		goto done;
+	}
+
+	/* increase counter write 1 back will clear */
+	if ((val & EQOS_MTL_EST_STATUS_CGCE) == EQOS_MTL_EST_STATUS_CGCE) {
+		osi_core->est_ready = OSI_DISABLE;
+		stat_val = osi_core->stats.const_gate_ctr_err;
+		osi_core->stats.const_gate_ctr_err =
+				osi_update_stats_counter(stat_val, 1U);
+	}
+
+	/* Handle HOL blocking */
+	eqos_handle_head_of_line_bloking(osi_core, val);
 
 	if ((val & EQOS_MTL_EST_STATUS_SWLC) == EQOS_MTL_EST_STATUS_SWLC) {
 		if ((val & EQOS_MTL_EST_STATUS_BTRE) !=
