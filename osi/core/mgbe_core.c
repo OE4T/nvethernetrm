@@ -2347,37 +2347,10 @@ static inline void mgbe_update_dma_sr_stats(struct osi_core_priv_data *osi_core,
 }
 #endif /* !OSI_STRIPPED_LIB */
 
-/**
- * @brief mgbe_set_avb_algorithm - Set TxQ/TC avb config
- *
- * Algorithm:
- *	1) Check if queue index is valid
- *	2) Update operation mode of TxQ/TC
- *	 2a) Set TxQ operation mode
- *	 2b) Set Algo and Credit contro
- *	 2c) Set Send slope credit
- *	 2d) Set Idle slope credit
- *	 2e) Set Hi credit
- *	 2f) Set low credit
- *	3) Update register values
- *
- * @param[in] osi_core: osi core priv data structure
- * @param[in] avb: structure having configuration for avb algorithm
- *
- * @note 1) MAC should be init and started. see osi_start_mac()
- *	 2) osi_core->osd should be populated.
- *
- * @retval 0 on success
- * @retval -1 on failure.
- */
-static nve32_t mgbe_set_avb_algorithm(
-				struct osi_core_priv_data *const osi_core,
-				const struct osi_core_avb_algorithm *const avb)
+static nve32_t validate_avb_args(struct osi_core_priv_data *const osi_core,
+				 const struct osi_core_avb_algorithm *const avb)
 {
-	nveu32_t value;
 	nve32_t ret = -1;
-	nveu32_t qinx = 0U;
-	nveu32_t tcinx = 0U;
 
 	if (avb == OSI_NULL) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
@@ -2423,6 +2396,49 @@ static nve32_t mgbe_set_avb_algorithm(
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			"Invalid Queue TC mapping\n",
 			(nveul64_t)avb->tcindex);
+		goto done;
+	}
+
+	ret = 0;
+
+done:
+	return ret;
+}
+
+/**
+ * @brief mgbe_set_avb_algorithm - Set TxQ/TC avb config
+ *
+ * Algorithm:
+ *	1) Check if queue index is valid
+ *	2) Update operation mode of TxQ/TC
+ *	 2a) Set TxQ operation mode
+ *	 2b) Set Algo and Credit contro
+ *	 2c) Set Send slope credit
+ *	 2d) Set Idle slope credit
+ *	 2e) Set Hi credit
+ *	 2f) Set low credit
+ *	3) Update register values
+ *
+ * @param[in] osi_core: osi core priv data structure
+ * @param[in] avb: structure having configuration for avb algorithm
+ *
+ * @note 1) MAC should be init and started. see osi_start_mac()
+ *	 2) osi_core->osd should be populated.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+static nve32_t mgbe_set_avb_algorithm(struct osi_core_priv_data *const osi_core,
+				      const struct osi_core_avb_algorithm *const avb)
+{
+	nveu32_t value;
+	nve32_t ret = 0;
+	nveu32_t qinx = 0U;
+	nveu32_t tcinx = 0U;
+
+	/* Validate AVB arguments */
+	ret = validate_avb_args(osi_core, avb);
+	if (ret == -1) {
 		goto done;
 	}
 
@@ -2504,8 +2520,6 @@ static nve32_t mgbe_set_avb_algorithm(
 		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
 				MGBE_MTL_CHX_TX_OP_MODE(qinx));
 	}
-
-	ret = 0;
 
 done:
 	return ret;

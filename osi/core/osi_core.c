@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2018-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -158,6 +158,11 @@ done:
 nve32_t osi_init_core_ops(struct osi_core_priv_data *const osi_core)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	typedef void (*init_core_ops_array)(struct if_core_ops *if_ops_p);
+	init_core_ops_array i_lcore_ops[MAX_INTERFACE_OPS] = {
+		hw_interface_init_core_ops,
+		ivc_interface_init_core_ops
+	};
 	static struct if_core_ops if_ops[MAX_INTERFACE_OPS];
 	nve32_t ret = 0;
 
@@ -178,12 +183,7 @@ nve32_t osi_init_core_ops(struct osi_core_priv_data *const osi_core)
 	}
 
 	l_core->if_ops_p = &if_ops[osi_core->use_virtualization];
-
-	if (osi_core->use_virtualization == OSI_DISABLE) {
-		hw_interface_init_core_ops(l_core->if_ops_p);
-	} else {
-		ivc_interface_init_core_ops(l_core->if_ops_p);
-	}
+	i_lcore_ops[osi_core->use_virtualization](l_core->if_ops_p);
 
 	if (validate_if_func_ptrs(osi_core, l_core->if_ops_p) < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,

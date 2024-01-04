@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -3415,6 +3415,33 @@ static inline void handle_dbg_evt_capture_done(
 	}
 }
 
+static inline void handle_macsec_tx_mac_crc_error(struct osi_core_priv_data *const osi_core,
+						  nveu32_t tx_isr, nveu32_t *clear)
+{
+#ifdef HSI_SUPPORT
+	nveu64_t tx_crc_err = 0;
+#endif
+	if ((tx_isr & MACSEC_TX_MAC_CRC_ERROR) == MACSEC_TX_MAC_CRC_ERROR) {
+		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_mac_crc_error);
+		*clear |= MACSEC_TX_MAC_CRC_ERROR;
+#ifdef HSI_SUPPORT
+		if (osi_core->hsi.enabled == OSI_ENABLE) {
+			tx_crc_err = osi_core->macsec_irq_stats.tx_mac_crc_error /
+				osi_core->hsi.err_count_threshold;
+			if (osi_core->hsi.macsec_tx_crc_err_count < tx_crc_err) {
+				osi_core->hsi.macsec_tx_crc_err_count = tx_crc_err;
+				osi_core->hsi.macsec_report_count_err[MACSEC_TX_CRC_ERR_IDX] =
+					OSI_ENABLE;
+			}
+
+			osi_core->hsi.macsec_err_code[MACSEC_TX_CRC_ERR_IDX] =
+				OSI_MACSEC_TX_CRC_ERR;
+			osi_core->hsi.macsec_report_err = OSI_ENABLE;
+		}
+#endif
+	}
+}
+
 /**
  * @brief handle_tx_irq - Handles all Tx interrupts
  *
@@ -3447,9 +3474,6 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 {
 	nveu32_t tx_isr, clear = 0;
 	nveu8_t *addr = (nveu8_t *)osi_core->macsec_base;
-#ifdef HSI_SUPPORT
-	nveu64_t tx_crc_err = 0;
-#endif
 
 	tx_isr = osi_readla(osi_core, addr + MACSEC_TX_ISR);
 	MACSEC_LOG("%s(): tx_isr 0x%x\n", __func__, tx_isr);
@@ -3476,25 +3500,7 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 		clear |= MACSEC_TX_SC_AN_NOT_VALID;
 	}
 
-	if ((tx_isr & MACSEC_TX_MAC_CRC_ERROR) == MACSEC_TX_MAC_CRC_ERROR) {
-		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_mac_crc_error);
-		clear |= MACSEC_TX_MAC_CRC_ERROR;
-#ifdef HSI_SUPPORT
-		if (osi_core->hsi.enabled == OSI_ENABLE) {
-			tx_crc_err = osi_core->macsec_irq_stats.tx_mac_crc_error /
-				osi_core->hsi.err_count_threshold;
-			if (osi_core->hsi.macsec_tx_crc_err_count < tx_crc_err) {
-				osi_core->hsi.macsec_tx_crc_err_count = tx_crc_err;
-				osi_core->hsi.macsec_report_count_err[MACSEC_TX_CRC_ERR_IDX] =
-					OSI_ENABLE;
-			}
-
-			osi_core->hsi.macsec_err_code[MACSEC_TX_CRC_ERR_IDX] =
-				OSI_MACSEC_TX_CRC_ERR;
-			osi_core->hsi.macsec_report_err = OSI_ENABLE;
-		}
-#endif
-	}
+	handle_macsec_tx_mac_crc_error(osi_core, tx_isr, &clear);
 
 	if ((tx_isr & MACSEC_TX_PN_THRSHLD_RCHD) == MACSEC_TX_PN_THRSHLD_RCHD) {
 		CERT_C__POST_INC__U64(osi_core->macsec_irq_stats.tx_pn_threshold);

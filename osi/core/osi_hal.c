@@ -528,12 +528,9 @@ static nve32_t osi_get_mac_version(struct osi_core_priv_data *const osi_core, nv
 	return ret;
 }
 
-static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
-{
-	struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	const nveu32_t ptp_ref_clk_rate[3] = {EQOS_X_PTP_CLK_SPEED, EQOS_PTP_CLK_SPEED,
-					      MGBE_PTP_CLK_SPEED};
 #ifdef HSI_SUPPORT
+static void fill_hsi_attributes(struct osi_core_priv_data *const osi_core)
+{
 	const nveu32_t error_attr[5][2] = {
 			 {OSI_EQOS_UNCORRECTABLE_ATTR, OSI_EQOS_CORRECTABLE_ATTR},
 			 {OSI_MGBE0_UNCORRECTABLE_ATTR, OSI_MGBE0_CORRECTABLE_ATTR},
@@ -542,7 +539,37 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 			 {OSI_MGBE3_UNCORRECTABLE_ATTR, OSI_MGBE3_CORRECTABLE_ATTR}};
 	nveu32_t i = 0U;
 	nveu32_t instance = 0U;
+
+	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+		/* Update MGBE instance */
+		instance = osi_core->instance_id + 1U;
+	} else {
+		/* Update EQOS instance */
+		instance = OSI_MAC_HW_EQOS;
+	}
+
+	/* Fill HSI error attribute values */
+	for (i = 0; i < OSI_HSI_MAX_MAC_ERROR_CODE; i++) {
+		if (i == CE_IDX) {
+			osi_core->hsi.err_attr[i] =
+				error_attr[instance][CE_IDX];
+		} else {
+			osi_core->hsi.err_attr[i] =
+				error_attr[instance][UE_IDX];
+		}
+	}
+	for (i = 0; i < HSI_MAX_MACSEC_ERROR_CODE; i++) {
+		osi_core->hsi.macsec_err_attr[i] =
+			error_attr[instance][UE_IDX];
+	}
+}
 #endif
+
+static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	const nveu32_t ptp_ref_clk_rate[3] = {EQOS_X_PTP_CLK_SPEED, EQOS_PTP_CLK_SPEED,
+					      MGBE_PTP_CLK_SPEED};
 	nve32_t ret;
 
 	ret = osi_get_mac_version(osi_core, &osi_core->mac_ver);
@@ -608,29 +635,10 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 	hw_start_mac(osi_core);
 
 #ifdef HSI_SUPPORT
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
-		/* Update MGBE instance */
-		instance = osi_core->instance_id + 1U;
-	} else {
-		/* Update EQOS instance */
-		instance = OSI_MAC_HW_EQOS;
-	}
-
-	/* Fill HSI error attribute values */
-	for (i = 0; i < OSI_HSI_MAX_MAC_ERROR_CODE; i++) {
-		if (i == CE_IDX) {
-			osi_core->hsi.err_attr[i] =
-				error_attr[instance][CE_IDX];
-		} else {
-			osi_core->hsi.err_attr[i] =
-				error_attr[instance][UE_IDX];
-		}
-	}
-	for (i = 0; i < HSI_MAX_MACSEC_ERROR_CODE; i++) {
-		osi_core->hsi.macsec_err_attr[i] =
-			error_attr[instance][UE_IDX];
-	}
+	/* Fill HSI error attributes */
+	fill_hsi_attributes(osi_core);
 #endif
+
 	l_core->lane_status = OSI_ENABLE;
 	l_core->hw_init_successful = OSI_ENABLE;
 
@@ -1998,7 +2006,7 @@ static inline nvel64_t drift_calculation(struct osi_core_priv_data *const osi_co
 			ret = -1;
 			goto fail;
 		}
-	} else if (time1 >= time2) {
+	} else {
 		temp = time1 - time2;
 		if ((OSI_LLONG_MAX - (nvel64_t)temp) > *secondary_time) {
 			*secondary_time += (nvel64_t)temp;
@@ -2012,11 +2020,6 @@ static inline nvel64_t drift_calculation(struct osi_core_priv_data *const osi_co
 			ret = -1;
 			goto fail;
 		}
-	} else {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "CORE: wrong drift\n", 0ULL);
-		ret = -1;
-		goto fail;
 	}
 	/* 0 is lowest possible valid time value which represent
 	 * 1 Jan, 1970
