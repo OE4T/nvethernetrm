@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -51,8 +51,16 @@
  */
 /** Increment the tx descriptor index */
 #define INCR_TX_DESC_INDEX(idx, x) ((idx) = (((idx) & ((nveu32_t)0x7FFFFFFFU)) + (1U)) & ((x) - 1U))
+
 /** Increment the rx descriptor index */
-#define INCR_RX_DESC_INDEX(idx, x) ((idx) = (((idx) & ((nveu32_t)0x7FFFFFFFU)) + (1U)) & ((x) - 1U))
+#define INCR_RX_DESC_INDEX(idx, x) do { \
+	if ((x) > 0U) { \
+		(idx) = (((idx) & ((nveu32_t)0x7FFFFFFFU)) + 1U) & ((x) - 1U); \
+	} else { \
+		(idx) = 0U; \
+	} \
+} while(0U != 0U)
+
 #ifndef OSI_STRIPPED_LIB
 /** Decrement the tx descriptor index */
 #define DECR_TX_DESC_INDEX(idx, x) ((idx) = (((idx) & ((nveu32_t)0x7FFFFFFFU)) - (1U)) & ((x) - 1U))

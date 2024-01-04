@@ -33,6 +33,18 @@
 
 static struct desc_ops d_ops[MAX_MAC_IP_TYPES];
 
+#if defined OSI_DEBUG && !defined OSI_STRIPPED_LIB
+static inline void dump_rx_descriptors(struct osi_dma_priv_data *osi_dma,
+				       struct osi_rx_ring *rx_ring,
+				       nveu32_t chan)
+{
+	if (osi_dma->enable_desc_dump == 1U) {
+		desc_dump(osi_dma, rx_ring->cur_rx_idx,
+			  rx_ring->cur_rx_idx, RX_DESC_DUMP, chan);
+	}
+}
+#endif
+
 /**
  * @brief validate_rx_completions_arg- Validate input argument of rx_completions
  *
@@ -90,9 +102,102 @@ static inline nve32_t validate_rx_completions_arg(
 		goto fail;
 	}
 
+	if ((*rx_ring)->cur_rx_idx >= osi_dma->rx_ring_sz) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "dma_txrx: Invalid cur_rx_idx\n", 0ULL);
+		ret = -1;
+	}
+
 fail:
 	return ret;
 }
+
+static inline void process_rx_desc(struct osi_dma_priv_data *osi_dma,
+				   struct osi_rx_ring *rx_ring,
+				   struct osi_rx_desc *rx_desc,
+				   struct osi_rx_swcx *rx_swcx,
+				   struct osi_rx_pkt_cx *rx_pkt_cx,
+				   nveu32_t chan)
+{
+	const nveu32_t es_bits_mask[2U] = { RDES3_ES_BITS, RDES3_ES_MGBE };
+	struct osi_rx_desc *context_desc = OSI_NULL;
+	struct osi_rx_swcx *ptp_rx_swcx = OSI_NULL;
+	nveu32_t ip_type = osi_dma->mac;
+	nve32_t ret = 0;
+
+	if (osi_likely((rx_desc->rdes3 & RDES3_LD) == RDES3_LD)) {
+		if ((rx_desc->rdes3 & es_bits_mask[ip_type]) != 0U) {
+			/* reset validity if any of the error bits
+			 * are set
+			 */
+			rx_pkt_cx->flags &= ~OSI_PKT_CX_VALID;
+#ifndef OSI_STRIPPED_LIB
+			d_ops[ip_type].update_rx_err_stats(rx_desc, &osi_dma->pkt_err_stats);
+#endif /* !OSI_STRIPPED_LIB */
+		}
+
+		/* Check if COE Rx checksum is valid */
+		d_ops[ip_type].get_rx_csum(rx_desc, rx_pkt_cx);
+
+#ifndef OSI_STRIPPED_LIB
+		/* Get Rx VLAN from descriptor */
+		d_ops[ip_type].get_rx_vlan(rx_desc, rx_pkt_cx);
+
+		/* get_rx_hash for RSS */
+		d_ops[ip_type].get_rx_hash(rx_desc, rx_pkt_cx);
+#endif /* !OSI_STRIPPED_LIB */
+		context_desc = rx_ring->rx_desc + rx_ring->cur_rx_idx;
+		/* Get rx time stamp */
+		ret = d_ops[ip_type].get_rx_hwstamp(osi_dma, rx_desc, context_desc, rx_pkt_cx);
+		if (ret == 0) {
+			ptp_rx_swcx = rx_ring->rx_swcx + rx_ring->cur_rx_idx;
+			/* Marking software context as PTP software
+			 * context so that OSD can skip DMA buffer
+			 * allocation and DMA mapping. DMA can use PTP
+			 * software context addresses directly since
+			 * those are valid.
+			 */
+			ptp_rx_swcx->flags |= OSI_RX_SWCX_REUSE;
+#ifdef OSI_DEBUG
+			dump_rx_descriptors(osi_dma, rx_ring, chan);
+#endif /* OSI_DEBUG */
+			/* Context descriptor was consumed. Its skb
+			 * and DMA mapping will be recycled
+			 */
+			INCR_RX_DESC_INDEX(rx_ring->cur_rx_idx, osi_dma->rx_ring_sz);
+		}
+
+		osi_dma->osd_ops.receive_packet(osi_dma->osd, rx_ring, chan,
+						osi_dma->rx_buf_len, rx_pkt_cx, rx_swcx);
+	}
+}
+
+#ifndef OSI_STRIPPED_LIB
+static inline void check_for_more_data_avail(struct osi_rx_ring *rx_ring, nve32_t received,
+					     nve32_t received_resv, nve32_t budget,
+					     nveu32_t *more_data_avail)
+{
+	struct osi_rx_desc *rx_desc = OSI_NULL;
+	struct osi_rx_swcx *rx_swcx = OSI_NULL;
+
+	/* If budget is done, check if HW ring still has unprocessed
+	 * Rx packets, so that the OSD layer can decide to schedule
+	 * this function again.
+	 */
+	if ((received + received_resv) >= budget) {
+		rx_desc = rx_ring->rx_desc + rx_ring->cur_rx_idx;
+		rx_swcx = rx_ring->rx_swcx + rx_ring->cur_rx_idx;
+		if (((rx_swcx->flags & OSI_RX_SWCX_PROCESSED) !=
+		    OSI_RX_SWCX_PROCESSED) &&
+		    ((rx_desc->rdes3 & RDES3_OWN) != RDES3_OWN)) {
+			/* Next descriptor has owned by SW
+			 * So set more data avail flag here.
+			 */
+			*more_data_avail = OSI_ENABLE;
+		}
+	}
+}
+#endif /* !OSI_STRIPPED_LIB */
 
 nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 				   nveu32_t chan, nve32_t budget,
@@ -102,9 +207,6 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 	struct osi_rx_pkt_cx *rx_pkt_cx = OSI_NULL;
 	struct osi_rx_desc *rx_desc = OSI_NULL;
 	struct osi_rx_swcx *rx_swcx = OSI_NULL;
-	struct osi_rx_swcx *ptp_rx_swcx = OSI_NULL;
-	struct osi_rx_desc *context_desc = OSI_NULL;
-	nveu32_t ip_type = osi_dma->mac;
 	nve32_t received = 0;
 #ifndef OSI_STRIPPED_LIB
 	nve32_t received_resv = 0;
@@ -114,13 +216,6 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 	ret = validate_rx_completions_arg(osi_dma, chan, more_data_avail,
 					  &rx_ring, &rx_pkt_cx);
 	if (osi_unlikely(ret < 0)) {
-		received = -1;
-		goto fail;
-	}
-
-	if (rx_ring->cur_rx_idx >= osi_dma->rx_ring_sz) {
-		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-			    "dma_txrx: Invalid cur_rx_idx\n", 0ULL);
 		received = -1;
 		goto fail;
 	}
@@ -142,10 +237,7 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 		rx_swcx = rx_ring->rx_swcx + rx_ring->cur_rx_idx;
 		osi_memset(rx_pkt_cx, 0U, sizeof(*rx_pkt_cx));
 #if defined OSI_DEBUG && !defined OSI_STRIPPED_LIB
-		if (osi_dma->enable_desc_dump == 1U) {
-			desc_dump(osi_dma, rx_ring->cur_rx_idx,
-				  rx_ring->cur_rx_idx, RX_DESC_DUMP, chan);
-		}
+		dump_rx_descriptors(osi_dma, rx_ring, chan);
 #endif /* OSI_DEBUG */
 
 		INCR_RX_DESC_INDEX(rx_ring->cur_rx_idx, osi_dma->rx_ring_sz);
@@ -196,70 +288,9 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 		/* Mark pkt as valid by default */
 		rx_pkt_cx->flags |= OSI_PKT_CX_VALID;
 
-		if ((rx_desc->rdes3 & RDES3_LD) == RDES3_LD) {
-			if ((rx_desc->rdes3 &
-			    (((osi_dma->mac == OSI_MAC_HW_MGBE) ?
-			    RDES3_ES_MGBE : RDES3_ES_BITS))) != 0U) {
-				/* reset validity if any of the error bits
-				 * are set
-				 */
-				rx_pkt_cx->flags &= ~OSI_PKT_CX_VALID;
-#ifndef OSI_STRIPPED_LIB
-				d_ops[ip_type].update_rx_err_stats(rx_desc,
-						&osi_dma->pkt_err_stats);
-#endif /* !OSI_STRIPPED_LIB */
-			}
+		/* Process the Rx descriptor */
+		process_rx_desc(osi_dma, rx_ring, rx_desc, rx_swcx, rx_pkt_cx, chan);
 
-			/* Check if COE Rx checksum is valid */
-			d_ops[ip_type].get_rx_csum(rx_desc, rx_pkt_cx);
-
-#ifndef OSI_STRIPPED_LIB
-			/* Get Rx VLAN from descriptor */
-			d_ops[ip_type].get_rx_vlan(rx_desc, rx_pkt_cx);
-
-			/* get_rx_hash for RSS */
-			d_ops[ip_type].get_rx_hash(rx_desc, rx_pkt_cx);
-#endif /* !OSI_STRIPPED_LIB */
-			context_desc = rx_ring->rx_desc + rx_ring->cur_rx_idx;
-			/* Get rx time stamp */
-			ret = d_ops[ip_type].get_rx_hwstamp(osi_dma, rx_desc,
-						  context_desc, rx_pkt_cx);
-			if (ret == 0) {
-				ptp_rx_swcx = rx_ring->rx_swcx +
-					      rx_ring->cur_rx_idx;
-				/* Marking software context as PTP software
-				 * context so that OSD can skip DMA buffer
-				 * allocation and DMA mapping. DMA can use PTP
-				 * software context addresses directly since
-				 * those are valid.
-				 */
-				ptp_rx_swcx->flags |= OSI_RX_SWCX_REUSE;
-#ifdef OSI_DEBUG
-				if (osi_dma->enable_desc_dump == 1U) {
-					desc_dump(osi_dma, rx_ring->cur_rx_idx,
-						  rx_ring->cur_rx_idx, RX_DESC_DUMP,
-						  chan);
-				}
-#endif /* OSI_DEBUG */
-				/* Context descriptor was consumed. Its skb
-				 * and DMA mapping will be recycled
-				 */
-				INCR_RX_DESC_INDEX(rx_ring->cur_rx_idx, osi_dma->rx_ring_sz);
-			}
-			if (osi_likely(osi_dma->osd_ops.receive_packet !=
-				       OSI_NULL)) {
-				osi_dma->osd_ops.receive_packet(osi_dma->osd,
-							    rx_ring, chan,
-							    osi_dma->rx_buf_len,
-							    rx_pkt_cx, rx_swcx);
-			} else {
-				OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-					    "dma_txrx: Invalid function pointer\n",
-					    0ULL);
-				received = -1;
-				goto fail;
-			}
-		}
 #ifndef OSI_STRIPPED_LIB
 		osi_dma->dstats.q_rx_pkt_n[chan] =
 			osi_update_stats_counter(
@@ -272,23 +303,8 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 	}
 
 #ifndef OSI_STRIPPED_LIB
-	/* If budget is done, check if HW ring still has unprocessed
-	 * Rx packets, so that the OSD layer can decide to schedule
-	 * this function again.
-	 */
-	if ((received + received_resv) >= budget) {
-		rx_desc = rx_ring->rx_desc + rx_ring->cur_rx_idx;
-		rx_swcx = rx_ring->rx_swcx + rx_ring->cur_rx_idx;
-		if (((rx_swcx->flags & OSI_RX_SWCX_PROCESSED) !=
-		    OSI_RX_SWCX_PROCESSED) &&
-		    ((rx_desc->rdes3 & RDES3_OWN) != RDES3_OWN)) {
-			/* Next descriptor has owned by SW
-			 * So set more data avail flag here.
-			 */
-			*more_data_avail = OSI_ENABLE;
-		}
-	}
-#endif /* !OSI_STRIPPED_LIB */
+	check_for_more_data_avail(rx_ring, received, received_resv, budget, more_data_avail);
+#endif /*!OSI_STRIPPED_LIB */
 
 fail:
 	return received;
