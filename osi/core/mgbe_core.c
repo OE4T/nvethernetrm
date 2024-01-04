@@ -2629,72 +2629,14 @@ fail:
 	return ret;
 }
 
-/**
- * @brief mgbe_handle_mtl_intrs - Handle MTL interrupts
- *
- * Algorithm: Code to handle interrupt for MTL EST error and status.
- * There are possible 4 errors which can be part of common interrupt in case of
- * MTL_EST_SCH_ERR (sheduling error)- HLBS
- * MTL_EST_FRMS_ERR (Frame size error) - HLBF
- * MTL_EST_FRMC_ERR (frame check error) - HLBF
- * Constant Gate Control Error - when time interval in less
- * than or equal to cycle time, llr = 1
- * There is one status interrupt which says swich to SWOL complete.
- *
- * @param[in] osi_core: osi core priv data structure
- * @param[in] mtl_isr: MTL interrupt status value
- *
- * @note MAC should be init and started. see osi_start_mac()
- */
-static void mgbe_handle_mtl_intrs(struct osi_core_priv_data *osi_core,
-				  nveu32_t mtl_isr)
+static void mgbe_handle_cgce_hlbs_hlbf(struct osi_core_priv_data *osi_core, nveu32_t val)
 {
-	nveu32_t val = 0U;
+	nveu32_t i = 0;
 	nveu32_t sch_err = 0U;
 	nveu32_t frm_err = 0U;
 	nveu32_t temp = 0U;
-	nveu32_t i = 0;
 	nveul64_t stat_val = 0U;
 	nveu32_t value = 0U;
-	nveu32_t qstatus = 0U;
-	nveu32_t qinx = 0U;
-
-	/* Check for all MTL queues */
-	for (i = 0; i < osi_core->num_mtl_queues; i++) {
-		qinx = osi_core->mtl_queues[i];
-		if ((mtl_isr & OSI_BIT(qinx)) ==  OSI_BIT(qinx)) {
-			/* check if Q has underflow error */
-			qstatus = osi_readl((nveu8_t *)osi_core->base +
-					    MGBE_MTL_QINT_STATUS(qinx));
-			/* Transmit Queue Underflow Interrupt Status */
-			if ((qstatus & MGBE_MTL_QINT_TXUNIFS) == MGBE_MTL_QINT_TXUNIFS) {
-#ifndef OSI_STRIPPED_LIB
-				osi_core->stats.mgbe_tx_underflow_err =
-				osi_update_stats_counter(
-				osi_core->stats.mgbe_tx_underflow_err,
-				1UL);
-#endif /* !OSI_STRIPPED_LIB */
-			}
-			/* Clear interrupt status by writing back with 1 */
-			osi_writel(1U, (nveu8_t *)osi_core->base +
-				   MGBE_MTL_QINT_STATUS(qinx));
-		}
-	}
-
-	if ((mtl_isr & MGBE_MTL_IS_ESTIS) != MGBE_MTL_IS_ESTIS) {
-		goto done;
-	}
-
-	val = osi_readla(osi_core,
-			 (nveu8_t *)osi_core->base + MGBE_MTL_EST_STATUS);
-	val &= (MGBE_MTL_EST_STATUS_CGCE | MGBE_MTL_EST_STATUS_HLBS |
-		MGBE_MTL_EST_STATUS_HLBF | MGBE_MTL_EST_STATUS_BTRE |
-		MGBE_MTL_EST_STATUS_SWLC);
-
-	/* return if interrupt is not related to EST */
-	if (val == OSI_DISABLE) {
-		goto done;
-	}
 
 	/* increase counter write 1 back will clear */
 	if ((val & MGBE_MTL_EST_STATUS_CGCE) == MGBE_MTL_EST_STATUS_CGCE) {
@@ -2769,6 +2711,76 @@ static void mgbe_handle_mtl_intrs(struct osi_core_priv_data *osi_core,
 				     OSI_NONE);
 		}
 	}
+}
+
+/**
+ * @brief mgbe_handle_mtl_intrs - Handle MTL interrupts
+ *
+ * Algorithm: Code to handle interrupt for MTL EST error and status.
+ * There are possible 4 errors which can be part of common interrupt in case of
+ * MTL_EST_SCH_ERR (sheduling error)- HLBS
+ * MTL_EST_FRMS_ERR (Frame size error) - HLBF
+ * MTL_EST_FRMC_ERR (frame check error) - HLBF
+ * Constant Gate Control Error - when time interval in less
+ * than or equal to cycle time, llr = 1
+ * There is one status interrupt which says swich to SWOL complete.
+ *
+ * @param[in] osi_core: osi core priv data structure
+ * @param[in] mtl_isr: MTL interrupt status value
+ *
+ * @note MAC should be init and started. see osi_start_mac()
+ */
+static void mgbe_handle_mtl_intrs(struct osi_core_priv_data *osi_core,
+				  nveu32_t mtl_isr)
+{
+	nveu32_t val = 0U;
+	nveu32_t i = 0;
+	nveul64_t stat_val = 0U;
+	nveu32_t qstatus = 0U;
+	nveu32_t qinx = 0U;
+
+	/* Check for all MTL queues */
+	for (i = 0; i < osi_core->num_mtl_queues; i++) {
+		qinx = osi_core->mtl_queues[i];
+		if ((mtl_isr & OSI_BIT(qinx)) ==  OSI_BIT(qinx)) {
+			/* check if Q has underflow error */
+			qstatus = osi_readl((nveu8_t *)osi_core->base +
+					    MGBE_MTL_QINT_STATUS(qinx));
+			/* Transmit Queue Underflow Interrupt Status */
+			if ((qstatus & MGBE_MTL_QINT_TXUNIFS) == MGBE_MTL_QINT_TXUNIFS) {
+#ifndef OSI_STRIPPED_LIB
+				osi_core->stats.mgbe_tx_underflow_err =
+				osi_update_stats_counter(
+				osi_core->stats.mgbe_tx_underflow_err,
+				1UL);
+#endif /* !OSI_STRIPPED_LIB */
+			}
+			/* Clear interrupt status by writing back with 1 */
+			osi_writel(1U, (nveu8_t *)osi_core->base +
+				   MGBE_MTL_QINT_STATUS(qinx));
+		}
+	}
+
+	if ((mtl_isr & MGBE_MTL_IS_ESTIS) != MGBE_MTL_IS_ESTIS) {
+		goto done;
+	}
+
+	val = osi_readla(osi_core,
+			 (nveu8_t *)osi_core->base + MGBE_MTL_EST_STATUS);
+	val &= (MGBE_MTL_EST_STATUS_CGCE | MGBE_MTL_EST_STATUS_HLBS |
+		MGBE_MTL_EST_STATUS_HLBF | MGBE_MTL_EST_STATUS_BTRE |
+		MGBE_MTL_EST_STATUS_SWLC);
+
+	/* return if interrupt is not related to EST */
+	if (val == OSI_DISABLE) {
+		goto done;
+	}
+
+	/* Handle Constant Gate Control Error,
+	 * Head-Of-Line Blocking due to Scheduling
+	 * Head-Of-Line Blocking due to Frame Size
+	 */
+	mgbe_handle_cgce_hlbs_hlbf(osi_core, val);
 
 	if ((val & MGBE_MTL_EST_STATUS_SWLC) == MGBE_MTL_EST_STATUS_SWLC) {
 		if ((val & MGBE_MTL_EST_STATUS_BTRE) !=
