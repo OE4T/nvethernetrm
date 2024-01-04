@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES.
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -321,6 +321,13 @@ static inline void inc_tx_pkt_stats(struct osi_dma_priv_data *osi_dma,
 		osi_update_stats_counter(osi_dma->dstats.tx_pkt_n, 1UL);
 }
 
+static inline void update_err_stats(nveu32_t error_bit, nveu64_t *error_counter)
+{
+	if (error_bit) {
+		*error_counter = osi_update_stats_counter(*error_counter, 1UL);
+	}
+}
+
 /**
  * @brief get_tx_err_stats - Detect Errors from Tx Status
  *
@@ -343,85 +350,16 @@ static inline void inc_tx_pkt_stats(struct osi_dma_priv_data *osi_dma,
 static inline void get_tx_err_stats(struct osi_tx_desc *tx_desc,
 				    struct osi_pkt_err_stats *pkt_err_stats)
 {
-	/* IP Header Error */
-	if ((tx_desc->tdes3 & TDES3_IP_HEADER_ERR) == TDES3_IP_HEADER_ERR) {
-		pkt_err_stats->ip_header_error =
-			osi_update_stats_counter(
-					pkt_err_stats->ip_header_error,
-					1UL);
-	}
-
-	/* Jabber timeout Error */
-	if ((tx_desc->tdes3 & TDES3_JABBER_TIMEO_ERR) ==
-	    TDES3_JABBER_TIMEO_ERR) {
-		pkt_err_stats->jabber_timeout_error =
-			osi_update_stats_counter(
-					pkt_err_stats->jabber_timeout_error,
-					1UL);
-	}
-
-	/* Packet Flush Error */
-	if ((tx_desc->tdes3 & TDES3_PKT_FLUSH_ERR) == TDES3_PKT_FLUSH_ERR) {
-		pkt_err_stats->pkt_flush_error =
-			osi_update_stats_counter(
-					pkt_err_stats->pkt_flush_error, 1UL);
-	}
-
-	/* Payload Checksum Error */
-	if ((tx_desc->tdes3 & TDES3_PL_CHK_SUM_ERR) == TDES3_PL_CHK_SUM_ERR) {
-		pkt_err_stats->payload_cs_error =
-			osi_update_stats_counter(
-					pkt_err_stats->payload_cs_error, 1UL);
-	}
-
-	/* Loss of Carrier Error */
-	if ((tx_desc->tdes3 & TDES3_LOSS_CARRIER_ERR) ==
-	    TDES3_LOSS_CARRIER_ERR) {
-		pkt_err_stats->loss_of_carrier_error =
-			osi_update_stats_counter(
-					pkt_err_stats->loss_of_carrier_error,
-					1UL);
-	}
-
-	/* No Carrier Error */
-	if ((tx_desc->tdes3 & TDES3_NO_CARRIER_ERR) == TDES3_NO_CARRIER_ERR) {
-		pkt_err_stats->no_carrier_error =
-			osi_update_stats_counter(
-					pkt_err_stats->no_carrier_error, 1UL);
-	}
-
-	/* Late Collision Error */
-	if ((tx_desc->tdes3 & TDES3_LATE_COL_ERR) == TDES3_LATE_COL_ERR) {
-		pkt_err_stats->late_collision_error =
-			osi_update_stats_counter(
-					pkt_err_stats->late_collision_error,
-					1UL);
-	}
-
-	/* Excessive Collision Error */
-	if ((tx_desc->tdes3 & TDES3_EXCESSIVE_COL_ERR) ==
-	    TDES3_EXCESSIVE_COL_ERR) {
-		pkt_err_stats->excessive_collision_error =
-			osi_update_stats_counter(
-				pkt_err_stats->excessive_collision_error,
-				1UL);
-	}
-
-	/* Excessive Deferal Error */
-	if ((tx_desc->tdes3 & TDES3_EXCESSIVE_DEF_ERR) ==
-	    TDES3_EXCESSIVE_DEF_ERR) {
-		pkt_err_stats->excessive_deferal_error =
-			osi_update_stats_counter(
-					pkt_err_stats->excessive_deferal_error,
-					1UL);
-	}
-
-	/* Under Flow Error */
-	if ((tx_desc->tdes3 & TDES3_UNDER_FLOW_ERR) == TDES3_UNDER_FLOW_ERR) {
-		pkt_err_stats->underflow_error =
-			osi_update_stats_counter(pkt_err_stats->underflow_error,
-						 1UL);
-	}
+	update_err_stats(tx_desc->tdes3 & TDES3_IP_HEADER_ERR, &pkt_err_stats->ip_header_error);
+	update_err_stats(tx_desc->tdes3 & TDES3_JABBER_TIMEO_ERR, &pkt_err_stats->jabber_timeout_error);
+	update_err_stats(tx_desc->tdes3 & TDES3_PKT_FLUSH_ERR, &pkt_err_stats->pkt_flush_error);
+	update_err_stats(tx_desc->tdes3 & TDES3_PL_CHK_SUM_ERR, &pkt_err_stats->payload_cs_error);
+	update_err_stats(tx_desc->tdes3 & TDES3_LOSS_CARRIER_ERR, &pkt_err_stats->loss_of_carrier_error);
+	update_err_stats(tx_desc->tdes3 & TDES3_NO_CARRIER_ERR, &pkt_err_stats->no_carrier_error);
+	update_err_stats(tx_desc->tdes3 & TDES3_LATE_COL_ERR, &pkt_err_stats->late_collision_error);
+	update_err_stats(tx_desc->tdes3 & TDES3_EXCESSIVE_COL_ERR, &pkt_err_stats->excessive_collision_error);
+	update_err_stats(tx_desc->tdes3 & TDES3_EXCESSIVE_DEF_ERR, &pkt_err_stats->excessive_deferal_error);
+	update_err_stats(tx_desc->tdes3 & TDES3_UNDER_FLOW_ERR, &pkt_err_stats->underflow_error);
 }
 
 nve32_t osi_clear_tx_pkt_err_stats(struct osi_dma_priv_data *osi_dma)
