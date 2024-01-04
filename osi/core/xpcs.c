@@ -495,17 +495,7 @@ fail:
 	return ret;
 }
 
-/**
- * @brief xpcs_init - XPCS initialization
- *
- * Algorithm: This routine initialize XPCS in USXMII mode.
- *
- * @param[in] osi_core: OSI core data structure.
- *
- * @retval 0 on success
- * @retval -1 on failure.
- */
-nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
+static nve32_t vendor_specifc_sw_rst_usxgmii_an_en(struct osi_core_priv_data *osi_core)
 {
 	void *xpcs_base = osi_core->xpcs_base;
 	nveu32_t retry = 1000;
@@ -514,51 +504,6 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 	nve32_t cond = 1;
 	nve32_t ret = 0;
 
-	if (osi_core->xpcs_base == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "XPCS base is NULL", 0ULL);
-		ret = -1;
-		goto fail;
-	}
-
-	if (xpcs_lane_bring_up(osi_core) < 0) {
-		ret = -1;
-		goto fail;
-	}
-
-	/* Switching to USXGMII Mode based on
-	 * XPCS programming guideline 7.6
-	 */
-
-	/* 1. switch DWC_xpcs to BASE-R mode */
-	ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_CTRL2);
-	ctrl |= XPCS_SR_XS_PCS_CTRL2_PCS_TYPE_SEL_BASE_R;
-	ret = xpcs_write_safety(osi_core, XPCS_SR_XS_PCS_CTRL2, ctrl);
-	if (ret != 0) {
-		goto fail;
-	}
-	/* 2. enable USXGMII Mode inside DWC_xpcs */
-
-	/* 3.  USXG_MODE = 10G - default it will be 10G mode */
-	if ((osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G) ||
-	    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G)) {
-		ctrl = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_KR_CTRL);
-		ctrl &= ~(XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_MASK);
-
-		if (osi_core->uphy_gbe_mode == OSI_DISABLE) {
-			ctrl |= XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_5G;
-		}
-	}
-
-	ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_KR_CTRL, ctrl);
-	if (ret != 0) {
-		goto fail;
-	}
-	/* 4. Program PHY to operate at 10Gbps/5Gbps/2Gbps
-         * this step not required since PHY speed programming
-         * already done as part of phy INIT
-	 */
-	/* 5. Vendor specific software reset */
 	ctrl = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_DIG_CTRL1);
 	ctrl |= XPCS_VR_XS_PCS_DIG_CTRL1_USXG_EN;
 	ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_DIG_CTRL1, ctrl);
@@ -612,15 +557,73 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 			goto fail;
 		}
 	}
+fail:
+	return ret;
+}
 
-	/* TODO: 9. MII_AN_INTR_EN to 1, to enable auto-negotiation
-	 * complete interrupt */
+/**
+ * @brief xpcs_init - XPCS initialization
+ *
+ * Algorithm: This routine initialize XPCS in USXMII mode.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
+{
+	void *xpcs_base = osi_core->xpcs_base;
+	nveu32_t ctrl = 0;
+	nve32_t ret = 0;
 
-	/* 10. (Optional step) Duration of link timer change */
+	if (osi_core->xpcs_base == OSI_NULL) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "XPCS base is NULL", 0ULL);
+		ret = -1;
+		goto fail;
+	}
 
-	/* 11. XPCS configured as MAC-side USGMII - NA */
+	if (xpcs_lane_bring_up(osi_core) < 0) {
+		ret = -1;
+		goto fail;
+	}
 
-	/* 13.  TODO: If there is interrupt enabled for AN interrupt */
+	/* Switching to USXGMII Mode based on
+	 * XPCS programming guideline 7.6
+	 */
+
+	/* 1. switch DWC_xpcs to BASE-R mode */
+	ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_CTRL2);
+	ctrl |= XPCS_SR_XS_PCS_CTRL2_PCS_TYPE_SEL_BASE_R;
+	ret = xpcs_write_safety(osi_core, XPCS_SR_XS_PCS_CTRL2, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+	/* 2. enable USXGMII Mode inside DWC_xpcs */
+
+	/* 3.  USXG_MODE = 10G - default it will be 10G mode */
+	if ((osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G) ||
+	    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G)) {
+		ctrl = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_KR_CTRL);
+		ctrl &= ~(XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_MASK);
+
+		if (osi_core->uphy_gbe_mode == OSI_DISABLE) {
+			ctrl |= XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_5G;
+		}
+	}
+
+	ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_KR_CTRL, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+	/* 4. Program PHY to operate at 10Gbps/5Gbps/2Gbps
+         * this step not required since PHY speed programming
+         * already done as part of phy INIT
+	 */
+	/* 5. Vendor specific software reset */
+	ret = vendor_specifc_sw_rst_usxgmii_an_en(osi_core);
+
 fail:
 	return ret;
 }
