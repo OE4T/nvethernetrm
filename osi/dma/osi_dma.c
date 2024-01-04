@@ -280,50 +280,11 @@ static nve32_t validate_func_ptrs(struct osi_dma_priv_data *osi_dma,
 }
 #endif
 
-nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma)
+static nve32_t validate_ring_sz(const struct osi_dma_priv_data *osi_dma)
 {
 	const nveu32_t default_rz[] = { EQOS_DEFAULT_RING_SZ, MGBE_DEFAULT_RING_SZ };
 	const nveu32_t max_rz[] = { EQOS_DEFAULT_RING_SZ, MGBE_MAX_RING_SZ };
-	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
-	static struct dma_chan_ops dma_gops[MAX_MAC_IP_TYPES];
-#ifndef OSI_STRIPPED_LIB
-	typedef void (*init_ops_arr)(struct dma_chan_ops *temp);
-	const init_ops_arr i_ops[MAX_MAC_IP_TYPES] = {
-		eqos_init_dma_chan_ops, mgbe_init_dma_chan_ops
-	};
-#endif
 	nve32_t ret = 0;
-
-	if (osi_dma == OSI_NULL) {
-		ret = -1;
-		goto fail;
-	}
-
-	if ((l_dma->magic_num != (nveu64_t)osi_dma) ||
-	    (l_dma->init_done == OSI_ENABLE)) {
-		ret = -1;
-		goto fail;
-	}
-
-	if (osi_dma->is_ethernet_server != OSI_ENABLE) {
-		if ((osi_dma->osd_ops.transmit_complete == OSI_NULL) ||
-		    (osi_dma->osd_ops.receive_packet == OSI_NULL) ||
-		    (osi_dma->osd_ops.ops_log == OSI_NULL) ||
-#ifdef OSI_DEBUG
-		    (osi_dma->osd_ops.printf == OSI_NULL) ||
-#endif /* OSI_DEBUG */
-		    (osi_dma->osd_ops.udelay == OSI_NULL)) {
-			ret = -1;
-			goto fail;
-		}
-	}
-
-	if (osi_dma->mac > OSI_MAC_HW_MGBE) {
-		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-			    "DMA: Invalid MAC HW type\n", 0ULL);
-		ret = -1;
-		goto fail;
-	}
 
 	if ((osi_dma->tx_ring_sz == 0U) ||
 	    (is_power_of_two(osi_dma->tx_ring_sz) == 0U) ||
@@ -346,6 +307,79 @@ nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma)
 		ret = -1;
 		goto fail;
 	}
+
+fail:
+	return ret;
+}
+
+static nve32_t validate_osd_ops_params(struct osi_dma_priv_data *osi_dma)
+{
+	nve32_t ret = 0;
+
+	if ((osi_dma->is_ethernet_server != OSI_ENABLE) &&
+	    ((osi_dma->osd_ops.transmit_complete == OSI_NULL) ||
+	    (osi_dma->osd_ops.receive_packet == OSI_NULL) ||
+	    (osi_dma->osd_ops.ops_log == OSI_NULL) ||
+#ifdef OSI_DEBUG
+	    (osi_dma->osd_ops.printf == OSI_NULL) ||
+#endif /* OSI_DEBUG */
+	    (osi_dma->osd_ops.udelay == OSI_NULL))) {
+		ret = -1;
+	}
+
+	return ret;
+}
+
+static nve32_t validate_dma_ops_params(struct osi_dma_priv_data *osi_dma)
+{
+	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
+	nve32_t ret = 0;
+
+	if (osi_dma == OSI_NULL) {
+		ret = -1;
+		goto fail;
+	}
+
+	if ((l_dma->magic_num != (nveu64_t)osi_dma) ||
+	    (l_dma->init_done == OSI_ENABLE)) {
+		ret = -1;
+		goto fail;
+	}
+
+	ret = validate_osd_ops_params(osi_dma);
+	if (ret < 0) {
+		goto fail;
+	}
+
+	if (osi_dma->mac > OSI_MAC_HW_MGBE) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "DMA: Invalid MAC HW type\n", 0ULL);
+		ret = -1;
+		goto fail;
+	}
+
+	ret = validate_ring_sz(osi_dma);
+fail:
+	return ret;
+}
+
+nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma)
+{
+	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
+	static struct dma_chan_ops dma_gops[MAX_MAC_IP_TYPES];
+#ifndef OSI_STRIPPED_LIB
+	typedef void (*init_ops_arr)(struct dma_chan_ops *temp);
+	const init_ops_arr i_ops[MAX_MAC_IP_TYPES] = {
+		eqos_init_dma_chan_ops, mgbe_init_dma_chan_ops
+	};
+#endif
+	nve32_t ret = 0;
+
+	ret = validate_dma_ops_params(osi_dma);
+	if (ret < 0) {
+		goto fail;
+	}
+
 #ifndef OSI_STRIPPED_LIB
 	i_ops[osi_dma->mac](&dma_gops[osi_dma->mac]);
 #endif
