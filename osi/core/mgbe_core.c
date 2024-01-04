@@ -2895,22 +2895,10 @@ static nve32_t mgbe_config_ptp_offload(struct osi_core_priv_data *const osi_core
 #endif /* !OSI_STRIPPED_LIB */
 
 #ifdef HSI_SUPPORT
-/**
- * @brief mgbe_handle_hsi_intr - Handles hsi interrupt.
- *
- * Algorithm:
- * - Read safety interrupt status register and clear it.
- * - Update error code in osi_hsi_data structure
- *
- * @param[in] osi_core: OSI core private data structure.
- *
- * @note MAC should be init and started. see osi_start_mac()
- */
-static void mgbe_handle_hsi_intr(struct osi_core_priv_data *osi_core)
+static void mgbe_handle_hsi_wrap_common_intr(struct osi_core_priv_data *osi_core)
 {
 	nveu32_t val = 0;
 	nveu32_t val2 = 0;
-	void *xpcs_base = osi_core->xpcs_base;
 	nveu64_t ce_count_threshold;
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
@@ -2963,6 +2951,28 @@ static void mgbe_handle_hsi_intr(struct osi_core_priv_data *osi_core)
 					MGBE_DMA_ECC_INTERRUPT_STATUS);
 		}
 	}
+}
+
+/**
+ * @brief mgbe_handle_hsi_intr - Handles hsi interrupt.
+ *
+ * Algorithm:
+ * - Read safety interrupt status register and clear it.
+ * - Update error code in osi_hsi_data structure
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ *
+ * @note MAC should be init and started. see osi_start_mac()
+ */
+static void mgbe_handle_hsi_intr(struct osi_core_priv_data *osi_core)
+{
+	nveu32_t val = 0;
+	nveu32_t val2 = 0;
+	void *xpcs_base = osi_core->xpcs_base;
+	nveu64_t ce_count_threshold;
+
+	/* Handle HSI wrapper common interrupt */
+	mgbe_handle_hsi_wrap_common_intr(osi_core);
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
 			XPCS_WRAP_INTERRUPT_STATUS);
