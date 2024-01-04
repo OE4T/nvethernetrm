@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION. All rights reserved.
  * All rights reserved.
  *
  *
@@ -555,11 +555,64 @@ exit_func:
 	return ret;
 }
 
+static nve32_t init_dma(const struct osi_dma_priv_data *osi_dma, nveu32_t channel)
+{
+	nveu32_t chan = channel & 0xFU;
+	nve32_t ret = 0;
+
+	/* CERT ARR-30C issue observed without this check */
+	if (osi_dma->num_dma_chans != 0U) {
+		ret = init_dma_channel(osi_dma, chan);
+		if (ret < 0) {
+			OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			   	    "DMA: Init DMA channel failed\n", 0ULL);
+			goto fail;
+		}
+	}
+
+	ret = intr_fn[OSI_DMA_INTR_ENABLE](osi_dma, VIRT_INTR_CHX_CNTRL(chan),
+					   VIRT_INTR_CHX_STATUS(chan),
+					   ((osi_dma->mac == OSI_MAC_HW_MGBE) ?
+					   MGBE_DMA_CHX_STATUS(chan) : EQOS_DMA_CHX_STATUS(chan)),
+					   OSI_BIT(OSI_DMA_CH_TX_INTR));
+	if (ret < 0) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "DMA: Enable Tx interrupt failed\n", 0ULL);
+		goto fail;
+	}
+
+	ret = intr_fn[OSI_DMA_INTR_ENABLE](osi_dma, VIRT_INTR_CHX_CNTRL(chan),
+					   VIRT_INTR_CHX_STATUS(chan),
+					   ((osi_dma->mac == OSI_MAC_HW_MGBE) ?
+					   MGBE_DMA_CHX_STATUS(chan) : EQOS_DMA_CHX_STATUS(chan)),
+					   OSI_BIT(OSI_DMA_CH_RX_INTR));
+	if (ret < 0) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "DMA: Enable Rx interrupt failed\n", 0ULL);
+		goto fail;
+	}
+
+	start_dma(osi_dma, chan);
+fail:
+	return ret;
+}
+
+static void set_default_ptp_config(struct osi_dma_priv_data *osi_dma)
+{
+	/**
+	 * OSD will update this if PTP needs to be run in diffrent modes.
+	 * Default configuration is PTP sync in two step sync with slave mode.
+	 */
+	if (osi_dma->ptp_flag == 0U) {
+		osi_dma->ptp_flag = (OSI_PTP_SYNC_SLAVE | OSI_PTP_SYNC_TWOSTEP);
+	}
+}
+
 nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma)
 {
 	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
-	nveu32_t i, chan;
 	nve32_t ret = 0;
+	nveu32_t i;
 
 	if (dma_validate_args(osi_dma, l_dma) < 0) {
 		ret = -1;
@@ -599,48 +652,13 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma)
 
 	/* Enable channel interrupts at wrapper level and start DMA */
 	for (i = 0; i < osi_dma->num_dma_chans; i++) {
-		chan = osi_dma->dma_chans[i];
-
-		ret = init_dma_channel(osi_dma, chan);
-		if (ret < 0) {
-			OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-				    "Init DMA channel failed\n", 0ULL);
-			goto fail;
-		}
-
-		ret = intr_fn[OSI_DMA_INTR_ENABLE](osi_dma,
-				VIRT_INTR_CHX_CNTRL(chan),
-				VIRT_INTR_CHX_STATUS(chan),
-				((osi_dma->mac == OSI_MAC_HW_MGBE) ?
-				MGBE_DMA_CHX_STATUS(chan) :
-				EQOS_DMA_CHX_STATUS(chan)),
-				OSI_BIT(OSI_DMA_CH_TX_INTR));
+		ret = init_dma(osi_dma, osi_dma->dma_chans[i]);
 		if (ret < 0) {
 			goto fail;
 		}
-
-		ret = intr_fn[OSI_DMA_INTR_ENABLE](osi_dma,
-				VIRT_INTR_CHX_CNTRL(chan),
-				VIRT_INTR_CHX_STATUS(chan),
-				((osi_dma->mac == OSI_MAC_HW_MGBE) ?
-				MGBE_DMA_CHX_STATUS(chan) :
-				EQOS_DMA_CHX_STATUS(chan)),
-				OSI_BIT(OSI_DMA_CH_RX_INTR));
-		if (ret < 0) {
-			goto fail;
-		}
-
-		start_dma(osi_dma, chan);
 	}
 
-	/**
-	 * OSD will update this if PTP needs to be run in diffrent modes.
-	 * Default configuration is PTP sync in two step sync with slave mode.
-	 */
-	if (osi_dma->ptp_flag == 0U) {
-		osi_dma->ptp_flag = (OSI_PTP_SYNC_SLAVE | OSI_PTP_SYNC_TWOSTEP);
-	}
-
+	set_default_ptp_config(osi_dma);
 fail:
 	return ret;
 }
