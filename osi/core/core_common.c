@@ -932,6 +932,68 @@ static nve32_t hw_est_write(struct osi_core_priv_data *osi_core,
 	return ret;
 }
 
+static inline nve32_t configure_est_params(struct osi_core_priv_data *const osi_core,
+					   struct osi_est_config *const est)
+{
+	nveu32_t i;
+	nve32_t ret;
+	nveu32_t addr = 0x0;
+	const nveu32_t MTL_EST_CTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_LOW,
+						MGBE_MTL_EST_CTR_LOW};
+	const nveu32_t MTL_EST_CTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_HIGH,
+						MGBE_MTL_EST_CTR_HIGH};
+	const nveu32_t MTL_EST_TER[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_TER,
+						MGBE_MTL_EST_TER};
+	const nveu32_t MTL_EST_LLR[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_LLR,
+						MGBE_MTL_EST_LLR};
+
+	ret = hw_est_write(osi_core, MTL_EST_CTR_LOW[osi_core->mac], est->ctr[0], 0);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				"GCL CTR[0] failed\n", 0LL);
+		goto done;
+	}
+	/* check for est->ctr[i]  not more than FF, TODO as per hw config
+	 * parameter we can have max 0x3 as this value in sec */
+	est->ctr[1] &= MTL_EST_CTR_HIGH_MAX;
+	ret = hw_est_write(osi_core, MTL_EST_CTR_HIGH[osi_core->mac], est->ctr[1], 0);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				"GCL CTR[1] failed\n", 0LL);
+		goto done;
+	}
+
+	ret = hw_est_write(osi_core, MTL_EST_TER[osi_core->mac], est->ter, 0);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				"GCL TER failed\n", 0LL);
+		goto done;
+	}
+
+	ret = hw_est_write(osi_core, MTL_EST_LLR[osi_core->mac], est->llr, 0);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				"GCL LLR failed\n", 0LL);
+		goto done;
+	}
+
+	/* Write GCL table */
+	for (i = 0U; i < est->llr; i++) {
+		addr = i;
+		addr = addr << MTL_EST_ADDR_SHIFT;
+		addr &= MTL_EST_ADDR_MASK;
+		ret = hw_est_write(osi_core, addr, est->gcl[i], 1);
+		if (ret < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+					"GCL enties write failed\n",
+					(nveul64_t)i);
+			goto done;
+		}
+	}
+done:
+	return ret;
+}
+
 /**
  * @brief hw_config_est - Read Setting for GCL from input and update
  * registers.
@@ -961,23 +1023,13 @@ nve32_t hw_config_est(struct osi_core_priv_data *const osi_core,
 	nveu32_t btr[2] = {0};
 	nveu32_t val = 0x0;
 	void *base = osi_core->base;
-	nveu32_t i;
 	nve32_t ret = 0;
-	nveu32_t addr = 0x0;
 	const nveu32_t MTL_EST_CONTROL[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL,
 						MGBE_MTL_EST_CONTROL};
 	const nveu32_t MTL_EST_BTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_LOW,
 						MGBE_MTL_EST_BTR_LOW};
 	const nveu32_t MTL_EST_BTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_HIGH,
 						MGBE_MTL_EST_BTR_HIGH};
-	const nveu32_t MTL_EST_CTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_LOW,
-						MGBE_MTL_EST_CTR_LOW};
-	const nveu32_t MTL_EST_CTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_HIGH,
-						MGBE_MTL_EST_CTR_HIGH};
-	const nveu32_t MTL_EST_TER[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_TER,
-						MGBE_MTL_EST_TER};
-	const nveu32_t MTL_EST_LLR[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_LLR,
-						MGBE_MTL_EST_LLR};
 
 	if ((osi_core->hw_feature != OSI_NULL) &&
 	    (osi_core->hw_feature->est_sel == OSI_DISABLE)) {
@@ -1011,48 +1063,10 @@ nve32_t hw_config_est(struct osi_core_priv_data *const osi_core,
 			goto done;
 		}
 
-		ret = hw_est_write(osi_core, MTL_EST_CTR_LOW[osi_core->mac], est->ctr[0], 0);
+		/* Configure ctr, ter, llr, gcl table */
+		ret = configure_est_params(osi_core, est);
 		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "GCL CTR[0] failed\n", 0LL);
 			goto done;
-		}
-		/* check for est->ctr[i]  not more than FF, TODO as per hw config
-		 * parameter we can have max 0x3 as this value in sec */
-		est->ctr[1] &= MTL_EST_CTR_HIGH_MAX;
-		ret = hw_est_write(osi_core, MTL_EST_CTR_HIGH[osi_core->mac], est->ctr[1], 0);
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "GCL CTR[1] failed\n", 0LL);
-			goto done;
-		}
-
-		ret = hw_est_write(osi_core, MTL_EST_TER[osi_core->mac], est->ter, 0);
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "GCL TER failed\n", 0LL);
-			goto done;
-		}
-
-		ret = hw_est_write(osi_core, MTL_EST_LLR[osi_core->mac], est->llr, 0);
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "GCL LLR failed\n", 0LL);
-			goto done;
-		}
-
-		/* Write GCL table */
-		for (i = 0U; i < est->llr; i++) {
-			addr = i;
-			addr = addr << MTL_EST_ADDR_SHIFT;
-			addr &= MTL_EST_ADDR_MASK;
-			ret = hw_est_write(osi_core, addr, est->gcl[i], 1);
-			if (ret < 0) {
-				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-					     "GCL enties write failed\n",
-					     (nveul64_t)i);
-				goto done;
-			}
 		}
 
 		/* Write parameters */
