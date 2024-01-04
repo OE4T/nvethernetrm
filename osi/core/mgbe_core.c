@@ -2146,29 +2146,12 @@ static inline nveu32_t get_free_ts_idx(struct core_local *l_core)
 	return i;
 }
 
-/**
- * @brief mgbe_handle_mac_intrs - Handle MAC interrupts
- *
- * Algorithm: This function takes care of handling the
- *	MAC nve32_terrupts which includes speed, mode detection.
- *
- * @param[in] osi_core: OSI core private data structure.
- *
- * @note MAC nve32_terrupts need to be enabled
- */
-static void mgbe_handle_mac_intrs(struct osi_core_priv_data *osi_core)
+static void mgbe_handle_link_change_and_fpe_intrs(struct osi_core_priv_data *osi_core,
+						  nveu32_t mac_isr)
 {
-	struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	nveu32_t mac_isr = 0;
 	nveu32_t mac_ier = 0;
-	nveu32_t tx_errors = 0;
 	nveu8_t *base = (nveu8_t *)osi_core->base;
 	nveu32_t value = 0U;
-#ifdef HSI_SUPPORT
-	nveu64_t tx_frame_err = 0;
-#endif
-
-	mac_isr = osi_readla(osi_core, base + MGBE_MAC_ISR);
 
 	/* Check for Link status change interrupt */
 	if ((mac_isr & MGBE_MAC_ISR_LSI) == OSI_ENABLE) {
@@ -2196,6 +2179,32 @@ static void mgbe_handle_mac_intrs(struct osi_core_priv_data *osi_core)
 	    ((mac_ier & MGBE_IMR_FPEIE) == MGBE_IMR_FPEIE)) {
 		mgbe_handle_mac_fpe_intrs(osi_core);
 	}
+}
+
+/**
+ * @brief mgbe_handle_mac_intrs - Handle MAC interrupts
+ *
+ * Algorithm: This function takes care of handling the
+ *	MAC nve32_terrupts which includes speed, mode detection.
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ *
+ * @note MAC nve32_terrupts need to be enabled
+ */
+static void mgbe_handle_mac_intrs(struct osi_core_priv_data *osi_core)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	nveu32_t mac_isr = 0;
+	nveu32_t tx_errors = 0;
+	nveu8_t *base = (nveu8_t *)osi_core->base;
+#ifdef HSI_SUPPORT
+	nveu64_t tx_frame_err = 0;
+#endif
+
+	mac_isr = osi_readla(osi_core, base + MGBE_MAC_ISR);
+
+	/* handle mgbe link change and fpe interrupts */
+	mgbe_handle_link_change_and_fpe_intrs(osi_core, mac_isr);
 
 	/* Check for any MAC Transmit Error Status Interrupt */
 	if ((mac_isr & MGBE_IMR_TXESIE) == MGBE_IMR_TXESIE) {
