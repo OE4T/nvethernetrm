@@ -1101,24 +1101,8 @@ done:
 	return ret;
 }
 
-/**
- * @brief hw_config_fpe - Read Setting for preemption and express for TC
- * and update registers.
- *
- * Algorithm:
- * 1) Check for TC enable and TC has masked for setting to preemptable.
- * 2) update FPE control status register
- *
- * @param[in] osi_core: OSI core private data structure.
- * @param[in] fpe: FPE configuration input argument.
- *
- * @note MAC should be init and started. see osi_start_mac()
- *
- * @retval 0 on success
- * @retval -1 on failure.
- */
-nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
-		      struct osi_fpe_config *const fpe)
+static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_core,
+					struct osi_fpe_config *const fpe)
 {
 	nveu32_t i = 0U;
 	nveu32_t val = 0U;
@@ -1139,6 +1123,109 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 						MGBE_MAC_RQC1R_RQ_SHIFT};
 	const nveu32_t MTL_FPE_ADV[MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_ADV,
 						MGBE_MTL_FPE_ADV};
+
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+			MTL_FPE_CTS[osi_core->mac & 0x1U]);
+	val &= ~MTL_FPE_CTS_PEC;
+	for (i = 0U; i < OSI_MAX_TC_NUM; i++) {
+		/* max 8 bit for this structure fot TC/TXQ. Set the TC for express or
+		 * preemption. Default is express for a TC. DWCXG_NUM_TC = 8 */
+		temp = OSI_BIT(i);
+		if ((fpe->tx_queue_preemption_enable & temp) == temp) {
+			temp_shift = i;
+			temp_shift += MTL_FPE_CTS_PEC_SHIFT;
+			/* set queue for preemtable */
+			if (temp_shift < MTL_FPE_CTS_PEC_MAX_SHIFT) {
+				temp1 = OSI_ENABLE;
+				temp1 = temp1 << temp_shift;
+				val |= temp1;
+			} else {
+				/* Do nothing */
+			}
+		}
+	}
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MTL_FPE_CTS[osi_core->mac & 0x1U]);
+
+	if ((fpe->rq == 0x0U) || (fpe->rq >= (max_number_queue[osi_core->mac] & 0x1U))) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				"FPE init failed due to wrong RQ\n", fpe->rq);
+		ret = -1;
+		goto done;
+	}
+
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+			(MAC_RQC1R[osi_core->mac] & 0x1U));
+	val &= ~MAC_RQC1R_RQ[osi_core->mac & 0x1U];
+	temp = fpe->rq;
+	temp = temp << ((MAC_RQC1R_RQ_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
+	temp = (temp & MAC_RQC1R_RQ[osi_core->mac & 0x1U]);
+	val |= temp;
+	osi_core->residual_queue = fpe->rq;
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
+		    MAC_RQC1R[osi_core->mac & 0x1U]);
+
+	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+				MGBE_MAC_RQC4R);
+		val &= ~MGBE_MAC_RQC4R_PMCBCQ;
+		temp = fpe->rq;
+		temp = temp << MGBE_MAC_RQC4R_PMCBCQ_SHIFT;
+		temp = (temp & MGBE_MAC_RQC4R_PMCBCQ);
+		val |= temp;
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
+				MGBE_MAC_RQC4R);
+	}
+	/* initiate SVER for SMD-V and SMD-R */
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+			(MTL_FPE_CTS[osi_core->mac] & 0x1U));
+	val |= MAC_FPE_CTS_SVER;
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
+			(MAC_FPE_CTS[osi_core->mac] & 0x1U));
+
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+			(MTL_FPE_ADV[osi_core->mac] & 0x1U));
+	val &= ~MTL_FPE_ADV_HADV_MASK;
+	//(minimum_fragment_size +IPG/EIPG + Preamble) *.8 ~98ns for10G
+	val |= MTL_FPE_ADV_HADV_VAL;
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
+			(MTL_FPE_ADV[osi_core->mac] & 0x1U));
+
+	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+#ifdef MACSEC_SUPPORT
+		osi_core->is_fpe_enabled = OSI_ENABLE;
+#endif /*  MACSEC_SUPPORT */
+	}
+done:
+	return ret;
+}
+
+
+
+/**
+ * @brief hw_config_fpe - Read Setting for preemption and express for TC
+ * and update registers.
+ *
+ * Algorithm:
+ * 1) Check for TC enable and TC has masked for setting to preemptable.
+ * 2) update FPE control status register
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] fpe: FPE configuration input argument.
+ *
+ * @note MAC should be init and started. see osi_start_mac()
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
+		      struct osi_fpe_config *const fpe)
+{
+	nveu32_t val = 0U;
+	nve32_t ret = 0;
+	const nveu32_t MTL_FPE_CTS[MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_CTS,
+						MGBE_MTL_FPE_CTS};
+	const nveu32_t MAC_FPE_CTS[MAX_MAC_IP_TYPES] = {EQOS_MAC_FPE_CTS,
+						MGBE_MAC_FPE_CTS};
 
 	if ((osi_core->hw_feature != OSI_NULL) &&
 	    (osi_core->hw_feature->fpe_sel == OSI_DISABLE)) {
@@ -1193,77 +1280,9 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 		}
 		ret = 0;
 	} else {
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				 MTL_FPE_CTS[osi_core->mac & 0x1U]);
-		val &= ~MTL_FPE_CTS_PEC;
-		for (i = 0U; i < OSI_MAX_TC_NUM; i++) {
-			/* max 8 bit for this structure fot TC/TXQ. Set the TC for express or
-			 * preemption. Default is express for a TC. DWCXG_NUM_TC = 8 */
-			temp = OSI_BIT(i);
-			if ((fpe->tx_queue_preemption_enable & temp) == temp) {
-				temp_shift = i;
-				temp_shift += MTL_FPE_CTS_PEC_SHIFT;
-				/* set queue for preemtable */
-				if (temp_shift < MTL_FPE_CTS_PEC_MAX_SHIFT) {
-					temp1 = OSI_ENABLE;
-					temp1 = temp1 << temp_shift;
-					val |= temp1;
-				} else {
-					/* Do nothing */
-				}
-			}
-		}
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			    MTL_FPE_CTS[osi_core->mac & 0x1U]);
-
-		if ((fpe->rq == 0x0U) || (fpe->rq >= max_number_queue[osi_core->mac & 0x1U])) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "FPE init failed due to wrong RQ\n", fpe->rq);
-			ret = -1;
+		ret = hw_config_fpe_pec_enable(osi_core, fpe);
+		if (ret < 0) {
 			goto done;
-		}
-
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				 MAC_RQC1R[osi_core->mac & 0x1U]);
-		val &= ~MAC_RQC1R_RQ[osi_core->mac & 0x1U];
-		temp = fpe->rq;
-		temp = temp << ((MAC_RQC1R_RQ_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
-		temp = (temp & MAC_RQC1R_RQ[osi_core->mac & 0x1U]);
-		val |= temp;
-		osi_core->residual_queue = fpe->rq;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			    MAC_RQC1R[osi_core->mac & 0x1U]);
-
-		if (osi_core->mac == OSI_MAC_HW_MGBE) {
-			val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-					 MGBE_MAC_RQC4R);
-			val &= ~MGBE_MAC_RQC4R_PMCBCQ;
-			temp = fpe->rq;
-			temp = temp << MGBE_MAC_RQC4R_PMCBCQ_SHIFT;
-			temp = (temp & MGBE_MAC_RQC4R_PMCBCQ);
-			val |= temp;
-			osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-				    MGBE_MAC_RQC4R);
-		}
-		/* initiate SVER for SMD-V and SMD-R */
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				 MTL_FPE_CTS[osi_core->mac & 0x1U]);
-		val |= MAC_FPE_CTS_SVER;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			    MAC_FPE_CTS[osi_core->mac & 0x1U]);
-
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				 MTL_FPE_ADV[osi_core->mac & 0x1U]);
-		val &= ~MTL_FPE_ADV_HADV_MASK;
-		//(minimum_fragment_size +IPG/EIPG + Preamble) *.8 ~98ns for10G
-		val |= MTL_FPE_ADV_HADV_VAL;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			    MTL_FPE_ADV[osi_core->mac & 0x1U]);
-
-		if (osi_core->mac == OSI_MAC_HW_MGBE) {
-#ifdef MACSEC_SUPPORT
-			osi_core->is_fpe_enabled = OSI_ENABLE;
-#endif /*  MACSEC_SUPPORT */
 		}
 	}
 done:
