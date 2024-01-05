@@ -2057,6 +2057,174 @@ fail:
 	return val;
 }
 
+static inline nve32_t validate_args_stat2(nvel64_t cofficient,
+					  nvel64_t const_i,
+					  nvel64_t const_p)
+{
+	nve32_t ret = 0;
+
+	if ((const_i == 0LL) || (const_p == 0LL) || (cofficient == 0LL)) {
+		ret = -1;
+		goto exit;
+	}
+
+	if (const_i > (OSI_LLONG_MAX / cofficient)) {
+		ret = -1;
+		goto exit;
+	}
+	if (const_p > (OSI_LLONG_MAX / cofficient)) {
+		ret = -1;
+		goto exit;
+	}
+exit:
+	return ret;
+}
+
+static inline nve32_t check_for_drift_stat2(nvel64_t cofficient,
+					    nvel64_t offset,
+					    nvel64_t const_i,
+					    nvel64_t const_p)
+{
+	nve32_t ret = 0;
+
+	if (validate_args_stat2(cofficient, const_i, const_p) < 0) {
+		goto exit;
+	}
+
+	if ((cofficient != 0) && (offset < 0) &&
+	    (((offset / WEIGHT_BY_10) < (-OSI_LLONG_MAX / (const_i * cofficient))) ||
+	    ((offset / WEIGHT_BY_10) < (-OSI_LLONG_MAX / (const_p * cofficient))))) {
+		ret = -1;
+		goto exit;
+	}
+
+	if ((cofficient != 0) && (offset > 0) &&
+			(((offset / WEIGHT_BY_10) > (OSI_LLONG_MAX / (const_i * cofficient))) ||
+			 ((offset / WEIGHT_BY_10) > (OSI_LLONG_MAX / (const_p * cofficient))))) {
+		ret = -1;
+		goto exit;
+	}
+exit:
+	return ret;
+}
+
+static inline nve32_t check_for_drift_stat1(nvel64_t cofficient, nvel64_t offset)
+{
+	nve32_t ret = -1;
+
+	if ((cofficient == 0) ||
+	    (((cofficient < 0) && (offset < 0)) &&
+	    ((OSI_LLONG_MAX / cofficient) < offset)) ||
+	    ((cofficient < 0) && ((-OSI_LLONG_MAX / cofficient) > offset)) ||
+	    ((offset < 0) && ((-OSI_LLONG_MAX / cofficient) > offset))) {
+		/* do nothing */
+		ret = 0;
+	}
+
+	return ret;
+}
+
+static inline void handle_servo_stats_2(struct osi_core_priv_data *sec_osi_core,
+					nvel64_t offset,
+					nvel64_t secondary_time,
+					nvel64_t *ppb)
+{
+	struct core_ptp_servo *s;
+	struct core_local *secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
+	nvel64_t cofficient;
+	nvel64_t ki_term;
+
+	s = &secondary_osi_lcore->serv;
+
+	s->offset[1] = offset;
+	s->local[1] = secondary_time;
+	if (s->local[0] >= s->local[1]) {
+		s->offset[0] = s->offset[1];
+		s->local[0] = s->local[1];
+		s->count = SERVO_STATS_0;
+		goto exit;
+	}
+
+	cofficient = (1000000000LL) / (s->local[1] - s->local[0]);
+
+	if (check_for_drift_stat2(cofficient, offset, s->const_i, s->const_p) < 0) {
+		s->count = SERVO_STATS_0;
+		goto exit;
+	}
+
+	/* calculate ppb */
+	ki_term = ((s->const_i * cofficient * offset) / WEIGHT_BY_10);
+	*ppb = (s->const_p * cofficient * offset / WEIGHT_BY_10) + s->drift + ki_term;
+
+	/* FIXME tune cofficients */
+	if (*ppb < MAX_FREQ_NEG) {
+		*ppb = MAX_FREQ_NEG;
+	} else if (*ppb > MAX_FREQ_POS) {
+		*ppb = MAX_FREQ_POS;
+	} else {
+		if (((s->drift >= 0) && ((OSI_LLONG_MAX - s->drift) < ki_term)) ||
+		    ((s->drift < 0) && ((-OSI_LLONG_MAX - s->drift) > ki_term))) {
+		} else {
+
+			s->drift += ki_term;
+		}
+		s->offset[0] = s->offset[1];
+		s->local[0] = s->local[1];
+	}
+
+exit:
+	return;
+}
+
+static inline void handle_servo_stats_1(struct osi_core_priv_data *sec_osi_core,
+					nvel64_t offset,
+					nvel64_t secondary_time,
+					nvel64_t *ppb)
+{
+	struct core_ptp_servo *s;
+	struct core_local *secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
+	nvel64_t cofficient;
+
+	s = &secondary_osi_lcore->serv;
+
+	s->offset[1] = offset;
+	s->local[1] = secondary_time;
+
+	/* Make sure the first sample is older than the second. */
+	if (s->local[0] >= s->local[1]) {
+		s->offset[0] = s->offset[1];
+		s->local[0] = s->local[1];
+		s->count = SERVO_STATS_0;
+	} else {
+		/* Adjust drift by the measured frequency offset. */
+		cofficient = (1000000000LL - s->drift) / (s->local[1] - s->local[0]);
+		if (check_for_drift_stat1(cofficient, s->offset[1]) < 0) {
+			if (((s->drift >= 0) && ((OSI_LLONG_MAX - s->drift) <
+			    (cofficient * s->offset[1]))) || ((s->drift < 0) &&
+			    ((-OSI_LLONG_MAX - s->drift) > (cofficient * s->offset[1])))) {
+				/* Do nothing */
+			} else {
+				s->drift += cofficient * s->offset[1];
+			}
+		}
+		/* update this with constant */
+		if (s->drift < MAX_FREQ_NEG) {
+			s->drift = MAX_FREQ_NEG;
+		} else if (s->drift > MAX_FREQ_POS) {
+			s->drift = MAX_FREQ_POS;
+		} else {
+			/* Do Nothing */
+		}
+
+		*ppb = s->drift;
+		s->count = SERVO_STATS_2;
+		s->offset[0] = s->offset[1];
+		s->local[0] = s->local[1];
+	}
+
+	return;
+}
+
 /**
  * @brief calculate frequency adjustment between primary and secondary
  *  controller.
@@ -2076,8 +2244,7 @@ static inline nve32_t freq_offset_calculate(struct osi_core_priv_data *sec_osi_c
 {
 	struct core_ptp_servo *s;
 	struct core_local *secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
-	nvel64_t ki_term, ppb = 0;
-	nvel64_t cofficient;
+	nvel64_t ppb = 0;
 
 	s = &secondary_osi_lcore->serv;
 	ppb = s->last_ppb;
@@ -2101,96 +2268,13 @@ static inline nve32_t freq_offset_calculate(struct osi_core_priv_data *sec_osi_c
 		break;
 
 	case SERVO_STATS_1:
-		s->offset[1] = offset;
-		s->local[1] = secondary_time;
-
-		/* Make sure the first sample is older than the second. */
-		if (s->local[0] >= s->local[1]) {
-			s->offset[0] = s->offset[1];
-			s->local[0] = s->local[1];
-			s->count = SERVO_STATS_0;
-			break;
-		}
-
-		/* Adjust drift by the measured frequency offset. */
-		cofficient = (1000000000LL - s->drift) / (s->local[1] - s->local[0]);
-		if ((cofficient == 0) ||
-		 (((cofficient < 0) && (s->offset[1] < 0)) &&
-		  ((OSI_LLONG_MAX / cofficient) < s->offset[1])) ||
-		    ((cofficient < 0) && ((-OSI_LLONG_MAX / cofficient) > s->offset[1])) ||
-		    ((s->offset[1] < 0) && ((-OSI_LLONG_MAX / cofficient) > s->offset[1]))) {
-			/* do nothing */
-		} else {
-
-			if (((s->drift >= 0) && ((OSI_LLONG_MAX - s->drift) < (cofficient * s->offset[1]))) ||
-			    ((s->drift < 0) && ((-OSI_LLONG_MAX - s->drift) > (cofficient * s->offset[1])))) {
-				/* Do nothing */
-			} else {
-				s->drift += cofficient * s->offset[1];
-			}
-		}
-		/* update this with constant */
-		if (s->drift < MAX_FREQ_NEG) {
-			s->drift = MAX_FREQ_NEG;
-		} else if (s->drift > MAX_FREQ_POS) {
-			s->drift = MAX_FREQ_POS;
-		} else {
-			/* Do Nothing */
-		}
-
-		ppb = s->drift;
-		s->count = SERVO_STATS_2;
-		s->offset[0] = s->offset[1];
-		s->local[0] = s->local[1];
+		handle_servo_stats_1(sec_osi_core, offset, secondary_time, &ppb);
 		break;
 
 	case SERVO_STATS_2:
-		s->offset[1] = offset;
-		s->local[1] = secondary_time;
-		if (s->local[0] >= s->local[1]) {
-			s->offset[0] = s->offset[1];
-			s->local[0] = s->local[1];
-			s->count = SERVO_STATS_0;
-			break;
-		}
-
-		cofficient = (1000000000LL) / (s->local[1] - s->local[0]);
-
-		if ((cofficient != 0) && (offset < 0) &&
-		    (((offset / WEIGHT_BY_10) < (-OSI_LLONG_MAX / (s->const_i * cofficient))) ||
-		     ((offset / WEIGHT_BY_10) < (-OSI_LLONG_MAX / (s->const_p * cofficient))))) {
-			s->count = SERVO_STATS_0;
-			break;
-		}
-
-		if ((cofficient != 0) && (offset > 0) &&
-		    (((offset / WEIGHT_BY_10) > (OSI_LLONG_MAX / (cofficient * s->const_i))) ||
-		     ((offset / WEIGHT_BY_10) > (OSI_LLONG_MAX / (cofficient * s->const_p))))) {
-			s->count = SERVO_STATS_0;
-			break;
-		}
-
-		/* calculate ppb */
-		ki_term = ((s->const_i * cofficient * offset) / WEIGHT_BY_10);
-		ppb = (s->const_p * cofficient * offset / WEIGHT_BY_10) + s->drift +
-		      ki_term;
-
-		/* FIXME tune cofficients */
-		if (ppb < MAX_FREQ_NEG) {
-			ppb = MAX_FREQ_NEG;
-		} else if (ppb > MAX_FREQ_POS) {
-			ppb = MAX_FREQ_POS;
-		} else {
-			if (((s->drift >= 0) && ((OSI_LLONG_MAX - s->drift) < ki_term)) ||
-			    ((s->drift < 0) && ((-OSI_LLONG_MAX - s->drift) > ki_term))) {
-			} else {
-
-				s->drift += ki_term;
-			}
-			s->offset[0] = s->offset[1];
-			s->local[0] = s->local[1];
-		}
+		handle_servo_stats_2(sec_osi_core, offset, secondary_time, &ppb);
 		break;
+
 	default:
 		/* for misra */
 		break;
