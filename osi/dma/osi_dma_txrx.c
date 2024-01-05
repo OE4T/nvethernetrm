@@ -424,6 +424,30 @@ nve32_t osi_clear_rx_pkt_err_stats(struct osi_dma_priv_data *osi_dma)
 }
 #endif /* !OSI_STRIPPED_LIB */
 
+static inline void update_tx_done_ts(struct osi_tx_desc *tx_desc,
+				     struct osi_txdone_pkt_cx *txdone_pkt_cx)
+{
+	nveu64_t vartdes1;
+	nveul64_t ns;
+
+	/* check tx tstamp status */
+	if (((tx_desc->tdes3 & TDES3_LD) == TDES3_LD) &&
+	    ((tx_desc->tdes3 & TDES3_CTXT) != TDES3_CTXT) &&
+	    ((tx_desc->tdes3 & TDES3_TTSS) == TDES3_TTSS)) {
+		/* tx timestamp captured for this packet */
+		ns = tx_desc->tdes0;
+		vartdes1 = tx_desc->tdes1;
+		if (OSI_NSEC_PER_SEC > (OSI_ULLONG_MAX / vartdes1)) {
+			/* Will not hit this case */
+		} else if ((OSI_ULLONG_MAX - (vartdes1 * OSI_NSEC_PER_SEC)) < ns) {
+			/* Will not hit this case */
+		} else {
+			txdone_pkt_cx->flags |= OSI_TXDONE_CX_TS;
+			txdone_pkt_cx->ns = ns + (vartdes1 * OSI_NSEC_PER_SEC);
+		}
+	}
+}
+
 /**
  * @brief validate_tx_completions_arg- Validate input argument of tx_completions
  *
@@ -488,6 +512,72 @@ static inline nveu32_t is_ptp_twostep_or_slave_mode(nveu32_t ptp_flag)
 	       OSI_ENABLE : OSI_DISABLE;
 }
 
+static inline void set_paged_buf_and_set_len(struct osi_tx_swcx *tx_swcx,
+					     struct osi_txdone_pkt_cx *txdone_pkt_cx)
+{
+	if ((tx_swcx->flags & OSI_PKT_CX_PAGED_BUF) == OSI_PKT_CX_PAGED_BUF) {
+		txdone_pkt_cx->flags |= OSI_TXDONE_CX_PAGED_BUF;
+	}
+
+	/* if tx_swcx->len == -1 means this is context
+	 * descriptor for PTP and TSO. Here length will be reset
+	 * so that for PTP/TSO context descriptors length will
+	 * not be added to tx_bytes
+	 */
+	if (tx_swcx->len == OSI_INVALID_VALUE) {
+		tx_swcx->len = 0;
+	}
+}
+
+#ifndef OSI_STRIPPED_LIB
+static inline nve32_t process_last_desc(struct osi_dma_priv_data *osi_dma,
+					struct osi_tx_desc *tx_desc,
+					struct osi_txdone_pkt_cx *txdone_pkt_cx,
+					nve32_t processed,
+					nveu32_t chan)
+#else
+static inline nve32_t process_last_desc(struct osi_dma_priv_data *osi_dma,
+				     struct osi_tx_desc *tx_desc,
+				     struct osi_txdone_pkt_cx *txdone_pkt_cx,
+				     nve32_t processed)
+#endif
+{
+	nve32_t last_processed = processed;
+
+	/* check for Last Descriptor */
+	if ((tx_desc->tdes3 & TDES3_LD) == TDES3_LD) {
+		if (((tx_desc->tdes3 & TDES3_ES_BITS) != 0U) &&
+		    (osi_dma->mac != OSI_MAC_HW_MGBE)) {
+			txdone_pkt_cx->flags |= OSI_TXDONE_CX_ERROR;
+#ifndef OSI_STRIPPED_LIB
+			/* fill packet error stats */
+			get_tx_err_stats(tx_desc, &osi_dma->pkt_err_stats);
+#endif /* !OSI_STRIPPED_LIB */
+		} else {
+#ifndef OSI_STRIPPED_LIB
+			inc_tx_pkt_stats(osi_dma, chan);
+#endif /* !OSI_STRIPPED_LIB */
+		}
+
+		if (last_processed < INT_MAX) {
+			last_processed++;
+		}
+	}
+
+	return last_processed;
+}
+
+#ifdef OSI_DEBUG
+static inline void dump_tx_done_desc(struct osi_dma_priv_data *osi_dma,
+				     nveu32_t entry, nveu32_t chan)
+{
+	if (osi_dma->enable_desc_dump == 1U) {
+		desc_dump(osi_dma, entry, entry,
+				(TX_DESC_DUMP | TX_DESC_DUMP_TX_DONE), chan);
+	}
+}
+#endif
+
 nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 				   nveu32_t chan, nve32_t budget)
 {
@@ -496,8 +586,6 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 	struct osi_tx_swcx *tx_swcx = OSI_NULL;
 	struct osi_tx_desc *tx_desc = OSI_NULL;
 	nveu32_t entry = 0U;
-	nveu64_t vartdes1;
-	nveul64_t ns;
 	nve32_t processed = 0;
 	nve32_t ret;
 
@@ -526,58 +614,18 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 		}
 
 #ifdef OSI_DEBUG
-		if (osi_dma->enable_desc_dump == 1U) {
-			desc_dump(osi_dma, entry, entry,
-				  (TX_DESC_DUMP | TX_DESC_DUMP_TX_DONE), chan);
-		}
+		dump_tx_done_desc(osi_dma, entry, chan);
 #endif /* OSI_DEBUG */
 
-		/* check for Last Descriptor */
-		if ((tx_desc->tdes3 & TDES3_LD) == TDES3_LD) {
-			if (((tx_desc->tdes3 & TDES3_ES_BITS) != 0U) &&
-			    (osi_dma->mac != OSI_MAC_HW_MGBE)) {
-				txdone_pkt_cx->flags |= OSI_TXDONE_CX_ERROR;
 #ifndef OSI_STRIPPED_LIB
-				/* fill packet error stats */
-				get_tx_err_stats(tx_desc,
-						 &osi_dma->pkt_err_stats);
-#endif /* !OSI_STRIPPED_LIB */
-			} else {
-#ifndef OSI_STRIPPED_LIB
-				inc_tx_pkt_stats(osi_dma, chan);
-#endif /* !OSI_STRIPPED_LIB */
-			}
-
-			if (processed < INT_MAX) {
-				processed++;
-			}
-		}
+		processed = process_last_desc(osi_dma, tx_desc, txdone_pkt_cx, processed, chan);
+#else
+		processed = process_last_desc(osi_dma, tx_desc, txdone_pkt_cx, processed);
+#endif
 
 		if (osi_dma->mac != OSI_MAC_HW_MGBE) {
-			/* check tx tstamp status */
-			if (((tx_desc->tdes3 & TDES3_LD) == TDES3_LD) &&
-			    ((tx_desc->tdes3 & TDES3_CTXT) != TDES3_CTXT) &&
-			    ((tx_desc->tdes3 & TDES3_TTSS) == TDES3_TTSS)) {
-				/* tx timestamp captured for this packet */
-				ns = tx_desc->tdes0;
-				vartdes1 = tx_desc->tdes1;
-				if (OSI_NSEC_PER_SEC >
-						(OSI_ULLONG_MAX / vartdes1)) {
-					/* Will not hit this case */
-				} else if ((OSI_ULLONG_MAX -
-					(vartdes1 * OSI_NSEC_PER_SEC)) < ns) {
-					/* Will not hit this case */
-				} else {
-					txdone_pkt_cx->flags |=
-						OSI_TXDONE_CX_TS;
-					txdone_pkt_cx->ns = ns +
-						(vartdes1 * OSI_NSEC_PER_SEC);
-				}
-			} else {
-				/* Do nothing here */
-			}
-		} else if (((tx_swcx->flags & OSI_PKT_CX_PTP) ==
-			   OSI_PKT_CX_PTP) &&
+			update_tx_done_ts(tx_desc, txdone_pkt_cx);
+		} else if (((tx_swcx->flags & OSI_PKT_CX_PTP) == OSI_PKT_CX_PTP) &&
 			   // if not master in onestep mode
 			   /* TODO: Is this check needed and can be removed ? */
 			   (is_ptp_twostep_or_slave_mode(osi_dma->ptp_flag) ==
@@ -589,31 +637,9 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 			/* Do nothing here */
 		}
 
-		if ((tx_swcx->flags & OSI_PKT_CX_PAGED_BUF) ==
-		    OSI_PKT_CX_PAGED_BUF) {
-			txdone_pkt_cx->flags |= OSI_TXDONE_CX_PAGED_BUF;
-		}
+		set_paged_buf_and_set_len(tx_swcx, txdone_pkt_cx);
 
-		if (osi_likely(osi_dma->osd_ops.transmit_complete !=
-			       OSI_NULL)) {
-			/* if tx_swcx->len == -1 means this is context
-			 * descriptor for PTP and TSO. Here length will be reset
-			 * so that for PTP/TSO context descriptors length will
-			 * not be added to tx_bytes
-			 */
-			if (tx_swcx->len == OSI_INVALID_VALUE) {
-				tx_swcx->len = 0;
-			}
-			osi_dma->osd_ops.transmit_complete(osi_dma->osd,
-						       tx_swcx,
-						       txdone_pkt_cx);
-		} else {
-			OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-				    "dma_txrx: Invalid function pointer\n",
-				    0ULL);
-			processed = -1;
-			goto fail;
-		}
+		osi_dma->osd_ops.transmit_complete(osi_dma->osd, tx_swcx, txdone_pkt_cx);
 
 		tx_desc->tdes3 = 0;
 		tx_desc->tdes2 = 0;
@@ -936,6 +962,100 @@ fail:
 	return ret;
 }
 
+#ifndef OSI_STRIPPED_LIB
+static inline void updata_tx_pkt_stats(struct osi_tx_pkt_cx *tx_pkt_cx,
+				       struct osi_dma_priv_data *osi_dma)
+{
+
+	/* Context descriptor for VLAN/TSO */
+	if ((tx_pkt_cx->flags & OSI_PKT_CX_VLAN) == OSI_PKT_CX_VLAN) {
+		osi_dma->dstats.tx_vlan_pkt_n =
+			osi_update_stats_counter(osi_dma->dstats.tx_vlan_pkt_n, 1UL);
+	}
+
+	if ((tx_pkt_cx->flags & OSI_PKT_CX_TSO) == OSI_PKT_CX_TSO) {
+		osi_dma->dstats.tx_tso_pkt_n =
+			osi_update_stats_counter(osi_dma->dstats.tx_tso_pkt_n, 1UL);
+	}
+}
+#endif /* !OSI_STRIPPED_LIB */
+
+static inline void update_frame_cnt(struct osi_dma_priv_data *osi_dma,
+				    struct osi_tx_ring *tx_ring)
+{
+	if (tx_ring->frame_cnt < UINT_MAX) {
+		tx_ring->frame_cnt++;
+	} else if ((osi_dma->use_tx_frames == OSI_ENABLE) &&
+		   ((tx_ring->frame_cnt % osi_dma->tx_frames) < UINT_MAX)) {
+		/* make sure count for tx_frame interrupt logic is retained */
+		tx_ring->frame_cnt = (tx_ring->frame_cnt % osi_dma->tx_frames) + 1U;
+	} else {
+		tx_ring->frame_cnt = 1U;
+	}
+
+}
+
+static inline void apply_write_barrier(struct osi_tx_ring *tx_ring)
+{
+	/*
+	 * We need to make sure Tx descriptor updated above is really updated
+	 * before setting up the DMA, hence add memory write barrier here.
+	 */
+	if (tx_ring->skip_dmb == 0U) {
+		dmb_oshst();
+	}
+
+}
+
+#ifdef OSI_DEBUG
+static inline void dump_tx_descriptors(struct osi_dma_priv_data *osi_dma,
+				       nveu32_t f_idx, nveu32_t l_idx, nveu32_t chan)
+{
+	if (osi_dma->enable_desc_dump == 1U) {
+		desc_dump(osi_dma, f_idx, DECR_TX_DESC_INDEX(l_idx, osi_dma->tx_ring_sz),
+			  (TX_DESC_DUMP | TX_DESC_DUMP_TX), chan);
+	}
+}
+#endif
+
+static inline void set_clear_ioc_for_last_desc(struct osi_dma_priv_data *osi_dma,
+					       struct osi_tx_ring *tx_ring,
+					       struct osi_tx_desc *last_desc)
+{
+	/* clear IOC bit if tx SW timer based coalescing is enabled */
+	if (osi_dma->use_tx_usecs == OSI_ENABLE) {
+		last_desc->tdes2 &= ~TDES2_IOC;
+
+		/* update IOC bit if tx_frames is enabled. Tx_frames
+		 * can be enabled only along with tx_usecs.
+		 */
+		if (osi_dma->use_tx_frames == OSI_ENABLE) {
+			if ((tx_ring->frame_cnt % osi_dma->tx_frames) == OSI_NONE) {
+				last_desc->tdes2 |= TDES2_IOC;
+			}
+		}
+	}
+}
+
+static inline void set_swcx_pkt_id_for_ptp(struct osi_dma_priv_data *osi_dma,
+					   struct osi_tx_pkt_cx *tx_pkt_cx,
+					   struct osi_tx_swcx *last_swcx,
+					   nveu32_t pkt_id)
+{
+	if (((tx_pkt_cx->flags & OSI_PKT_CX_PTP) == OSI_PKT_CX_PTP) &&
+	    (osi_dma->mac == OSI_MAC_HW_MGBE)) {
+		last_swcx->flags |= OSI_PKT_CX_PTP;
+		last_swcx->pktid = pkt_id;
+	}
+}
+
+static inline void set_context_desc_own_bit(struct osi_tx_desc *cx_desc,
+					    nve32_t cntx_desc_consumed)
+{
+	if (cntx_desc_consumed == 1) {
+		cx_desc->tdes3 |= TDES3_OWN;
+	}
+}
 nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 		    struct osi_tx_ring *tx_ring,
 		    nveu32_t dma_chan)
@@ -950,7 +1070,6 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	struct osi_tx_desc *cx_desc = OSI_NULL;
 #ifdef OSI_DEBUG
 	nveu32_t f_idx = tx_ring->cur_tx_idx;
-	nveu32_t l_idx = 0;
 #endif /* OSI_DEBUG */
 	nveu32_t chan = dma_chan & 0xFU;
 	const nveu32_t tail_ptr_reg[2] = {
@@ -992,18 +1111,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	}
 
 #ifndef OSI_STRIPPED_LIB
-	/* Context descriptor for VLAN/TSO */
-	if ((tx_pkt_cx->flags & OSI_PKT_CX_VLAN) == OSI_PKT_CX_VLAN) {
-		osi_dma->dstats.tx_vlan_pkt_n =
-			osi_update_stats_counter(osi_dma->dstats.tx_vlan_pkt_n,
-						 1UL);
-	}
-
-	if ((tx_pkt_cx->flags & OSI_PKT_CX_TSO) == OSI_PKT_CX_TSO) {
-		osi_dma->dstats.tx_tso_pkt_n =
-			osi_update_stats_counter(osi_dma->dstats.tx_tso_pkt_n,
-						 1UL);
-	}
+	 updata_tx_pkt_stats(tx_pkt_cx, osi_dma);
 #endif /* !OSI_STRIPPED_LIB */
 
 	cntx_desc_consumed = need_cntx_desc(tx_pkt_cx, tx_swcx, tx_desc,
@@ -1063,62 +1171,26 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 
 	/* Mark it as LAST descriptor */
 	last_desc->tdes3 |= TDES3_LD;
-	if (((tx_pkt_cx->flags & OSI_PKT_CX_PTP) == OSI_PKT_CX_PTP) &&
-	    (osi_dma->mac == OSI_MAC_HW_MGBE)) {
-		last_swcx->flags |= OSI_PKT_CX_PTP;
-		last_swcx->pktid = pkt_id;
-	}
+
+	set_swcx_pkt_id_for_ptp(osi_dma, tx_pkt_cx, last_swcx, pkt_id);
 
 	/* set Interrupt on Completion*/
 	last_desc->tdes2 |= TDES2_IOC;
 
-	if (tx_ring->frame_cnt < UINT_MAX) {
-		tx_ring->frame_cnt++;
-	} else if ((osi_dma->use_tx_frames == OSI_ENABLE) &&
-		   ((tx_ring->frame_cnt % osi_dma->tx_frames) < UINT_MAX)) {
-		/* make sure count for tx_frame interrupt logic is retained */
-		tx_ring->frame_cnt = (tx_ring->frame_cnt % osi_dma->tx_frames)
-					+ 1U;
-	} else {
-		tx_ring->frame_cnt = 1U;
-	}
+	update_frame_cnt(osi_dma, tx_ring);
 
-	/* clear IOC bit if tx SW timer based coalescing is enabled */
-	if (osi_dma->use_tx_usecs == OSI_ENABLE) {
-		last_desc->tdes2 &= ~TDES2_IOC;
+	set_clear_ioc_for_last_desc(osi_dma, tx_ring, last_desc);
 
-		/* update IOC bit if tx_frames is enabled. Tx_frames
-		 * can be enabled only along with tx_usecs.
-		 */
-		if (osi_dma->use_tx_frames == OSI_ENABLE) {
-			if ((tx_ring->frame_cnt % osi_dma->tx_frames) ==
-			    OSI_NONE) {
-				last_desc->tdes2 |= TDES2_IOC;
-			}
-		}
-	}
 	/* Set OWN bit for first and context descriptors
 	 * at the end to avoid race condition
 	 */
 	first_desc->tdes3 |= TDES3_OWN;
-	if (cntx_desc_consumed == 1) {
-		cx_desc->tdes3 |= TDES3_OWN;
-	}
+	set_context_desc_own_bit(cx_desc, cntx_desc_consumed);
 
-	/*
-	 * We need to make sure Tx descriptor updated above is really updated
-	 * before setting up the DMA, hence add memory write barrier here.
-	 */
-	if (tx_ring->skip_dmb == 0U) {
-		dmb_oshst();
-	}
+	apply_write_barrier(tx_ring);
 
 #ifdef OSI_DEBUG
-	if (osi_dma->enable_desc_dump == 1U) {
-		l_idx = entry;
-		desc_dump(osi_dma, f_idx, DECR_TX_DESC_INDEX(l_idx, osi_dma->tx_ring_sz),
-			  (TX_DESC_DUMP | TX_DESC_DUMP_TX), chan);
-	}
+	dump_tx_descriptors(osi_dma, f_idx, entry, chan);
 #endif /* OSI_DEBUG */
 
 	tailptr = tx_ring->tx_desc_phy_addr +
