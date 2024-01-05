@@ -2408,6 +2408,14 @@ static nve32_t validate_avb_args(struct osi_core_priv_data *const osi_core,
 		goto done;
 	}
 
+	/* Check for CC */
+	if (avb->credit_control > OSI_ENABLE) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"Invalid credit control\n",
+			(nveul64_t)avb->credit_control);
+		goto done;
+	}
+
 	ret = 0;
 
 done:

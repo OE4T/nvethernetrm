@@ -3123,11 +3123,27 @@ static nve32_t eqos_set_avb_algorithm(
 		goto done;
 	}
 
+	/* Validate algo is valid  */
+	if (avb->algo > OSI_MTL_TXQ_AVALG_CBS) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"Invalid Algo input\n",
+			(nveul64_t)avb->algo);
+		goto done;
+	}
+
 	/* can't set AVB mode for queue 0 */
 	if ((avb->qindex == 0U) && (avb->oper_mode == OSI_MTL_QUEUE_AVB)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_OPNOTSUPP,
 			     "Not allowed to set AVB for Q0\n",
 			     (nveul64_t)avb->qindex);
+		goto done;
+	}
+
+	/* Check for CC */
+	if (avb->credit_control > OSI_ENABLE) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"Invalid credit control\n",
+			(nveul64_t)avb->credit_control);
 		goto done;
 	}
 

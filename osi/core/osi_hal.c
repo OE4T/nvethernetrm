@@ -2458,6 +2458,368 @@ static void store_l2_filter(struct osi_core_priv_data *osi_core,
 	}
 }
 
+static nve32_t handle_config_filters(struct osi_core_priv_data *osi_core,
+				     struct osi_ioctl *data)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	nve32_t ret = -1;
+
+	if (data->cmd == OSI_CMD_L3L4_FILTER) {
+		ret = configure_l3l4_filter(osi_core, &data->l3l4_filter);
+		if (ret == 0) {
+			l_core->cfg.flags |= DYNAMIC_CFG_L3_L4;
+		}
+	} else if (data->cmd == OSI_CMD_L2_FILTER) {
+		ret = osi_l2_filter(osi_core, &data->l2_filter);
+		if (ret == 0) {
+			store_l2_filter(osi_core, &data->l2_filter);
+			l_core->cfg.flags |= DYNAMIC_CFG_L2;
+		}
+	} else {
+		/* do nothing */
+	}
+
+	return ret;
+}
+
+static nve32_t handle_config_est_fpe_ioctl(struct osi_core_priv_data *osi_core,
+					   struct osi_ioctl *data)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	nve32_t ret = -1;
+
+	if (data->cmd == OSI_CMD_CONFIG_EST) {
+		ret = config_est(osi_core, &data->est);
+		if (ret == 0) {
+			(void)osi_memcpy(&l_core->cfg.est, &data->est,
+					 sizeof(struct osi_est_config));
+			l_core->cfg.flags |= DYNAMIC_CFG_EST;
+		}
+	} else if (data->cmd == OSI_CMD_CONFIG_FPE) {
+		ret = config_fpe(osi_core, &data->fpe);
+		if (ret == 0) {
+			(void)osi_memcpy(&l_core->cfg.fpe, &data->fpe,
+					 sizeof(struct osi_fpe_config));
+			l_core->cfg.flags |= DYNAMIC_CFG_FPE;
+		}
+	} else {
+		/* do nothing */
+	}
+
+	return ret;
+}
+
+static nve32_t handle_set_systohw_time_ioctl(struct osi_core_priv_data *osi_core,
+					     struct osi_ioctl *data)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	struct osi_core_priv_data *sec_osi_core;
+	struct core_local *secondary_osi_lcore;
+	nveu32_t sec = 0x0;
+	nveu32_t nsec = 0x0;
+	nve32_t ret;
+
+	ret = hw_set_systime_to_mac(osi_core, data->arg1_u32, data->arg2_u32);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				"CORE: set systohw time failed\n", 0ULL);
+#ifdef HSI_SUPPORT
+		osi_core->hsi.report_err = OSI_ENABLE;
+		osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_SET_TIME_ERR;
+#endif
+		goto exit;
+	}
+
+	if ((l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) &&
+	    (l_core->m2m_tsync != OSI_ENABLE)) {
+		/* Do Nothing */
+	} else {
+		sec_osi_core = get_role_pointer(OSI_PTP_M2M_SECONDARY);
+		secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
+		if ((validate_args(sec_osi_core, secondary_osi_lcore) < 0) ||
+				   (secondary_osi_lcore->hw_init_successful != OSI_ENABLE) ||
+				   (secondary_osi_lcore->m2m_tsync != OSI_ENABLE)) {
+			goto exit;
+		} else {
+			if (l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) {
+				osi_lock_irq_enabled(&secondary_osi_lcore->serv.m2m_lock);
+				common_get_systime_from_mac(osi_core->base,
+							    osi_core->mac, &sec, &nsec);
+				osi_unlock_irq_enabled(&secondary_osi_lcore->serv.m2m_lock);
+				ret = hw_set_systime_to_mac(sec_osi_core, sec, nsec);
+				if (ret == 0) {
+					secondary_osi_lcore->serv.count = SERVO_STATS_0;
+					secondary_osi_lcore->serv.drift = 0;
+					secondary_osi_lcore->serv.last_ppb = 0;
+					ret = osi_adjust_freq(sec_osi_core, 0);
+				}
+			}
+			if (ret < 0) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+						"CORE: set_time for sec_controller failed\n",
+						0ULL);
+#ifdef HSI_SUPPORT
+				osi_core->hsi.report_err = OSI_ENABLE;
+				osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_SET_TIME_ERR;
+#endif
+				ret = 0;
+			}
+		}
+	}
+
+exit:
+	return ret;
+}
+
+static nve32_t handle_config_ptp_ioctl(struct osi_core_priv_data *osi_core,
+				       struct osi_ioctl *data)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	struct osi_core_priv_data *sec_osi_core;
+	struct core_local *secondary_osi_lcore;
+	nve32_t ret;
+
+	ret = osi_ptp_configuration(osi_core, data->arg1_u32);
+	if (ret == 0) {
+		l_core->cfg.ptp = data->arg1_u32;
+		l_core->cfg.flags |= DYNAMIC_CFG_PTP;
+	}
+
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			     "CORE: configure_ptp failed\n", 0ULL);
+#ifdef HSI_SUPPORT
+		osi_core->hsi.report_err = OSI_ENABLE;
+		osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_CONFIG_PTP_ERR;
+#endif
+		goto exit;
+	}
+
+	if ((l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) &&
+	    (l_core->m2m_tsync != OSI_ENABLE)) {
+		/* Do Nothing */
+	} else {
+		sec_osi_core = get_role_pointer(OSI_PTP_M2M_SECONDARY);
+		secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
+		if ((validate_args(sec_osi_core, secondary_osi_lcore) < 0) ||
+				   (secondary_osi_lcore->hw_init_successful != OSI_ENABLE) ||
+				   (secondary_osi_lcore->m2m_tsync != OSI_ENABLE)) {
+			goto exit;
+		}
+
+		if ((l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) &&
+		    (data->arg1_u32 == OSI_ENABLE)) {
+			secondary_osi_lcore->serv.count = SERVO_STATS_0;
+			secondary_osi_lcore->serv.drift = 0;
+			secondary_osi_lcore->serv.last_ppb = 0;
+		}
+	}
+
+exit:
+	return ret;
+}
+
+static nve32_t handle_time_ether_m2m_role(struct osi_core_priv_data *osi_core)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	struct osi_core_priv_data *sec_osi_core;
+	struct core_local *secondary_osi_lcore;
+	nvel64_t drift_value = 0x0;
+	nvel64_t secondary_time = 0x0;
+	nvel64_t primary_time = 0x0;
+	nve32_t ret = 0;
+
+	sec_osi_core = get_role_pointer(OSI_PTP_M2M_SECONDARY);
+	secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
+	if ((validate_args(sec_osi_core, secondary_osi_lcore) < 0) ||
+			(secondary_osi_lcore->hw_init_successful != OSI_ENABLE) ||
+			(secondary_osi_lcore->m2m_tsync != OSI_ENABLE)) {
+			/* Do nothing */
+	} else {
+		if (l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) {
+			drift_value = drift_calculation(osi_core, sec_osi_core,
+							&primary_time,
+							&secondary_time,
+							&ret);
+
+			if (ret == 0) {
+				ret = osi_adjust_time(sec_osi_core, drift_value);
+				if (ret == 0) {
+					secondary_osi_lcore->serv.count = SERVO_STATS_0;
+					secondary_osi_lcore->serv.drift = 0;
+					secondary_osi_lcore->serv.last_ppb = 0;
+					ret = osi_adjust_freq(sec_osi_core, 0);
+				}
+			}
+		}
+
+		if (ret < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+					"CORE: adjust_time for sec_controller failed\n",
+					0ULL);
+#ifdef HSI_SUPPORT
+			osi_core->hsi.report_err = OSI_ENABLE;
+			osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_ADJ_TIME_ERR;
+#endif
+			ret = 0;
+		}
+	}
+
+	return ret;
+}
+
+static nve32_t handle_adjust_time_ioctl(struct osi_core_priv_data *osi_core,
+					struct osi_ioctl *data)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	nve32_t ret;
+
+	ret = osi_adjust_time(osi_core, data->arg8_64);
+
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			     "CORE: adjust_time failed\n", 0ULL);
+#ifdef HSI_SUPPORT
+		osi_core->hsi.report_err = OSI_ENABLE;
+		osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_ADJ_TIME_ERR;
+#endif
+		goto exit;
+	}
+
+	if ((l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) &&
+			(l_core->m2m_tsync != OSI_ENABLE)) {
+		goto exit;
+	}
+
+	ret = handle_time_ether_m2m_role(osi_core);
+
+exit:
+	return ret;
+}
+
+
+static nve32_t handle_freq_ether_m2m_role(struct osi_core_priv_data *osi_core)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	struct osi_core_priv_data *sec_osi_core;
+	struct core_local *secondary_osi_lcore;
+	nvel64_t drift_value = 0x0;
+	nve32_t freq_adj_value = 0x0;
+	nvel64_t secondary_time = 0x0;
+	nvel64_t primary_time = 0x0;
+	nve32_t ret = 0;
+
+	sec_osi_core = get_role_pointer(OSI_PTP_M2M_SECONDARY);
+	secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
+	if ((validate_args(sec_osi_core, secondary_osi_lcore) < 0) ||
+	    (secondary_osi_lcore->hw_init_successful != OSI_ENABLE) ||
+	    (secondary_osi_lcore->m2m_tsync != OSI_ENABLE)) {
+			/* Do Nothing */
+	} else {
+		if (l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) {
+			drift_value = drift_calculation(osi_core, sec_osi_core,
+							&primary_time,
+							&secondary_time,
+							&ret);
+
+			if (ret == 0) {
+				secondary_osi_lcore->serv.const_i = I_COMPONENT_BY_10;
+				secondary_osi_lcore->serv.const_p = P_COMPONENT_BY_10;
+				freq_adj_value = freq_offset_calculate(sec_osi_core,
+								       drift_value,
+								       secondary_time);
+				if (secondary_osi_lcore->serv.count == SERVO_STATS_0) {
+					/* call adjust time as JUMP happened */
+					ret = osi_adjust_time(sec_osi_core, drift_value);
+					if (ret < 0) {
+						OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+							     "CORE: adjust_time failed\n",
+							     0ULL);
+#ifdef HSI_SUPPORT
+						osi_core->hsi.report_err = OSI_ENABLE;
+						osi_core->hsi.err_code[MAC2MAC_ERR_IDX] =
+							OSI_M2M_ADJ_TIME_ERR;
+#endif
+					} else {
+						ret = osi_adjust_freq(sec_osi_core, 0);
+					}
+				} else {
+					ret = osi_adjust_freq(sec_osi_core, freq_adj_value);
+				}
+			}
+		}
+
+		if (ret < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+					"CORE: adjust_freq for sec_controller failed\n",
+					0ULL);
+#ifdef HSI_SUPPORT
+			osi_core->hsi.report_err = OSI_ENABLE;
+			osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_ADJ_FREQ_ERR;
+#endif
+			ret = 0;
+		}
+	}
+
+	return ret;
+}
+
+static nve32_t handle_adjust_freq_ioctl(struct osi_core_priv_data *osi_core,
+					struct osi_ioctl *data)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	nve32_t ret;
+
+	ret = osi_adjust_freq(osi_core, data->arg6_32);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				"CORE: adjust freq failed\n", 0ULL);
+#ifdef HSI_SUPPORT
+		osi_core->hsi.report_err = OSI_ENABLE;
+		osi_core->hsi.err_code[MAC2MAC_ERR_IDX] =
+			OSI_M2M_ADJ_FREQ_ERR;
+#endif
+		goto exit;
+	}
+
+	if ((l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) &&
+	    (l_core->m2m_tsync != OSI_ENABLE)) {
+		goto exit;
+	}
+	ret = handle_freq_ether_m2m_role(osi_core);
+exit:
+	return ret;
+}
+
+
+static nve32_t handle_set_avb_ioctl(struct osi_core_priv_data *osi_core,
+				    struct osi_ioctl *data)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	const struct core_ops *ops_p;
+	nve32_t ret;
+
+	ops_p = l_core->ops_p;
+
+	if (data->avb.algo == OSI_MTL_TXQ_AVALG_CBS) {
+		ret = hw_validate_avb_input(osi_core, &data->avb);
+		if (ret != 0) {
+			goto exit;
+		}
+	}
+
+	ret = ops_p->set_avb_algorithm(osi_core, &data->avb);
+	if (ret == 0) {
+		(void)osi_memcpy(&l_core->cfg.avb[data->avb.qindex].avb_info,
+				&data->avb, sizeof(struct osi_core_avb_algorithm));
+		l_core->cfg.avb[data->avb.qindex].used = OSI_ENABLE;
+		l_core->cfg.flags |= DYNAMIC_CFG_AVB;
+	}
+exit:
+	return ret;
+}
+
+
 /**
  * @brief osi_hal_handle_ioctl - HW function API to handle runtime command
  *
@@ -2625,26 +2987,11 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	const struct core_ops *ops_p;
 	nve32_t ret = -1;
-	struct osi_core_priv_data *sec_osi_core;
-	struct core_local *secondary_osi_lcore;
-	nveu32_t sec = 0x0;
-	nveu32_t nsec = 0x0;
-	nvel64_t drift_value = 0x0;
-	nve32_t freq_adj_value = 0x0;
-	nvel64_t secondary_time = 0x0;
-	nvel64_t primary_time = 0x0;
 	nveu32_t ret_u32;
 
 	ops_p = l_core->ops_p;
 
 	switch (data->cmd) {
-	case OSI_CMD_L3L4_FILTER:
-		ret = configure_l3l4_filter(osi_core, &data->l3l4_filter);
-		if (ret == 0) {
-			l_core->cfg.flags |= DYNAMIC_CFG_L3_L4;
-		}
-		break;
-
 #ifndef OSI_STRIPPED_LIB
 	case OSI_CMD_MDC_CONFIG:
 		ops_p->set_mdc_clk_rate(osi_core, data->arg5_u64);
@@ -2737,20 +3084,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_SET_AVB:
-		if (data->avb.algo == OSI_MTL_TXQ_AVALG_CBS) {
-			ret = hw_validate_avb_input(osi_core, &data->avb);
-			if (ret != 0) {
-				break;
-			}
-		}
-
-		ret = ops_p->set_avb_algorithm(osi_core, &data->avb);
-		if (ret == 0) {
-			(void)osi_memcpy(&l_core->cfg.avb[data->avb.qindex].avb_info,
-					 &data->avb, sizeof(struct osi_core_avb_algorithm));
-			l_core->cfg.avb[data->avb.qindex].used = OSI_ENABLE;
-			l_core->cfg.flags |= DYNAMIC_CFG_AVB;
-		}
+		ret = handle_set_avb_ioctl(osi_core, data);
 		break;
 
 	case OSI_CMD_COMMON_ISR:
@@ -2772,12 +3106,8 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_L2_FILTER:
-		ret = osi_l2_filter(osi_core, &data->l2_filter);
-		if (ret == 0) {
-			store_l2_filter(osi_core, &data->l2_filter);
-			l_core->cfg.flags |= DYNAMIC_CFG_L2;
-		}
-
+	case OSI_CMD_L3L4_FILTER:
+		ret = handle_config_filters(osi_core, data);
 		break;
 
 	case OSI_CMD_RXCSUM_OFFLOAD:
@@ -2790,178 +3120,15 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_ADJ_FREQ:
-		ret = osi_adjust_freq(osi_core, data->arg6_32);
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "CORE: adjust freq failed\n", 0ULL);
-#ifdef HSI_SUPPORT
-			osi_core->hsi.report_err = OSI_ENABLE;
-			osi_core->hsi.err_code[MAC2MAC_ERR_IDX] =
-						OSI_M2M_ADJ_FREQ_ERR;
-#endif
-			break;
-		}
-
-		if ((l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) &&
-		    (l_core->m2m_tsync != OSI_ENABLE)) {
-			break;
-		}
-
-		sec_osi_core = get_role_pointer(OSI_PTP_M2M_SECONDARY);
-		secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
-		if ((validate_args(sec_osi_core, secondary_osi_lcore) < 0) ||
-		    (secondary_osi_lcore->hw_init_successful != OSI_ENABLE) ||
-		    (secondary_osi_lcore->m2m_tsync != OSI_ENABLE)) {
-			break;
-		}
-
-		if (l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) {
-			drift_value = drift_calculation(osi_core, sec_osi_core,
-							&primary_time,
-							&secondary_time,
-							&ret);
-
-			if (ret != 0) {
-				ret = 0;
-				break;
-			}
-
-			secondary_osi_lcore->serv.const_i = I_COMPONENT_BY_10;
-			secondary_osi_lcore->serv.const_p = P_COMPONENT_BY_10;
-			freq_adj_value = freq_offset_calculate(sec_osi_core,
-							       drift_value,
-							       secondary_time);
-			if (secondary_osi_lcore->serv.count == SERVO_STATS_0) {
-				/* call adjust time as JUMP happened */
-				ret = osi_adjust_time(sec_osi_core,
-						      drift_value);
-				if (ret < 0) {
-					OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-						     "CORE: adjust_time failed\n",
-						     0ULL);
-#ifdef HSI_SUPPORT
-					osi_core->hsi.report_err = OSI_ENABLE;
-					osi_core->hsi.err_code[MAC2MAC_ERR_IDX] =
-								 OSI_M2M_ADJ_TIME_ERR;
-#endif
-				} else {
-					ret = osi_adjust_freq(sec_osi_core, 0);
-				}
-			} else {
-				ret = osi_adjust_freq(sec_osi_core,
-						      freq_adj_value);
-			}
-		}
-
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "CORE: adjust_freq for sec_controller failed\n",
-				     0ULL);
-#ifdef HSI_SUPPORT
-			osi_core->hsi.report_err = OSI_ENABLE;
-			osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_ADJ_FREQ_ERR;
-#endif
-			ret = 0;
-		}
-
+		ret = handle_adjust_freq_ioctl(osi_core, data);
 		break;
 
 	case OSI_CMD_ADJ_TIME:
-		ret = osi_adjust_time(osi_core, data->arg8_64);
-
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "CORE: adjust_time failed\n", 0ULL);
-#ifdef HSI_SUPPORT
-			osi_core->hsi.report_err = OSI_ENABLE;
-			osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_ADJ_TIME_ERR;
-#endif
-			break;
-		}
-
-		if ((l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) &&
-		    (l_core->m2m_tsync != OSI_ENABLE)) {
-			break;
-		}
-
-		sec_osi_core = get_role_pointer(OSI_PTP_M2M_SECONDARY);
-		secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
-		if ((validate_args(sec_osi_core, secondary_osi_lcore) < 0) ||
-		    (secondary_osi_lcore->hw_init_successful != OSI_ENABLE) ||
-		    (secondary_osi_lcore->m2m_tsync != OSI_ENABLE)) {
-			break;
-		}
-
-		if (l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) {
-			drift_value = drift_calculation(osi_core, sec_osi_core,
-							&primary_time,
-							&secondary_time,
-							&ret);
-
-			if (ret != 0) {
-				ret = 0;
-				break;
-			}
-
-			ret = osi_adjust_time(sec_osi_core, drift_value);
-			if (ret == 0) {
-				secondary_osi_lcore->serv.count = SERVO_STATS_0;
-				secondary_osi_lcore->serv.drift = 0;
-				secondary_osi_lcore->serv.last_ppb = 0;
-				ret = osi_adjust_freq(sec_osi_core, 0);
-			}
-		}
-
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "CORE: adjust_time for sec_controller failed\n",
-				     0ULL);
-#ifdef HSI_SUPPORT
-			osi_core->hsi.report_err = OSI_ENABLE;
-			osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_ADJ_TIME_ERR;
-#endif
-			ret = 0;
-		}
-
+		ret = handle_adjust_time_ioctl(osi_core, data);
 		break;
 
 	case OSI_CMD_CONFIG_PTP:
-		ret = osi_ptp_configuration(osi_core, data->arg1_u32);
-		if (ret == 0) {
-			l_core->cfg.ptp = data->arg1_u32;
-			l_core->cfg.flags |= DYNAMIC_CFG_PTP;
-		}
-
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "CORE: configure_ptp failed\n", 0ULL);
-#ifdef HSI_SUPPORT
-			osi_core->hsi.report_err = OSI_ENABLE;
-			osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_CONFIG_PTP_ERR;
-#endif
-			break;
-		}
-
-		if ((l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) &&
-		    (l_core->m2m_tsync != OSI_ENABLE)) {
-			break;
-		}
-
-		sec_osi_core = get_role_pointer(OSI_PTP_M2M_SECONDARY);
-		secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
-		if ((validate_args(sec_osi_core, secondary_osi_lcore) < 0) ||
-		    (secondary_osi_lcore->hw_init_successful != OSI_ENABLE) ||
-		    (secondary_osi_lcore->m2m_tsync != OSI_ENABLE)) {
-			break;
-		}
-
-		if ((l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) &&
-		    (data->arg1_u32 == OSI_ENABLE)) {
-			secondary_osi_lcore->serv.count = SERVO_STATS_0;
-			secondary_osi_lcore->serv.drift = 0;
-			secondary_osi_lcore->serv.last_ppb = 0;
-		}
-
+		ret = handle_config_ptp_ioctl(osi_core, data);
 		break;
 
 	case OSI_CMD_GET_HW_FEAT:
@@ -2974,56 +3141,9 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_SET_SYSTOHW_TIME:
-		ret = hw_set_systime_to_mac(osi_core, data->arg1_u32, data->arg2_u32);
-
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "CORE: set systohw time failed\n", 0ULL);
-#ifdef HSI_SUPPORT
-			osi_core->hsi.report_err = OSI_ENABLE;
-			osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_SET_TIME_ERR;
-#endif
-			break;
-		}
-
-		if ((l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) &&
-		    (l_core->m2m_tsync != OSI_ENABLE)) {
-			break;
-		}
-
-		sec_osi_core = get_role_pointer(OSI_PTP_M2M_SECONDARY);
-		secondary_osi_lcore = (struct core_local *)(void *)sec_osi_core;
-		if ((validate_args(sec_osi_core, secondary_osi_lcore) < 0) ||
-		    (secondary_osi_lcore->hw_init_successful != OSI_ENABLE) ||
-		    (secondary_osi_lcore->m2m_tsync != OSI_ENABLE)) {
-			break;
-		}
-
-		if (l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) {
-			osi_lock_irq_enabled(&secondary_osi_lcore->serv.m2m_lock);
-			common_get_systime_from_mac(osi_core->base,
-				    osi_core->mac, &sec, &nsec);
-			osi_unlock_irq_enabled(&secondary_osi_lcore->serv.m2m_lock);
-			ret = hw_set_systime_to_mac(sec_osi_core, sec, nsec);
-			if (ret == 0) {
-				secondary_osi_lcore->serv.count = SERVO_STATS_0;
-				secondary_osi_lcore->serv.drift = 0;
-				secondary_osi_lcore->serv.last_ppb = 0;
-				ret = osi_adjust_freq(sec_osi_core, 0);
-			}
-		}
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "CORE: set_time for sec_controller failed\n",
-				     0ULL);
-#ifdef HSI_SUPPORT
-			osi_core->hsi.report_err = OSI_ENABLE;
-			osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_SET_TIME_ERR;
-#endif
-			ret = 0;
-		}
-
+		ret = handle_set_systohw_time_ioctl(osi_core, data);
 		break;
+
 #ifndef OSI_STRIPPED_LIB
 	case OSI_CMD_CONFIG_PTP_OFFLOAD:
 		ret = conf_ptp_offload(osi_core, &data->pto_config);
@@ -3044,23 +3164,8 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_CONFIG_EST:
-		ret = config_est(osi_core, &data->est);
-		if (ret == 0) {
-			(void)osi_memcpy(&l_core->cfg.est, &data->est,
-					 sizeof(struct osi_est_config));
-			l_core->cfg.flags |= DYNAMIC_CFG_EST;
-		}
-
-		break;
-
 	case OSI_CMD_CONFIG_FPE:
-		ret = config_fpe(osi_core, &data->fpe);
-		if (ret == 0) {
-			(void)osi_memcpy(&l_core->cfg.fpe, &data->fpe,
-					 sizeof(struct osi_fpe_config));
-			l_core->cfg.flags |= DYNAMIC_CFG_FPE;
-		}
-
+		ret = handle_config_est_fpe_ioctl(osi_core, data);
 		break;
 
 	case OSI_CMD_READ_REG:
