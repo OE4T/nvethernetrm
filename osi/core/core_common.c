@@ -691,57 +691,11 @@ err:
 	return ret;
 }
 
-/**
- * @brief eqos_gcl_validate - validate GCL from user
- *
- * Algorithm: validate GCL size and width of time interval value
- *
- * @param[in] osi_core: OSI core private data structure.
- * @param[in] est: Configuration input argument.
- * @param[in] btr: Base time register value.
- * @param[in] mac: MAC index
- *
- * @note MAC should be init and started. see osi_start_mac()
- *
- * @retval 0 on success
- * @retval -1 on failure.
- */
-static nve32_t gcl_validate(struct osi_core_priv_data *const osi_core,
-			    struct osi_est_config *const est,
-			    const nveu32_t *btr, nveu32_t mac)
+static nve32_t validate_est_args(struct osi_core_priv_data *const osi_core,
+				 struct osi_est_config *const est)
 {
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	const nveu32_t PTP_CYCLE_8[MAX_MAC_IP_TYPES] = {EQOS_8PTP_CYCLE,
-						  MGBE_8PTP_CYCLE};
-	const nveu32_t MTL_EST_CONTROL[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL,
-						MGBE_MTL_EST_CONTROL};
-	const nveu32_t MTL_EST_STATUS[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_STATUS,
-						MGBE_MTL_EST_STATUS};
-	const nveu32_t MTL_EST_BTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_LOW,
-						MGBE_MTL_EST_BTR_LOW};
-	const nveu32_t MTL_EST_BTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_HIGH,
-						MGBE_MTL_EST_BTR_HIGH};
-	const nveu32_t MTL_EST_CTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_LOW,
-						MGBE_MTL_EST_CTR_LOW};
-	const nveu32_t MTL_EST_CTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_HIGH,
-						MGBE_MTL_EST_CTR_HIGH};
-	nveu32_t i;
-	nveu64_t sum_ti = 0U;
-	nveu64_t sum_tin = 0U;
-	nveu64_t ctr = 0U;
-	nveu64_t btr_new = 0U;
-	nveu32_t btr_l, btr_h, ctr_l, ctr_h;
-	nveu32_t bunk = 0U;
-	nveu32_t est_status;
-	nveu64_t old_btr, old_ctr;
 	nve32_t ret = 0;
-	nveu32_t val = 0U;
-	nveu64_t rem = 0U;
-	const struct est_read hw_read_arr[4] = {
-				    {&btr_l, MTL_EST_BTR_LOW[mac]},
-				    {&btr_h, MTL_EST_BTR_HIGH[mac]},
-				    {&ctr_l, MTL_EST_CTR_LOW[mac]},
-				    {&ctr_h, MTL_EST_CTR_HIGH[mac]}};
+	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
 
 	if (est->en_dis > OSI_ENABLE) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
@@ -789,37 +743,42 @@ static nve32_t gcl_validate(struct osi_core_priv_data *const osi_core,
 		goto done;
 	}
 
-	ctr = ((nveu64_t)est->ctr[1] * OSI_NSEC_PER_SEC)  + est->ctr[0];
+done:
+	return ret;
+
+}
+
+static nve32_t validate_btr(struct osi_core_priv_data *const osi_core,
+			    struct osi_est_config *const est,
+			    const nveu32_t *btr, nveu32_t mac, nveu32_t bunk)
+{
+	nveu32_t i;
+	nve32_t ret = 0;
+	nveu32_t val = 0U;
+	nveu64_t rem = 0U;
+	nveu64_t btr_new = 0U;
+	nveu64_t old_btr, old_ctr;
+	nveu32_t btr_l, btr_h, ctr_l, ctr_h;
+	const nveu32_t MTL_EST_CONTROL[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CONTROL,
+							    MGBE_MTL_EST_CONTROL};
+	const nveu32_t PTP_CYCLE_8[MAX_MAC_IP_TYPES] = {EQOS_8PTP_CYCLE,
+							MGBE_8PTP_CYCLE};
+	const nveu32_t MTL_EST_BTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_LOW,
+							    MGBE_MTL_EST_BTR_LOW};
+	const nveu32_t MTL_EST_BTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_HIGH,
+							     MGBE_MTL_EST_BTR_HIGH};
+	const nveu32_t MTL_EST_CTR_LOW[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_LOW,
+							    MGBE_MTL_EST_CTR_LOW};
+	const nveu32_t MTL_EST_CTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_CTR_HIGH,
+							     MGBE_MTL_EST_CTR_HIGH};
+	const struct est_read hw_read_arr[4] = {
+				    {&btr_l, MTL_EST_BTR_LOW[mac]},
+				    {&btr_h, MTL_EST_BTR_HIGH[mac]},
+				    {&ctr_l, MTL_EST_CTR_LOW[mac]},
+				    {&ctr_h, MTL_EST_CTR_HIGH[mac]}};
+
 	btr_new = (((nveu64_t)btr[1] + est->btr_offset[1]) * OSI_NSEC_PER_SEC) +
 		   (btr[0] + est->btr_offset[0]);
-	for (i = 0U; i < est->llr; i++) {
-		if (est->gcl[i] <= l_core->gcl_width_val) {
-			sum_ti += ((nveu64_t)est->gcl[i] & l_core->ti_mask);
-			if ((sum_ti > ctr) &&
-			    ((ctr - sum_tin) >= PTP_CYCLE_8[mac])) {
-				continue;
-			} else if (((ctr - sum_ti) != 0U) &&
-				   ((ctr - sum_ti) < PTP_CYCLE_8[mac])) {
-				OSI_CORE_ERR(osi_core->osd,
-					     OSI_LOG_ARG_INVALID,
-					     "CTR issue due to trancate\n",
-					     (nveul64_t)i);
-				ret = -1;
-				goto done;
-			} else {
-				//do nothing
-			}
-			sum_tin = sum_ti;
-			continue;
-		}
-
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "validation of GCL entry failed\n",
-			     (nveul64_t)i);
-		ret = -1;
-		goto done;
-	}
-
 	/* Check for BTR in case of new ETS while current GCL enabled */
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
@@ -827,14 +786,6 @@ static nve32_t gcl_validate(struct osi_core_priv_data *const osi_core,
 	if ((val & MTL_EST_CONTROL_EEST) != MTL_EST_CONTROL_EEST) {
 		ret = 0;
 		goto done;
-	}
-
-	/* Read EST_STATUS for bunk */
-	est_status = osi_readla(osi_core,
-				(nveu8_t *)osi_core->base +
-				MTL_EST_STATUS[mac]);
-	if ((est_status & MTL_EST_STATUS_SWOL) == 0U) {
-		bunk = MTL_EST_DBGB;
 	}
 
 	/* Read last BTR and CTR */
@@ -871,6 +822,88 @@ static nve32_t gcl_validate(struct osi_core_priv_data *const osi_core,
 	} else {
 		// Nothing to do
 	}
+
+done:
+	return ret;
+}
+
+
+
+/**
+ * @brief eqos_gcl_validate - validate GCL from user
+ *
+ * Algorithm: validate GCL size and width of time interval value
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] est: Configuration input argument.
+ * @param[in] btr: Base time register value.
+ * @param[in] mac: MAC index
+ *
+ * @note MAC should be init and started. see osi_start_mac()
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+static nve32_t gcl_validate(struct osi_core_priv_data *const osi_core,
+			    struct osi_est_config *const est,
+			    const nveu32_t *btr, nveu32_t mac)
+{
+	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	const nveu32_t PTP_CYCLE_8[MAX_MAC_IP_TYPES] = {EQOS_8PTP_CYCLE,
+						  MGBE_8PTP_CYCLE};
+	const nveu32_t MTL_EST_STATUS[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_STATUS,
+						MGBE_MTL_EST_STATUS};
+	nveu32_t i;
+	nveu64_t sum_ti = 0U;
+	nveu64_t sum_tin = 0U;
+	nveu64_t ctr = 0U;
+	nveu32_t bunk = 0U;
+	nveu32_t est_status;
+	nve32_t ret = 0;
+
+	if (validate_est_args(osi_core, est) < 0) {
+		ret = -1;
+		goto done;
+	}
+
+	ctr = ((nveu64_t)est->ctr[1] * OSI_NSEC_PER_SEC)  + est->ctr[0];
+	for (i = 0U; i < est->llr; i++) {
+		if (est->gcl[i] <= l_core->gcl_width_val) {
+			sum_ti += ((nveu64_t)est->gcl[i] & l_core->ti_mask);
+			if ((sum_ti > ctr) &&
+			    ((ctr - sum_tin) >= PTP_CYCLE_8[mac])) {
+				continue;
+			} else if (((ctr - sum_ti) != 0U) &&
+				   ((ctr - sum_ti) < PTP_CYCLE_8[mac])) {
+				OSI_CORE_ERR(osi_core->osd,
+					     OSI_LOG_ARG_INVALID,
+					     "CTR issue due to trancate\n",
+					     (nveul64_t)i);
+				ret = -1;
+				goto done;
+			} else {
+				//do nothing
+			}
+			sum_tin = sum_ti;
+			continue;
+		}
+
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			     "validation of GCL entry failed\n",
+			     (nveul64_t)i);
+		ret = -1;
+		goto done;
+	}
+
+	/* Read EST_STATUS for bunk */
+	est_status = osi_readla(osi_core,
+				(nveu8_t *)osi_core->base +
+				MTL_EST_STATUS[mac]);
+	if ((est_status & MTL_EST_STATUS_SWOL) == 0U) {
+		bunk = MTL_EST_DBGB;
+	}
+
+	ret = validate_btr(osi_core, est, btr, mac, bunk);
 
 done:
 	return ret;
