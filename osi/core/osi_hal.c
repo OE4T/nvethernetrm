@@ -2987,7 +2987,8 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	const struct core_ops *ops_p;
 	nve32_t ret = -1;
-	nveu32_t ret_u32;
+	nveu32_t ret_u32 = 0;
+	nve32_t ret_s32 = 0;
 
 	ops_p = l_core->ops_p;
 
@@ -3169,22 +3170,26 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_READ_REG:
-		ret = (nve32_t) ops_p->read_reg(osi_core, (nve32_t) data->arg1_u32);
+		ret_s32 = convert_to_s32_with_same_hex(&(data->arg1_u32));
+		ret_u32 = ops_p->read_reg(osi_core, ret_s32);
+		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 
 	case OSI_CMD_WRITE_REG:
-		ret = (nve32_t) ops_p->write_reg(osi_core, (nveu32_t) data->arg1_u32,
-				       (nve32_t) data->arg2_u32);
+		ret_s32 = convert_to_s32_with_same_hex(&(data->arg2_u32));
+		ret_u32 = ops_p->write_reg(osi_core, (nveu32_t) data->arg1_u32, ret_s32);
+		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 #ifdef MACSEC_SUPPORT
 	case OSI_CMD_READ_MACSEC_REG:
-		ret_u32 = ops_p->read_macsec_reg(osi_core, (nve32_t) data->arg1_u32);
+		ret_s32 = convert_to_s32_with_same_hex(&(data->arg1_u32));
+		ret_u32 = ops_p->read_macsec_reg(osi_core, ret_s32);
 		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 
 	case OSI_CMD_WRITE_MACSEC_REG:
-		ret_u32 = ops_p->write_macsec_reg(osi_core, (nveu32_t) data->arg1_u32,
-				       (nve32_t) data->arg2_u32);
+		ret_s32 = convert_to_s32_with_same_hex(&(data->arg2_u32));
+		ret_u32 = ops_p->write_macsec_reg(osi_core, data->arg1_u32, ret_s32);
 		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 #endif /*  MACSEC_SUPPORT */

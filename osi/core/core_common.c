@@ -705,7 +705,7 @@ static nve32_t validate_est_args(struct osi_core_priv_data *const osi_core,
 		goto done;
 	}
 
-	if (est->llr > l_core->gcl_dep || est->llr == OSI_NONE) {
+	if ((est->llr > l_core->gcl_dep) || (est->llr == OSI_NONE)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "input argument more than GCL depth\n",
 			     (nveul64_t)est->llr);

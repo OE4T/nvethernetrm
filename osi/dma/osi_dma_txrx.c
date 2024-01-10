@@ -803,7 +803,7 @@ static inline void fill_first_desc(OSI_UNUSED struct osi_tx_ring *tx_ring,
 				   nveu32_t ptp_flag)
 #endif /* !OSI_STRIPPED_LIB */
 {
-#ifndef OSI_STRIPPED_LIB
+#ifdef OSI_STRIPPED_LIB
 	(void)tx_ring; // unused
 #endif /* !OSI_STRIPPED_LIB */
 
