@@ -1507,6 +1507,7 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 		/* T23X-MGBE_HSIv2-12:Initialization of Transaction Timeout in PCS */
 		/* T23X-MGBE_HSIv2-11:Initialization of Watchdog Timer */
 		value = (0xCCU << XPCS_SFTY_1US_MULT_SHIFT) & XPCS_SFTY_1US_MULT_MASK;
+		value |= ((nveu32_t)0x01U << XPCS_FSM_TO_SEL_SHIFT) & XPCS_FSM_TO_SEL_MASK;
 		ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_SFTY_TMR_CTRL, value);
 		if (ret != 0) {
 			goto fail;
@@ -1533,10 +1534,16 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 
 		/* T23X-MGBE_HSIv2-3: Enabling and Initialization of Watchdog Timer */
 		/* T23X-MGBE_HSIv2-4: Enabling of Consistency Monitor for XGMAC FSM State */
-		/* TODO enable MGBE_TMOUTEN. Bug 3584387 */
-		value = MGBE_PRTYEN;
+		value = MGBE_PRTYEN | MGBE_TMOUTEN;
 		osi_writela(osi_core, value,
 			    (nveu8_t *)osi_core->base + MGBE_MAC_FSM_CONTROL);
+
+		/* T23X-MGBE_HSIv2-20: Enabling of error reporting for Inbound Bus CRC errors */
+		value = osi_readla(osi_core,
+				   (nveu8_t *)osi_core->base + MGBE_MMC_RX_INTR_EN);
+		value |= MGBE_RXCRCERPIE;
+		osi_writela(osi_core, value,
+			    (nveu8_t *)osi_core->base + MGBE_MMC_RX_INTR_EN);
 
 		/* T23X-MGBE_HSIv2-2: Enabling of Bus Parity */
 		value = osi_readla(osi_core,
@@ -1612,6 +1619,9 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 		/* T23X-MGBE_HSIv2-4: Enabling of Consistency Monitor for XGMAC FSM State */
 		osi_writela(osi_core, 0,
 			    (nveu8_t *)osi_core->base + MGBE_MAC_FSM_CONTROL);
+
+		/* T23X-MGBE_HSIv2-20: Enabling of error reporting for Inbound Bus CRC errors */
+		osi_writela(osi_core, 0, (nveu8_t *)osi_core->base + MGBE_MMC_RX_INTR_EN);
 
 		/* T23X-MGBE_HSIv2-2: Disable of Bus Parity */
 		value = osi_readla(osi_core,
@@ -1781,9 +1791,6 @@ static nve32_t mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 	/* Disable all MMC Tx nve32_terrupts */
 	osi_writela(osi_core, OSI_NONE, (nveu8_t *)osi_core->base +
 		   MGBE_MMC_TX_INTR_EN);
-	/* Disable all MMC RX nve32_terrupts */
-	osi_writela(osi_core, OSI_NONE, (nveu8_t *)osi_core->base +
-		   MGBE_MMC_RX_INTR_EN);
 
 	/* Configure MMC counters */
 	value = osi_readla(osi_core,

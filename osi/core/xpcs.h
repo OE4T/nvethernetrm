@@ -109,6 +109,9 @@
 #define XPCS_VR_XS_PCS_SFTY_TMR_CTRL			0xE03D4
 #define XPCS_SFTY_1US_MULT_MASK				0xFFU
 #define XPCS_SFTY_1US_MULT_SHIFT			0U
+#define XPCS_FSM_TO_SEL_SHIFT				10U
+#define XPCS_FSM_TO_SEL_MASK				0xC00U
+#define XPCS_FEC_EN					OSI_BIT(0)
 #endif
 /** @} */
 
