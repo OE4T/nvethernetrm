@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -46,9 +46,14 @@
 /** @} */
 
 /**
-* @brief Maximum data matching length
-*/
+ * @brief FRP data matching length
+ */
 #define OSI_FRP_MATCH_DATA_MAX		12U
+#define OSI_FRP_MATCH_DATA_MIN		1U
+/**
+ * @brief Maximum FRP indexes
+ */
+#define OSI_FRP_ID_MAX			0xFF
 
 /**
  * @addtogroup MTL queue operation mode
@@ -102,7 +107,7 @@ struct osi_core_frp_cmd {
 	 * NVETHERNETRM_PIF$OSI_FRP_CMD_UPDATE or
 	 * NVETHERNETRM_PIF$OSI_FRP_CMD_DEL */
 	nveu32_t cmd;
-	/** OSD FRP ID, valid values are from 0 to 0xFF */
+	/** OSD FRP ID, valid values are from 0 to NVETHERNETRM_PIF$OSI_FRP_ID_MAX */
 	nve32_t frp_id;
 	/** OSD match data type
 	 * valid values are from NVETHERNETRM_PIF$OSI_FRP_MATCH_NORMAL
@@ -110,18 +115,22 @@ struct osi_core_frp_cmd {
 	nveu8_t match_type;
 	/** OSD match data */
 	nveu8_t match[OSI_FRP_MATCH_DATA_MAX];
-	/** OSD match data length 
-	 * valid value is from 1 to NVETHERNETRM_PIF$OSI_FRP_MATCH_DATA_MAX */
+	/** OSD match data length
+	 * valid value is from NVETHERNETRM_PIF$OSI_FRP_MATCH_DATA_MIN to
+	 * NVETHERNETRM_PIF$OSI_FRP_MATCH_DATA_MAX
+	 */
 	nveu8_t match_length;
 	/** OSD Offset
-	 * Valid values are from 1 to NVETHERNETRM_PIF$OSI_FRP_OFFSET_MAX*/
+	 * Valid values are from 0 to (NVETHERNETRM_PIF$OSI_FRP_OFFSET_MAX-1)
+	 */
 	nveu8_t offset;
 	/** OSD FRP filter mode flag
 	 * Valid values are from NVETHERNETRM_PIF$OSI_FRP_MODE_ROUTE
 	 * to NVETHERNETRM_PIF$OSI_FRP_MODE_IM_LINK*/
 	nveu8_t filter_mode;
 	/** OSD FRP Link ID
-	 * valid values are from 0 to 0xFF*/
+	 * valid values are from 0 to NVETHERNETRM_PIF$OSI_FRP_ID_MAX
+	 */
 	nve32_t next_frp_id;
 	/** OSD DMA Channel Selection
 	 * Bit selection of DMA channels to route the frame

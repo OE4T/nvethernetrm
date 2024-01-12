@@ -544,8 +544,16 @@ static nve32_t frp_add_proto(struct osi_core_priv_data *const osi_core,
 		proto_offset = FRP_L2_VLAN_PROTO_OFFSET;
 		break;
 	case OSI_FRP_MATCH_NORMAL:
+	case OSI_FRP_MATCH_L2_DA:
+	case OSI_FRP_MATCH_L2_SA:
+	case OSI_FRP_MATCH_L3_SIP:
+	case OSI_FRP_MATCH_L3_DIP:
+		proto_entry = OSI_DISABLE;
+		ret = 0;
+		break;
 	default:
 		proto_entry = OSI_DISABLE;
+		ret = -1;
 		break;
 	}
 
@@ -579,7 +587,6 @@ static nve32_t frp_add_proto(struct osi_core_priv_data *const osi_core,
 		*pos = (nveu8_t)(*pos + (nveu8_t)1);
 	}
 
-	ret = 0;
 done:
 	return ret;
 }
@@ -897,6 +904,21 @@ nve32_t setup_frp(struct osi_core_priv_data *const osi_core,
 {
 	nve32_t ret = -1;
 
+	if ((cmd->frp_id > OSI_FRP_ID_MAX) ||
+	    (cmd->next_frp_id > OSI_FRP_ID_MAX)) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "Invalid FRP ID\n",
+			      cmd->frp_id);
+		goto error;
+	}
+	if ((cmd->match_length < OSI_FRP_MATCH_DATA_MIN) ||
+	    (cmd->match_length > OSI_FRP_MATCH_DATA_MAX)) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "Invalid FRP match_lenght \n",
+			      cmd->frp_id);
+		goto error;
+	}
+
 	switch (cmd->cmd) {
 	case OSI_FRP_CMD_ADD:
 		ret = frp_add(osi_core, ops_p, cmd);
@@ -924,5 +946,6 @@ nve32_t setup_frp(struct osi_core_priv_data *const osi_core,
 			      cmd->cmd);
 	}
 
+error:
 	return ret;
 }
