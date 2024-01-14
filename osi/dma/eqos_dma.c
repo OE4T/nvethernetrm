@@ -21,7 +21,6 @@
  */
 
 #ifndef OSI_STRIPPED_LIB
-#include "../osi/common/common.h"
 #include "dma_local.h"
 #include "eqos_dma.h"
 
@@ -60,24 +59,24 @@ static void eqos_config_slot(struct osi_dma_priv_data *osi_dma,
 #endif
 	if (set == OSI_ENABLE) {
 		/* Program SLOT CTRL register SIV and set ESC bit */
-		value = osi_readl((nveu8_t *)osi_dma->base +
-				  EQOS_DMA_CHX_SLOT_CTRL(chan));
+		value = osi_dma_readl((nveu8_t *)osi_dma->base +
+			    	       EQOS_DMA_CHX_SLOT_CTRL(chan));
 		value &= ~EQOS_DMA_CHX_SLOT_SIV_MASK;
 		/* remove overflow bits of interval */
 		intr = interval & EQOS_DMA_CHX_SLOT_SIV_MASK;
 		value |= (intr << EQOS_DMA_CHX_SLOT_SIV_SHIFT);
 		/* Set ESC bit */
 		value |= EQOS_DMA_CHX_SLOT_ESC;
-		osi_writel(value, (nveu8_t *)osi_dma->base +
-			   EQOS_DMA_CHX_SLOT_CTRL(chan));
+		osi_dma_writel(value, (nveu8_t *)osi_dma->base +
+			       EQOS_DMA_CHX_SLOT_CTRL(chan));
 
 	} else {
 		/* Clear ESC bit of SLOT CTRL register */
-		value = osi_readl((nveu8_t *)osi_dma->base +
-				  EQOS_DMA_CHX_SLOT_CTRL(chan));
+		value = osi_dma_readl((nveu8_t *)osi_dma->base +
+				      EQOS_DMA_CHX_SLOT_CTRL(chan));
 		value &= ~EQOS_DMA_CHX_SLOT_ESC;
-		osi_writel(value, (nveu8_t *)osi_dma->base +
-			   EQOS_DMA_CHX_SLOT_CTRL(chan));
+		osi_dma_writel(value, (nveu8_t *)osi_dma->base +
+			       EQOS_DMA_CHX_SLOT_CTRL(chan));
 	}
 }
 
@@ -101,30 +100,30 @@ static void eqos_debug_intr_config(struct osi_dma_priv_data *osi_dma)
 	if (enable == OSI_ENABLE) {
 		for (chinx = 0; chinx < osi_dma->num_dma_chans; chinx++) {
 			chan = osi_dma->dma_chans[chinx];
-			val = osi_readl((nveu8_t *)osi_dma->base +
-					EQOS_DMA_CHX_INTR_ENA(chan));
+			val = osi_dma_readl((nveu8_t *)osi_dma->base +
+					    EQOS_DMA_CHX_INTR_ENA(chan));
 
 			val |= (EQOS_DMA_CHX_INTR_AIE |
 				EQOS_DMA_CHX_INTR_FBEE |
 				EQOS_DMA_CHX_INTR_RBUE |
 				EQOS_DMA_CHX_INTR_TBUE |
 				EQOS_DMA_CHX_INTR_NIE);
-			osi_writel(val, (nveu8_t *)osi_dma->base +
-				   EQOS_DMA_CHX_INTR_ENA(chan));
+			osi_dma_writel(val, (nveu8_t *)osi_dma->base +
+				       EQOS_DMA_CHX_INTR_ENA(chan));
 		}
 
 	} else {
 		for (chinx = 0; chinx < osi_dma->num_dma_chans; chinx++) {
 			chan = osi_dma->dma_chans[chinx];
-			val = osi_readl((nveu8_t *)osi_dma->base +
-					EQOS_DMA_CHX_INTR_ENA(chan));
+			val = osi_dma_readl((nveu8_t *)osi_dma->base +
+				   	    EQOS_DMA_CHX_INTR_ENA(chan));
 			val &= (~EQOS_DMA_CHX_INTR_AIE &
 				~EQOS_DMA_CHX_INTR_FBEE &
 				~EQOS_DMA_CHX_INTR_RBUE &
 				~EQOS_DMA_CHX_INTR_TBUE &
 				~EQOS_DMA_CHX_INTR_NIE);
-			osi_writel(val, (nveu8_t *)osi_dma->base +
-				   EQOS_DMA_CHX_INTR_ENA(chan));
+			osi_dma_writel(val, (nveu8_t *)osi_dma->base +
+				       EQOS_DMA_CHX_INTR_ENA(chan));
 		}
 	}
 }

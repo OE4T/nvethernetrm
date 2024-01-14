@@ -861,7 +861,8 @@ static nve32_t gcl_validate(struct osi_core_priv_data *const osi_core,
 	nveu32_t est_status;
 	nve32_t ret = 0;
 
-	if (validate_est_args(osi_core, est) < 0) {
+	if((est->btr_offset[0] > OSI_NSEC_PER_SEC) ||
+	   (validate_est_args(osi_core, est) < 0)) {
 		ret = -1;
 		goto done;
 	}
@@ -1084,9 +1085,9 @@ nve32_t hw_config_est(struct osi_core_priv_data *const osi_core,
 		btr[0] = est->btr[0];
 		btr[1] = est->btr[1];
 		if ((btr[0] == 0U) && (btr[1] == 0U)) {
-			common_get_systime_from_mac(osi_core->base,
-						    osi_core->mac,
-						    &btr[1], &btr[0]);
+			core_get_systime_from_mac(osi_core->base,
+						  osi_core->mac,
+						  &btr[1], &btr[0]);
 		}
 
 		if (gcl_validate(osi_core, est, btr, osi_core->mac) < 0) {

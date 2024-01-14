@@ -21,7 +21,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <local_common.h>
 #include <ivc_core.h>
 #include "core_local.h"
 #include "../osi/common/common.h"

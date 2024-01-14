@@ -143,7 +143,7 @@ void reg_dump(struct osi_dma_priv_data *osi_dma)
 		if (addr > max_addr)
 			break;
 
-		reg_val = osi_readl((nveu8_t *)osi_dma->base + addr);
+		reg_val = osi_dma_readl((nveu8_t *)osi_dma->base + addr);
 		osi_dma->osd_ops.printf(osi_dma, OSI_DEBUG_TYPE_REG,
 					"%x: %x\n", addr, reg_val);
 		addr += 4;

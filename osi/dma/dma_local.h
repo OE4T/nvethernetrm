@@ -21,14 +21,152 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-
 #ifndef INCLUDED_DMA_LOCAL_H
 #define INCLUDED_DMA_LOCAL_H
 
-#include "../osi/common/common.h"
 #include <osi_dma.h>
 #include "eqos_dma.h"
 #include "mgbe_dma.h"
+
+/**
+ * @brief Maximum number of supported MAC IP types (EQOS and MGBE)
+ */
+#define MAX_MAC_IP_TYPES       2U
+/** MAC version type for EQOS version previous to 5.30 */
+#define MAC_CORE_VER_TYPE_EQOS		0U
+/** MAC version type for EQOS version 5.30 */
+#define MAC_CORE_VER_TYPE_EQOS_5_30	1U
+/** MAC version type for MGBE IP */
+#define MAC_CORE_VER_TYPE_MGBE		2U
+/**
+ * @brief validate_dma_mac_ver_update_chans - Validates mac version and update chan
+ *
+ * @param[in] mac_ver: MAC version read.
+ * @param[out] num_max_chans: Maximum channel number.
+ * @param[out] l_mac_ver: local mac version.
+ *
+ * @note MAC has to be out of reset.
+ *
+ * @note
+ * API Group:
+ * - Initialization: Yes
+ * - Run time: No
+ * - De-initialization: No
+ *
+ * @retval 0 - for not Valid MAC
+ * @retval 1 - for Valid MAC
+ */
+static inline nve32_t validate_dma_mac_ver_update_chans(nveu32_t mac_ver,
+						        nveu32_t *num_max_chans,
+						        nveu32_t *l_mac_ver)
+{
+	nve32_t ret;
+
+	switch (mac_ver) {
+#ifndef OSI_STRIPPED_LIB
+	case OSI_EQOS_MAC_5_00:
+		*num_max_chans = OSI_EQOS_XP_MAX_CHANS;
+		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS;
+		ret = 1;
+		break;
+#endif
+	case OSI_EQOS_MAC_5_30:
+		*num_max_chans = OSI_EQOS_MAX_NUM_CHANS;
+		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS_5_30;
+		ret = 1;
+		break;
+	case OSI_MGBE_MAC_3_10:
+#ifndef OSI_STRIPPED_LIB
+	case OSI_MGBE_MAC_4_00:
+#endif /* !OSI_STRIPPED_LIB */
+		*num_max_chans = OSI_MGBE_MAX_NUM_CHANS;
+		*l_mac_ver = MAC_CORE_VER_TYPE_MGBE;
+		ret = 1;
+		break;
+	default:
+		ret = 0;
+		break;
+	}
+
+	return ret;
+}
+/**
+ * @brief osi_dma_memset - osi memset
+ *
+ * @param[out] s: source that need to be set
+ * @param[in] c: value to fill in source
+ * @param[in] count: first n bytes of source
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ */
+static inline void osi_dma_memset(void *s, nveu32_t c, nveu64_t count)
+{
+	nveu8_t *xs = OSI_NULL;
+	nveu64_t temp = count;
+
+	xs = (nveu8_t *)s;
+	while (temp != 0UL) {
+		if (c < OSI_UCHAR_MAX) {
+			*xs = (nveu8_t)c;
+			xs++;
+		}
+		temp--;
+	}
+	return;
+}
+/**
+ * @brief osi_dma_readl - Read a memory mapped register.
+ *
+ * @param[in] addr: Memory mapped address.
+ *
+ * @pre Physical address has to be memory mapped.
+ *
+ * @return Data from memory mapped register - success.
+ *
+ * @note
+ * API Group:
+ * - Initialization: Yes
+ * - Run time: Yes
+ * - De-initialization: Yes
+ */
+static inline nveu32_t osi_dma_readl(void *addr)
+{
+	return *(volatile nveu32_t *)addr;
+}
+/**
+ * @brief osi_dma_writel - Write to a memory mapped register.
+ *
+ * @param[in] val:  Value to be written.
+ * @param[in] addr: Memory mapped address.
+ *
+ * @pre Physical address has to be memory mapped.
+ *
+ * @note
+ * API Group:
+ * - Initialization: Yes
+ * - Run time: Yes
+ * - De-initialization: Yes
+ */
+static inline void osi_dma_writel(nveu32_t val, void *addr)
+{
+	*(volatile nveu32_t *)addr = val;
+}
+
+/**
+ * @brief TX timestamp helper MACROS
+ * @{
+ */
+#define CHAN_START_POSITION 6U
+#define PKT_ID_CNT	((nveu32_t)1 << CHAN_START_POSITION)
+/* First 6 bytes of idx and last 4 bytes of chan(+1 to avoid pkt_id to be 0) */
+#define INC_TX_TS_PKTID(idx) ((idx) = (((idx) & 0x7FFFFFFFU) + 1U))
+#define GET_TX_TS_PKTID(idx, c) (((idx) & (PKT_ID_CNT - 1U)) | \
+				 (((c) + 1U) << CHAN_START_POSITION))
+/** @} */
 
 /**
  * @brief Maximum number of OSI DMA instances.
@@ -224,7 +362,7 @@ static inline void update_rx_tail_ptr(const struct osi_dma_priv_data *const osi_
 		MGBE_DMA_CHX_RDTLP(chan)
 	};
 
-	osi_writel(L32(tailptr), (nveu8_t *)osi_dma->base + tail_ptr_reg[osi_dma->mac]);
+	osi_dma_writel(L32(tailptr), (nveu8_t *)osi_dma->base + tail_ptr_reg[osi_dma->mac]);
 }
 
 /** @} */

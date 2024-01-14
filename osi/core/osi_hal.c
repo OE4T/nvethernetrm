@@ -20,7 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <local_common.h>
 #include <ivc_core.h>
 #include "core_local.h"
 #include "../osi/common/common.h"
@@ -44,6 +43,81 @@ static inline nve32_t convert_to_s32_with_same_hex(const void *data)
 	return (*((const nve32_t *)data));
 }
 /** \endcond */
+
+static nveul64_t get_systime_from_mac(void *addr, nveu32_t mac_type)
+{
+        nveul64_t ns1, ns2, ns = 0;
+        nveu32_t varmac_stnsr, temp1;
+        nveu32_t varmac_stsr;
+        const nveu32_t mac_stnsr_mask[2U] = { EQOS_CORE_MAC_STNSR_TSSS_MASK ,
+					      MGBE_CORE_MAC_STNSR_TSSS_MASK };
+        const nveu32_t mac_stnsr[2U] = { EQOS_CORE_MAC_STNSR, MGBE_CORE_MAC_STNSR };
+        const nveu32_t mac_stsr[2U] = { EQOS_CORE_MAC_STSR , MGBE_CORE_MAC_STSR };
+
+        varmac_stnsr = osi_readl((nveu8_t *)addr + mac_stnsr[mac_type]);
+        temp1 = (varmac_stnsr & mac_stnsr_mask[mac_type]);
+        ns1 = (nveul64_t)temp1;
+
+        varmac_stsr = osi_readl((nveu8_t *)addr + mac_stsr[mac_type]);
+
+        varmac_stnsr = osi_readl((nveu8_t *)addr + mac_stnsr[mac_type]);
+        temp1 = (varmac_stnsr & mac_stnsr_mask[mac_type]);
+        ns2 = (nveul64_t)temp1;
+
+        /* if ns1 is greater than ns2, it means nsec counter rollover
+         * happened. In that case read the updated sec counter again
+         */
+        if (ns1 >= ns2) {
+                varmac_stsr = osi_readl((nveu8_t *)addr + mac_stsr[mac_type]);
+                /* convert sec/high time value to nanosecond */
+                if (varmac_stsr < UINT_MAX) {
+                        ns = ns2 + (varmac_stsr * OSI_NSEC_PER_SEC);
+                }
+        } else {
+                /* convert sec/high time value to nanosecond */
+                if (varmac_stsr < UINT_MAX) {
+                        ns = ns1 + (varmac_stsr * OSI_NSEC_PER_SEC);
+                }
+        }
+
+        return ns;
+}
+
+static nveu64_t div_u64_rem(nveu64_t dividend, nveu64_t divisor,
+		     nveu64_t *remain)
+{
+	nveu64_t ret = 0;
+
+	if (divisor != 0U) {
+		*remain = dividend % divisor;
+		ret = dividend / divisor;
+	} else {
+		ret = 0;
+	}
+
+	return ret;
+}
+
+void core_get_systime_from_mac(void *addr, nveu32_t mac, nveu32_t *sec, nveu32_t *nsec)
+{
+	nveu64_t temp;
+	nveu64_t remain;
+	nveul64_t ns;
+
+	ns = get_systime_from_mac(addr, mac);
+
+	temp = div_u64_rem((nveu64_t)ns, OSI_NSEC_PER_SEC, &remain);
+	if (temp < UINT_MAX) {
+		*sec = (nveu32_t)temp;
+	} else {
+		/* do nothing here */
+	}
+	if (remain < UINT_MAX) {
+		*nsec = (nveu32_t)remain;
+	} else {
+		/* do nothing here */
+	}
+}
 
 /**
  * @brief Function to validate input arguments of API.
@@ -1331,8 +1405,7 @@ static nve32_t osi_adjust_time(struct osi_core_priv_data *const osi_core,
 		goto fail;
 	}
 
-	common_get_systime_from_mac(osi_core->base,
-				    osi_core->mac, &cur_sec, &cur_nsec);
+	core_get_systime_from_mac(osi_core->base, osi_core->mac, &cur_sec, &cur_nsec);
 	calculate = ((nvel64_t)cur_sec * OSI_NSEC_PER_SEC_SIGNED) + (nvel64_t)cur_nsec;
 
 	if (neg_adj == 1U) {
@@ -1857,7 +1930,7 @@ static inline nve32_t get_tx_ts(struct osi_core_priv_data *osi_core,
 	nveul64_t temp_val = 0ULL;
 	nveul64_t ts_val = 0ULL;
 
-	common_get_systime_from_mac(osi_core->base, osi_core->mac, &sec, &nsec);
+	core_get_systime_from_mac(osi_core->base, osi_core->mac, &sec, &nsec);
 	ts_val = (sec * OSI_NSEC_PER_SEC) + nsec;
 
 	if (__sync_fetch_and_add(&l_core->ts_lock, 1) == 1U) {
@@ -2543,8 +2616,8 @@ static nve32_t handle_set_systohw_time_ioctl(struct osi_core_priv_data *osi_core
 		} else {
 			if (l_core->ether_m2m_role == OSI_PTP_M2M_PRIMARY) {
 				osi_lock_irq_enabled(&secondary_osi_lcore->serv.m2m_lock);
-				common_get_systime_from_mac(osi_core->base,
-							    osi_core->mac, &sec, &nsec);
+				core_get_systime_from_mac(osi_core->base,
+							  osi_core->mac, &sec, &nsec);
 				osi_unlock_irq_enabled(&secondary_osi_lcore->serv.m2m_lock);
 				ret = hw_set_systime_to_mac(sec_osi_core, sec, nsec);
 				if (ret == 0) {

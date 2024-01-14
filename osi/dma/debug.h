@@ -26,7 +26,6 @@
 #include <osi_common.h>
 #include <osi_dma.h>
 #include "hw_desc.h"
-#include "../osi/common/common.h"
 #include "dma_local.h"
 
 /**

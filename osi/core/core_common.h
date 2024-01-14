@@ -212,4 +212,5 @@ nve32_t hw_validate_avb_input(struct osi_core_priv_data *const osi_core,
 			      const struct osi_core_avb_algorithm *const avb);
 nve32_t hw_config_flow_control(struct osi_core_priv_data *const osi_core,
 			       const nveu32_t flw_ctrl);
+void core_get_systime_from_mac(void *addr, nveu32_t mac, nveu32_t *sec, nveu32_t *nsec);
 #endif /* INCLUDED_CORE_COMMON_H */

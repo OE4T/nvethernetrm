@@ -103,4 +103,18 @@
 /* AXI Data width */
 #define MGBE_AXI_DATAWIDTH		128U
 /** @} */
+
+/**
+ * @addtogroup MGBE-MAC MAC register offsets
+ *
+ * @{
+ */
+#define MGBE_MAC_STSR			0x0D08
+#define MGBE_MAC_STNSR			0x0D0C
+#define MGBE_MAC_STNSR_TSSS_MASK	0x7FFFFFFFU
+
+#define MGBE_MAC_TX			0x0000
+#define MGBE_MCR_TE			OSI_BIT(0)
+/** @} */
+
 #endif

@@ -24,7 +24,6 @@
 #define INCLUDED_CORE_LOCAL_H
 
 #include <osi_core.h>
-#include <local_common.h>
 #ifdef MACSEC_SUPPORT
 #include <osi_macsec.h>
 #endif /* MACSEC_SUPPORT */
@@ -41,6 +40,8 @@
  */
 #define MAX_INTERFACE_OPS	2U
 
+#define CHAN_START_POSITION 6U
+#define PKT_ID_CNT	((nveu32_t)1 << CHAN_START_POSITION)
 /**
  * @brief Maximum number of timestamps stored in OSI from HW FIFO.
  */

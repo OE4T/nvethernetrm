@@ -21,7 +21,6 @@
  */
 
 #include "../osi/common/common.h"
-#include <local_common.h>
 #include <osi_common.h>
 #include <osi_core.h>
 #include "mgbe_core.h"
@@ -2565,7 +2564,8 @@ static nve32_t mgbe_get_avb_algorithm(struct osi_core_priv_data *const osi_core,
 		goto fail;
 	}
 
-	if (avb->qindex >= OSI_MGBE_MAX_NUM_QUEUES) {
+	if ((avb->qindex >= OSI_MGBE_MAX_NUM_QUEUES) ||
+	    (avb->qindex == OSI_NONE)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			"Invalid Queue index\n",
 			(nveul64_t)avb->qindex);

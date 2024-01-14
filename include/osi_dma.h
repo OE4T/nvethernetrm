@@ -1336,6 +1336,7 @@ nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma);
 nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
 				     nveu32_t *sec, nveu32_t *nsec);
 
+#ifndef OSI_STRIPPED_LIB
 /**
  * @brief
  * Description: Checks if MAC is enabled.
@@ -1377,6 +1378,7 @@ nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
  */
 #endif
 nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma);
+#endif
 
 /**
  * @brief
@@ -1538,7 +1540,6 @@ nve32_t osi_config_slot_function(struct osi_dma_priv_data *osi_dma,
  * @retval -1 on failure - invalid argument
  */
 nve32_t osi_clear_rx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
-#endif /* !OSI_STRIPPED_LIB */
 
 /**
  * @brief
@@ -1588,6 +1589,7 @@ nve32_t osi_clear_rx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
  */
 #endif
 nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
+#endif /* !OSI_STRIPPED_LIB */
 
 /**
  * @brief

@@ -40,14 +40,10 @@ NV_COMPONENT_SOURCES           := \
 	$(NV_SOURCE)/nvethernetrm/osi/core/xpcs.c \
 	$(NV_SOURCE)/nvethernetrm/osi/core/mgbe_mmc.c \
 	$(NV_SOURCE)/nvethernetrm/osi/core/core_common.c \
-	$(NV_SOURCE)/nvethernetrm/osi/common/osi_common.c \
-	$(NV_SOURCE)/nvethernetrm/osi/common/eqos_common.c \
-	$(NV_SOURCE)/nvethernetrm/osi/common/mgbe_common.c \
 	$(NV_SOURCE)/nvethernetrm/osi/core/macsec.c
 
 NV_COMPONENT_INCLUDES          := \
 	$(NV_SOURCE)/nvethernetrm/include \
-	$(NV_SOURCE)/nvethernetrm/osi/common/include
 
 include $(NV_SOURCE)/nvethernetrm/include/config.tmk
 

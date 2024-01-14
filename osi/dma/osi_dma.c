@@ -23,9 +23,7 @@
  */
 
 #include "dma_local.h"
-#include <local_common.h>
 #include "hw_desc.h"
-#include "../osi/common/common.h"
 #ifdef OSI_DEBUG
 #include "debug.h"
 #endif /* OSI_DEBUG */
@@ -69,11 +67,11 @@ static inline nve32_t intr_en_dis_retry(nveu8_t *base, nveu32_t intr_ctrl,
 	nve32_t ret = -1;
 
 	for (i = 0U; i < 10U; i++) {
-		cntrl1 = osi_readl(base + intr_ctrl);
+		cntrl1 = osi_dma_readl(base + intr_ctrl);
 		cntrl1 = set_clr[en_dis](cntrl1, val);
-		osi_writel(cntrl1, base + intr_ctrl);
+		osi_dma_writel(cntrl1, base + intr_ctrl);
 
-		cntrl2 = osi_readl(base + intr_ctrl);
+		cntrl2 = osi_dma_readl(base + intr_ctrl);
 		if (cntrl1 == cntrl2) {
 			ret = 0;
 			break;
@@ -108,10 +106,10 @@ static inline nve32_t disable_intr(struct osi_dma_priv_data const *osi_dma,
 	};
 	nveu32_t status;
 
-	status = osi_readl(base + intr_status);
+	status = osi_dma_readl(base + intr_status);
 	if ((status & val) == val) {
-		osi_writel(status_val[val], base + dma_status);
-		osi_writel(val, base + intr_status);
+		osi_dma_writel(status_val[val], base + dma_status);
+		osi_dma_writel(val, base + intr_status);
 	}
 
 	return intr_en_dis_retry((nveu8_t *)osi_dma->base, intr_ctrl,
@@ -420,15 +418,15 @@ static inline void start_dma(const struct osi_dma_priv_data *const osi_dma, nveu
 	nveu32_t val;
 
 	/* Start Tx DMA */
-	val = osi_readl((nveu8_t *)osi_dma->base + tx_dma_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + tx_dma_reg[osi_dma->mac]);
 	val |= OSI_BIT(0);
-	osi_writel(val, (nveu8_t *)osi_dma->base + tx_dma_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + tx_dma_reg[osi_dma->mac]);
 
 	/* Start Rx DMA */
-	val = osi_readl((nveu8_t *)osi_dma->base + rx_dma_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + rx_dma_reg[osi_dma->mac]);
 	val |= OSI_BIT(0);
 	val &= ~OSI_BIT(31);
-	osi_writel(val, (nveu8_t *)osi_dma->base + rx_dma_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + rx_dma_reg[osi_dma->mac]);
 }
 
 static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
@@ -504,17 +502,17 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 	tx_pbl[1] = temp_tx_pbl;
 
 	/* Enable Transmit/Receive interrupts */
-	val = osi_readl((nveu8_t *)osi_dma->base + intr_en_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + intr_en_reg[osi_dma->mac]);
 	val |= (DMA_CHX_INTR_TIE | DMA_CHX_INTR_RIE);
-	osi_writel(val, (nveu8_t *)osi_dma->base + intr_en_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + intr_en_reg[osi_dma->mac]);
 
 	/* Enable PBLx8 */
-	val = osi_readl((nveu8_t *)osi_dma->base + chx_ctrl_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + chx_ctrl_reg[osi_dma->mac]);
 	val |= DMA_CHX_CTRL_PBLX8;
-	osi_writel(val, (nveu8_t *)osi_dma->base + chx_ctrl_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + chx_ctrl_reg[osi_dma->mac]);
 
 	/* Program OSP, TSO enable and TXPBL */
-	val = osi_readl((nveu8_t *)osi_dma->base + tx_ctrl_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + tx_ctrl_reg[osi_dma->mac]);
 	val |= (DMA_CHX_TX_CTRL_OSP | DMA_CHX_TX_CTRL_TSE);
 
 	if (osi_dma->mac == OSI_MAC_HW_EQOS) {
@@ -533,9 +531,9 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 			val |= ((tx_pbl[osi_dma->mac] / 8U) << MGBE_DMA_CHX_CTRL_PBL_SHIFT);
 		}
 	}
-	osi_writel(val, (nveu8_t *)osi_dma->base + tx_ctrl_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + tx_ctrl_reg[osi_dma->mac]);
 
-	val = osi_readl((nveu8_t *)osi_dma->base + rx_ctrl_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + rx_ctrl_reg[osi_dma->mac]);
 	val &= ~DMA_CHX_RBSZ_MASK;
 	/** Subtract 30 bytes again which were added for buffer address alignment
 	 * HW don't need those extra 30 bytes. If data length received more than
@@ -553,32 +551,32 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 			val |= ((rx_pbl[osi_dma->mac] / 8U) << MGBE_DMA_CHX_CTRL_PBL_SHIFT);
 		}
 	}
-	osi_writel(val, (nveu8_t *)osi_dma->base + rx_ctrl_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + rx_ctrl_reg[osi_dma->mac]);
 
 	if ((osi_dma->use_riwt == OSI_ENABLE) &&
 	    (osi_dma->rx_riwt < UINT_MAX)) {
-		val = osi_readl((nveu8_t *)osi_dma->base + rx_wdt_reg[osi_dma->mac]);
+		val = osi_dma_readl((nveu8_t *)osi_dma->base + rx_wdt_reg[osi_dma->mac]);
 		val &= ~DMA_CHX_RX_WDT_RWT_MASK;
 		val |= rwt_val[osi_dma->mac];
-		osi_writel(val, (nveu8_t *)osi_dma->base + rx_wdt_reg[osi_dma->mac]);
+		osi_dma_writel(val, (nveu8_t *)osi_dma->base + rx_wdt_reg[osi_dma->mac]);
 
-		val = osi_readl((nveu8_t *)osi_dma->base + rx_wdt_reg[osi_dma->mac]);
+		val = osi_dma_readl((nveu8_t *)osi_dma->base + rx_wdt_reg[osi_dma->mac]);
 		val &= ~rwtu_mask[osi_dma->mac];
 		val |= rwtu_val[osi_dma->mac];
-		osi_writel(val, (nveu8_t *)osi_dma->base + rx_wdt_reg[osi_dma->mac]);
+		osi_dma_writel(val, (nveu8_t *)osi_dma->base + rx_wdt_reg[osi_dma->mac]);
 	}
 
 	if (osi_dma->mac == OSI_MAC_HW_MGBE) {
 		/* Update ORRQ in DMA_CH(#i)_Tx_Control2 register */
-		val = osi_readl((nveu8_t *)osi_dma->base + MGBE_DMA_CHX_TX_CNTRL2(chan));
+		val = osi_dma_readl((nveu8_t *)osi_dma->base + MGBE_DMA_CHX_TX_CNTRL2(chan));
 		val |= (((MGBE_DMA_CHX_TX_CNTRL2_ORRQ_RECOMMENDED / osi_dma->num_dma_chans)) <<
 			MGBE_DMA_CHX_TX_CNTRL2_ORRQ_SHIFT);
-		osi_writel(val, (nveu8_t *)osi_dma->base + MGBE_DMA_CHX_TX_CNTRL2(chan));
+		osi_dma_writel(val, (nveu8_t *)osi_dma->base + MGBE_DMA_CHX_TX_CNTRL2(chan));
 
 		/* Update OWRQ in DMA_CH(#i)_Rx_Control2 register */
-		val = osi_readl((nveu8_t *)osi_dma->base + MGBE_DMA_CHX_RX_CNTRL2(chan));
+		val = osi_dma_readl((nveu8_t *)osi_dma->base + MGBE_DMA_CHX_RX_CNTRL2(chan));
 		val |= (owrq_arr[osi_dma->num_dma_chans - 1U] << MGBE_DMA_CHX_RX_CNTRL2_OWRQ_SHIFT);
-		osi_writel(val, (nveu8_t *)osi_dma->base + MGBE_DMA_CHX_RX_CNTRL2(chan));
+		osi_dma_writel(val, (nveu8_t *)osi_dma->base + MGBE_DMA_CHX_RX_CNTRL2(chan));
 	}
 
 	/* success */
@@ -653,11 +651,11 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma)
 		goto fail;
 	}
 
-	l_dma->mac_ver = osi_readl((nveu8_t *)osi_dma->base + MAC_VERSION) &
-				   MAC_VERSION_SNVER_MASK;
-	if (validate_mac_ver_update_chans(l_dma->mac_ver,
-					  &l_dma->num_max_chans,
-					  &l_dma->l_mac_ver) == 0) {
+	l_dma->mac_ver = osi_dma_readl((nveu8_t *)osi_dma->base + MAC_VERSION) &
+				       MAC_VERSION_SNVER_MASK;
+	if (validate_dma_mac_ver_update_chans(l_dma->mac_ver,
+			       		      &l_dma->num_max_chans,
+					      &l_dma->l_mac_ver) == 0) {
 		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
 			    "Invalid MAC version\n", (nveu64_t)l_dma->mac_ver);
 		ret = -1;
@@ -712,15 +710,15 @@ static inline void stop_dma(const struct osi_dma_priv_data *const osi_dma,
 	nveu32_t val;
 
 	/* Stop Tx DMA */
-	val = osi_readl((nveu8_t *)osi_dma->base + dma_tx_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + dma_tx_reg[osi_dma->mac]);
 	val &= ~OSI_BIT(0);
-	osi_writel(val, (nveu8_t *)osi_dma->base + dma_tx_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + dma_tx_reg[osi_dma->mac]);
 
 	/* Stop Rx DMA */
-	val = osi_readl((nveu8_t *)osi_dma->base + dma_rx_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + dma_rx_reg[osi_dma->mac]);
 	val &= ~OSI_BIT(0);
 	val |= OSI_BIT(31);
-	osi_writel(val, (nveu8_t *)osi_dma->base + dma_rx_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + dma_rx_reg[osi_dma->mac]);
 }
 
 nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma)
@@ -765,7 +763,7 @@ nveu32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma)
 		goto fail;
 	}
 
-	ret = osi_readl((nveu8_t *)osi_dma->base + HW_GLOBAL_DMA_STATUS);
+	ret = osi_dma_readl((nveu8_t *)osi_dma->base + HW_GLOBAL_DMA_STATUS);
 fail:
 	return ret;
 }
@@ -1011,6 +1009,80 @@ fail:
 	return ret;
 }
 
+static nveu64_t dma_div_u64_rem(nveu64_t dividend, nveu64_t divisor, nveu64_t *remain)
+{
+	nveu64_t ret = 0;
+
+	if (divisor != 0U) {
+		*remain = dividend % divisor;
+		ret = dividend / divisor;
+	} else {
+		ret = 0;
+	}
+
+	return ret;
+}
+
+static nveul64_t read_systime_from_mac(void *addr, nveu32_t mac_type)
+{
+        nveul64_t ns1, ns2, ns = 0;
+        nveu32_t varmac_stnsr, temp1;
+        nveu32_t varmac_stsr;
+        const nveu32_t mac_stnsr_mask[2U] = { EQOS_MAC_STNSR_TSSS_MASK , MGBE_MAC_STNSR_TSSS_MASK };
+        const nveu32_t mac_stnsr[2U] = { EQOS_MAC_STNSR, MGBE_MAC_STNSR };
+        const nveu32_t mac_stsr[2U] = { EQOS_MAC_STSR , MGBE_MAC_STSR };
+
+        varmac_stnsr = osi_dma_readl((nveu8_t *)addr + mac_stnsr[mac_type]);
+        temp1 = (varmac_stnsr & mac_stnsr_mask[mac_type]);
+        ns1 = (nveul64_t)temp1;
+
+        varmac_stsr = osi_dma_readl((nveu8_t *)addr + mac_stsr[mac_type]);
+
+        varmac_stnsr = osi_dma_readl((nveu8_t *)addr + mac_stnsr[mac_type]);
+        temp1 = (varmac_stnsr & mac_stnsr_mask[mac_type]);
+        ns2 = (nveul64_t)temp1;
+
+        /* if ns1 is greater than ns2, it means nsec counter rollover
+         * happened. In that case read the updated sec counter again
+         */
+        if (ns1 >= ns2) {
+                varmac_stsr = osi_dma_readl((nveu8_t *)addr + mac_stsr[mac_type]);
+                /* convert sec/high time value to nanosecond */
+                if (varmac_stsr < UINT_MAX) {
+                        ns = ns2 + (varmac_stsr * OSI_NSEC_PER_SEC);
+                }
+        } else {
+                /* convert sec/high time value to nanosecond */
+                if (varmac_stsr < UINT_MAX) {
+                        ns = ns1 + (varmac_stsr * OSI_NSEC_PER_SEC);
+                }
+        }
+
+        return ns;
+}
+
+
+static void dma_get_systime_from_mac(void *addr, nveu32_t mac, nveu32_t *sec, nveu32_t *nsec)
+{
+	nveu64_t temp;
+	nveu64_t remain;
+	nveul64_t ns;
+
+	ns = read_systime_from_mac(addr, mac);
+
+	temp = dma_div_u64_rem((nveu64_t)ns, OSI_NSEC_PER_SEC, &remain);
+	if (temp < UINT_MAX) {
+		*sec = (nveu32_t)temp;
+	} else {
+		/* do nothing here */
+	}
+	if (remain < UINT_MAX) {
+		*nsec = (nveu32_t)remain;
+	} else {
+		/* do nothing here */
+	}
+}
+
 nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
 				     nveu32_t *sec, nveu32_t *nsec)
 {
@@ -1019,25 +1091,10 @@ nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
 
 	if (dma_validate_args(osi_dma, l_dma) < 0) {
 		ret = -1;
-		goto fail;
 	}
 
-	common_get_systime_from_mac(osi_dma->base, osi_dma->mac, sec, nsec);
-fail:
-	return ret;
-}
+	dma_get_systime_from_mac(osi_dma->base, osi_dma->mac, sec, nsec);
 
-nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma)
-{
-	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
-	nveu32_t ret = OSI_DISABLE;
-
-	if (dma_validate_args(osi_dma, l_dma) < 0) {
-		goto fail;
-	}
-
-	ret = common_is_mac_enabled(osi_dma->base, osi_dma->mac);
-fail:
 	return ret;
 }
 
@@ -1190,7 +1247,6 @@ nve32_t osi_config_slot_function(struct osi_dma_priv_data *osi_dma,
 
 	return 0;
 }
-#endif /* !OSI_STRIPPED_LIB */
 
 nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan)
 {
@@ -1198,3 +1254,5 @@ nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan)
 
 	return (tx_ring->clean_idx == tx_ring->cur_tx_idx) ? 1 : 0;
 }
+#endif /* !OSI_STRIPPED_LIB */
+

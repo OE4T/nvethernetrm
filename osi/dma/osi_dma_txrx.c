@@ -24,9 +24,7 @@
 #include "dma_local.h"
 #include <osi_dma_txrx.h>
 #include "hw_desc.h"
-#include "../osi/common/common.h"
 #include "mgbe_dma.h"
-#include "local_common.h"
 #ifdef OSI_DEBUG
 #include "debug.h"
 #endif /* OSI_DEBUG */
@@ -236,7 +234,7 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 			break;
 		}
 		rx_swcx = rx_ring->rx_swcx + rx_ring->cur_rx_idx;
-		osi_memset(rx_pkt_cx, 0U, sizeof(*rx_pkt_cx));
+		osi_dma_memset(rx_pkt_cx, 0U, sizeof(*rx_pkt_cx));
 #if defined OSI_DEBUG && !defined OSI_STRIPPED_LIB
 		dump_rx_descriptors(osi_dma, rx_ring, chan);
 #endif /* OSI_DEBUG */
@@ -605,7 +603,7 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 #endif /* !OSI_STRIPPED_LIB */
 	while ((entry != tx_ring->cur_tx_idx) && (entry < osi_dma->tx_ring_sz) &&
 	       (processed < budget)) {
-		osi_memset(txdone_pkt_cx, 0U, sizeof(*txdone_pkt_cx));
+		osi_dma_memset(txdone_pkt_cx, 0U, sizeof(*txdone_pkt_cx));
 
 		tx_desc = tx_ring->tx_desc + entry;
 		tx_swcx = tx_ring->tx_swcx + entry;
@@ -1211,7 +1209,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	tx_ring->cur_tx_idx = entry;
 
 	/* Update the Tx tail pointer */
-	osi_writel(L32(tailptr), (nveu8_t *)osi_dma->base + tail_ptr_reg[osi_dma->mac]);
+	osi_dma_writel(L32(tailptr), (nveu8_t *)osi_dma->base + tail_ptr_reg[osi_dma->mac]);
 
 fail:
 	return ret;
@@ -1323,17 +1321,17 @@ static nve32_t rx_dma_desc_initialization(const struct osi_dma_priv_data *const 
 	}
 
 	/* Update the HW DMA ring length */
-	val = osi_readl((nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
 	val |= (osi_dma->rx_ring_sz - 1U) & mask[osi_dma->mac];
-	osi_writel(val, (nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
 
 	update_rx_tail_ptr(osi_dma, chan, tailptr);
 
 	/* Program Ring start address */
-	osi_writel(H32(rx_ring->rx_desc_phy_addr),
-		   (nveu8_t *)osi_dma->base + start_addr_high_reg[osi_dma->mac]);
-	osi_writel(L32(rx_ring->rx_desc_phy_addr),
-		   (nveu8_t *)osi_dma->base + start_addr_low_reg[osi_dma->mac]);
+	osi_dma_writel(H32(rx_ring->rx_desc_phy_addr),
+		       (nveu8_t *)osi_dma->base + start_addr_high_reg[osi_dma->mac]);
+	osi_dma_writel(L32(rx_ring->rx_desc_phy_addr),
+		       (nveu8_t *)osi_dma->base + start_addr_low_reg[osi_dma->mac]);
 
 fail:
 	return ret;
@@ -1400,15 +1398,15 @@ static inline void set_tx_ring_len_and_start_addr(const struct osi_dma_priv_data
 	nveu32_t val;
 
 	/* Program ring length */
-	val = osi_readl((nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
 	val |= len & mask[osi_dma->mac];
-	osi_writel(val, (nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
 
 	/* Program tx ring start address */
-	osi_writel(H32(tx_desc_phy_addr),
-		   (nveu8_t *)osi_dma->base + start_addr_high_reg[osi_dma->mac]);
-	osi_writel(L32(tx_desc_phy_addr),
-		   (nveu8_t *)osi_dma->base + start_addr_low_reg[osi_dma->mac]);
+	osi_dma_writel(H32(tx_desc_phy_addr),
+		       (nveu8_t *)osi_dma->base + start_addr_high_reg[osi_dma->mac]);
+	osi_dma_writel(L32(tx_desc_phy_addr),
+	   	       (nveu8_t *)osi_dma->base + start_addr_low_reg[osi_dma->mac]);
 }
 
 /**
