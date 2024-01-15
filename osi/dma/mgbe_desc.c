@@ -68,7 +68,7 @@ static inline void mgbe_update_rx_err_stats(struct osi_rx_desc *rx_desc,
 	/* increment rx crc if we see CE bit set */
 	if ((rx_desc->rdes3 & RDES3_ERR_MGBE_CRC) == RDES3_ERR_MGBE_CRC) {
 		stats->rx_crc_error =
-			osi_update_stats_counter(stats->rx_crc_error, 1UL);
+			dma_update_stats_counter(stats->rx_crc_error, 1UL);
 	}
 
 	/* Update FRP Counters */
@@ -77,22 +77,22 @@ static inline void mgbe_update_rx_err_stats(struct osi_rx_desc *rx_desc,
 	/* Increment FRP parsed count */
 	if ((frpsm == OSI_NONE) && (frpsl == OSI_NONE)) {
 		stats->frp_parsed =
-			osi_update_stats_counter(stats->frp_parsed, 1UL);
+			dma_update_stats_counter(stats->frp_parsed, 1UL);
 	}
 	/* Increment FRP dropped count */
 	if ((frpsm == OSI_NONE) && (frpsl == MGBE_RDES3_FRPSL)) {
 		stats->frp_dropped =
-			osi_update_stats_counter(stats->frp_dropped, 1UL);
+			dma_update_stats_counter(stats->frp_dropped, 1UL);
 	}
 	/* Increment FRP Parsing Error count */
 	if ((frpsm == MGBE_RDES2_FRPSM) && (frpsl == OSI_NONE)) {
 		stats->frp_err =
-			osi_update_stats_counter(stats->frp_err, 1UL);
+			dma_update_stats_counter(stats->frp_err, 1UL);
 	}
 	/* Increment FRP Incomplete Parsing count */
 	if ((frpsm == MGBE_RDES2_FRPSM) && (frpsl == MGBE_RDES3_FRPSL)) {
 		stats->frp_incomplete =
-			osi_update_stats_counter(stats->frp_incomplete, 1UL);
+			dma_update_stats_counter(stats->frp_incomplete, 1UL);
 	}
 }
 

@@ -292,11 +292,11 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 
 #ifndef OSI_STRIPPED_LIB
 		osi_dma->dstats.q_rx_pkt_n[chan] =
-			osi_update_stats_counter(
+			dma_update_stats_counter(
 					osi_dma->dstats.q_rx_pkt_n[chan],
 					1UL);
 		osi_dma->dstats.rx_pkt_n =
-			osi_update_stats_counter(osi_dma->dstats.rx_pkt_n, 1UL);
+			dma_update_stats_counter(osi_dma->dstats.rx_pkt_n, 1UL);
 #endif /* !OSI_STRIPPED_LIB */
 		received++;
 	}
@@ -331,15 +331,15 @@ static inline void inc_tx_pkt_stats(struct osi_dma_priv_data *osi_dma,
 				    nveu32_t chan)
 {
 	osi_dma->dstats.q_tx_pkt_n[chan] =
-		osi_update_stats_counter(osi_dma->dstats.q_tx_pkt_n[chan], 1UL);
+		dma_update_stats_counter(osi_dma->dstats.q_tx_pkt_n[chan], 1UL);
 	osi_dma->dstats.tx_pkt_n =
-		osi_update_stats_counter(osi_dma->dstats.tx_pkt_n, 1UL);
+		dma_update_stats_counter(osi_dma->dstats.tx_pkt_n, 1UL);
 }
 
 static inline void update_err_stats(nveu32_t error_bit, nveu64_t *error_counter)
 {
 	if (error_bit) {
-		*error_counter = osi_update_stats_counter(*error_counter, 1UL);
+		*error_counter = dma_update_stats_counter(*error_counter, 1UL);
 	}
 }
 
@@ -396,7 +396,7 @@ nve32_t osi_clear_tx_pkt_err_stats(struct osi_dma_priv_data *osi_dma)
 		pkt_err_stats->excessive_deferal_error = 0U;
 		pkt_err_stats->underflow_error = 0U;
 		pkt_err_stats->clear_tx_err =
-			osi_update_stats_counter(pkt_err_stats->clear_tx_err,
+			dma_update_stats_counter(pkt_err_stats->clear_tx_err,
 						 1UL);
 		ret = 0;
 	}
@@ -414,7 +414,7 @@ nve32_t osi_clear_rx_pkt_err_stats(struct osi_dma_priv_data *osi_dma)
 		/* Reset Rx packet errors */
 		pkt_err_stats->rx_crc_error = 0U;
 		pkt_err_stats->clear_tx_err =
-			osi_update_stats_counter(pkt_err_stats->clear_rx_err,
+			dma_update_stats_counter(pkt_err_stats->clear_rx_err,
 						 1UL);
 		ret = 0;
 	}
@@ -599,7 +599,7 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 
 #ifndef OSI_STRIPPED_LIB
 	osi_dma->dstats.tx_clean_n[chan] =
-		osi_update_stats_counter(osi_dma->dstats.tx_clean_n[chan], 1U);
+		dma_update_stats_counter(osi_dma->dstats.tx_clean_n[chan], 1U);
 #endif /* !OSI_STRIPPED_LIB */
 	while ((entry != tx_ring->cur_tx_idx) && (entry < osi_dma->tx_ring_sz) &&
 	       (processed < budget)) {
@@ -969,12 +969,12 @@ static inline void updata_tx_pkt_stats(struct osi_tx_pkt_cx *tx_pkt_cx,
 	/* Context descriptor for VLAN/TSO */
 	if ((tx_pkt_cx->flags & OSI_PKT_CX_VLAN) == OSI_PKT_CX_VLAN) {
 		osi_dma->dstats.tx_vlan_pkt_n =
-			osi_update_stats_counter(osi_dma->dstats.tx_vlan_pkt_n, 1UL);
+			dma_update_stats_counter(osi_dma->dstats.tx_vlan_pkt_n, 1UL);
 	}
 
 	if ((tx_pkt_cx->flags & OSI_PKT_CX_TSO) == OSI_PKT_CX_TSO) {
 		osi_dma->dstats.tx_tso_pkt_n =
-			osi_update_stats_counter(osi_dma->dstats.tx_tso_pkt_n, 1UL);
+			dma_update_stats_counter(osi_dma->dstats.tx_tso_pkt_n, 1UL);
 	}
 }
 #endif /* !OSI_STRIPPED_LIB */

@@ -37,12 +37,14 @@
  * @brief g_ops - Static core operations array.
  */
 
+#if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
 /** \cond DO_NOT_DOCUMENT */
 static inline nve32_t convert_to_s32_with_same_hex(const void *data)
 {
 	return (*((const nve32_t *)data));
 }
 /** \endcond */
+#endif /*  MACSEC_SUPPORT */
 
 static nveul64_t get_systime_from_mac(void *addr, nveu32_t mac_type)
 {
@@ -3060,9 +3062,10 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	const struct core_ops *ops_p;
 	nve32_t ret = -1;
-	nveu32_t ret_u32 = 0;
+#if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
+	nveu32_t ret_u32;
 	nve32_t ret_s32 = 0;
-
+#endif /*  MACSEC_SUPPORT */
 	ops_p = l_core->ops_p;
 
 	switch (data->cmd) {
@@ -3242,6 +3245,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		ret = handle_config_est_fpe_ioctl(osi_core, data);
 		break;
 
+#ifndef OSI_STRIPPED_LIB
 	case OSI_CMD_READ_REG:
 		ret_s32 = convert_to_s32_with_same_hex(&(data->arg1_u32));
 		ret_u32 = ops_p->read_reg(osi_core, ret_s32);
@@ -3266,6 +3270,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 #endif /*  MACSEC_SUPPORT */
+#endif /* !OSI_STRIPPED_LIB */
 	case OSI_CMD_GET_TX_TS:
 		ret = get_tx_ts(osi_core, &data->tx_ts);
 		break;

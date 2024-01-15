@@ -69,13 +69,13 @@ static inline void eqos_update_rx_err_stats(struct osi_rx_desc *rx_desc,
 	/* increment rx crc if we see CE bit set */
 	if ((rx_desc->rdes3 & RDES3_ERR_CRC) == RDES3_ERR_CRC) {
 		stats->rx_crc_error =
-			osi_update_stats_counter(stats->rx_crc_error, 1UL);
+			dma_update_stats_counter(stats->rx_crc_error, 1UL);
 	}
 
 	/* increment rx frame error if we see RE bit set */
 	if ((rx_desc->rdes3 & RDES3_ERR_RE) == RDES3_ERR_RE) {
 		stats->rx_frame_error =
-			osi_update_stats_counter(stats->rx_frame_error, 1UL);
+			dma_update_stats_counter(stats->rx_frame_error, 1UL);
 	}
 }
 

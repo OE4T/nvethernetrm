@@ -1107,6 +1107,7 @@ static inline void read_lut_data(struct osi_core_priv_data *const osi_core,
 	}
 }
 
+#ifndef OSI_STRIPPED_LIB
 /**
  * @brief lut_read_inputs_DA - Read LUT data an fill destination address and flags
  *
@@ -1706,6 +1707,7 @@ static nve32_t sc_state_lut_read(struct osi_core_priv_data *const osi_core,
 
 	return 0;
 }
+#endif /* !OSI_STRIPPED_LIB */
 
 /**
  * @brief sa_state_lut_read - Read Sa state LUT data
@@ -1791,6 +1793,7 @@ static nve32_t lut_data_read(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = 0;
 
 	switch (lut_config->lut_sel) {
+#ifndef OSI_STRIPPED_LIB
 	case OSI_LUT_SEL_BYPASS:
 		ret = byp_lut_read(osi_core, lut_config);
 		break;
@@ -1803,6 +1806,7 @@ static nve32_t lut_data_read(struct osi_core_priv_data *const osi_core,
 	case OSI_LUT_SEL_SC_STATE:
 		ret = sc_state_lut_read(osi_core, lut_config);
 		break;
+#endif /* !OSI_STRIPPED_LIB */
 	case OSI_LUT_SEL_SA_STATE:
 		ret = sa_state_lut_read(osi_core, lut_config);
 		break;
@@ -4531,7 +4535,6 @@ exit:
 	return ret;
 }
 
-#ifdef DEBUG_MACSEC
 static void macsec_intr_config(struct osi_core_priv_data *const osi_core, nveu32_t enable)
 {
 	nveu32_t val = 0;
@@ -4602,7 +4605,6 @@ static void macsec_intr_config(struct osi_core_priv_data *const osi_core, nveu32
 		MACSEC_LOG("Write MACSEC_COMMON_IMR: 0x%x\n", val);
 	}
 }
-#endif /* DEBUG_MACSEC */
 
 /**
  * @brief macsec_initialize - Inititlizes macsec
@@ -4735,9 +4737,7 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 	 * Default power on reset is AES-GCM128, leave it.
 	 */
 
-#ifdef DEBUG_MACSEC
 	macsec_intr_config(osi_core, OSI_ENABLE);
-#endif
 
 	ret = set_byp_lut(osi_core);
 	if (ret < 0) {

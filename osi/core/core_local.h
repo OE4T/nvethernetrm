@@ -148,6 +148,7 @@ struct core_ops {
 	/** Called to get HW features */
 	nve32_t (*get_hw_features)(struct osi_core_priv_data *const osi_core,
 				   struct osi_hw_features *hw_feat);
+#ifndef OSI_STRIPPED_LIB
 	/** Called to read reg */
 	nveu32_t (*read_reg)(struct osi_core_priv_data *const osi_core,
 			     const nve32_t reg);
@@ -155,7 +156,8 @@ struct core_ops {
 	nveu32_t (*write_reg)(struct osi_core_priv_data *const osi_core,
 			      const nveu32_t val,
 			      const nve32_t reg);
-#ifdef MACSEC_SUPPORT
+#endif
+#if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
 	/** Called to read macsec reg */
 	nveu32_t (*read_macsec_reg)(struct osi_core_priv_data *const osi_core,
 				    const nve32_t reg);
@@ -163,6 +165,8 @@ struct core_ops {
 	nveu32_t (*write_macsec_reg)(struct osi_core_priv_data *const osi_core,
 				     const nveu32_t val,
 				     const nve32_t reg);
+#endif /*  MACSEC_SUPPORT */
+#ifdef MACSEC_SUPPORT
 	void (*macsec_config_mac)(struct osi_core_priv_data *const osi_core,
 				  const nveu32_t enable);
 #endif /*  MACSEC_SUPPORT */
@@ -566,4 +570,60 @@ void ivc_interface_init_core_ops(struct if_core_ops *if_ops_p);
  * @retval NULL on failure.
  */
 struct osi_core_priv_data *get_role_pointer(nveu32_t role);
+
+/**
+ * @brief
+ * Description: osi_update_stats_counter - update value by increment passed
+ * as parameter
+ *
+ * @param[in] last_value: last value of stat counter
+ *   * Range: 0 to UINT64_MAX
+ * @param[in] incr: increment value
+ *   * Range: 0 to UINT64_MAX
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: Yes
+ *  - Signal handler: Yes
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ *  - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
+ * @pre
+ *  - MAC needs to be out of reset and proper clocks need to be configured.
+ *  - DMA HW init need to be completed successfully, see osi_hw_dma_init
+ *
+ * @retval 0 on sucess
+ * @retval -1 on failure
+ */
+#ifndef DOXYGEN_ICD
+/**
+ *
+ * Traceability Details:
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_016
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_042
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,
+						nveu64_t incr)
+{
+	nveu64_t temp = last_value + incr;
+
+	if (temp < last_value) {
+		/* Stats overflow, so reset it to zero */
+		temp = 0UL;
+	}
+
+	return temp;
+}
 #endif /* INCLUDED_CORE_LOCAL_H */

@@ -637,6 +637,7 @@ done:
 	return ret;
 }
 
+#ifndef OSI_STRIPPED_LIB
 /** \cond DO_NOT_DOCUMENT */
 /**
  * @brief eqos_configure_rxq_priority - Configure Priorities Selected in
@@ -705,6 +706,7 @@ static void eqos_configure_rxq_priority(
 		osi_writela(osi_core, val, (nveu8_t *)osi_core->base + EQOS_MAC_RQC2R);
 	}
 }
+#endif /* !OSI_STRIPPED_LIB */
 
 #ifdef HSI_SUPPORT
 /**
@@ -1036,10 +1038,13 @@ static void eqos_configure_mac(struct osi_core_priv_data *const osi_core)
 	osi_writela(osi_core, value,
 		    (nveu8_t *)osi_core->base + EQOS_MAC_VLANTIR);
 
+	/* Moved to stripped since in safety dcs is always enabled */
+#ifndef OSI_STRIPPED_LIB
 	/* USP (user Priority) to RxQ Mapping, only if DCS not enabled */
 	if (osi_core->dcs_en != OSI_ENABLE) {
 		eqos_configure_rxq_priority(osi_core);
 	}
+#endif /* !OSI_STRIPPED_LIB */
 }
 /**
  * @brief eqos_configure_dma - Configure DMA
@@ -2805,6 +2810,7 @@ fail:
 	return ret;
 }
 
+#ifndef OSI_STRIPPED_LIB
 /**
  * @brief eqos_read_reg - Read a reg
  *
@@ -2843,8 +2849,9 @@ static nveu32_t eqos_write_reg(struct osi_core_priv_data *const osi_core,
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + reg);
 	return 0;
 }
+#endif
 
-#ifdef MACSEC_SUPPORT
+#if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
 /**
  * @brief eqos_read_macsec_reg - Read a MACSEC reg
  *
@@ -3776,6 +3783,7 @@ static nve32_t eqos_get_hw_features(struct osi_core_priv_data *const osi_core,
 	return 0;
 }
 
+#ifndef OSI_STRIPPED_LIB
 /**
  * @brief eqos_padctl_rx_pins Enable/Disable RGMII Rx pins
  *
@@ -3856,6 +3864,7 @@ static nve32_t eqos_padctl_rx_pins(struct osi_core_priv_data *const osi_core,
 error:
 	return ret;
 }
+#endif /* !OSI_STRIPPED_LIB */
 
 /**
  * @brief poll_for_mac_tx_rx_idle - check mac tx/rx idle or not
@@ -3942,9 +3951,13 @@ static nve32_t eqos_pre_pad_calibrate(struct osi_core_priv_data *const osi_core)
 	if (osi_core->osd_ops.padctrl_mii_rx_pins != OSI_NULL) {
 		ret = osi_core->osd_ops.padctrl_mii_rx_pins(osi_core->osd,
 							   OSI_DISABLE);
-	} else {
+	}
+#ifndef OSI_STRIPPED_LIB
+	else {
 		ret = eqos_padctl_rx_pins(osi_core, OSI_DISABLE);
 	}
+#endif /* !OSI_STRIPPED_LIB */
+
 	if (ret < 0) {
 		goto error;
 	}
@@ -3956,9 +3969,12 @@ error:
 	if (osi_core->osd_ops.padctrl_mii_rx_pins != OSI_NULL) {
 		(void)osi_core->osd_ops.padctrl_mii_rx_pins(osi_core->osd,
 							   OSI_ENABLE);
-	} else {
+	}
+#ifndef OSI_STRIPPED_LIB
+	else {
 		(void)eqos_padctl_rx_pins(osi_core, OSI_ENABLE);
 	}
+#endif /* !OSI_STRIPPED_LIB */
 
 	/* Enable MAC RGSMIIIE - RGMII/SMII interrupts */
 	/* Read MAC IMR Register */
@@ -3999,9 +4015,12 @@ static nve32_t eqos_post_pad_calibrate(
 	if (osi_core->osd_ops.padctrl_mii_rx_pins != OSI_NULL) {
 		ret = osi_core->osd_ops.padctrl_mii_rx_pins(osi_core->osd,
 							   OSI_ENABLE);
-	} else {
+	}
+#ifndef OSI_STRIPPED_LIB
+	else {
 		ret = eqos_padctl_rx_pins(osi_core, OSI_ENABLE);
 	}
+#endif /* !OSI_STRIPPED_LIB */
 	/* handle only those MAC interrupts which are enabled */
 	mac_imr = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 			     EQOS_MAC_IMR);
@@ -4161,16 +4180,20 @@ void eqos_init_core_ops(struct core_ops *ops)
 	ops->write_phy_reg = eqos_write_phy_reg;
 	ops->read_phy_reg = eqos_read_phy_reg;
 	ops->get_hw_features = eqos_get_hw_features;
+#ifndef OSI_STRIPPED_LIB
 	ops->read_reg = eqos_read_reg;
 	ops->write_reg = eqos_write_reg;
+#endif /* !OSI_STRIPPED_LIB */
 	ops->set_avb_algorithm = eqos_set_avb_algorithm;
 	ops->get_avb_algorithm = eqos_get_avb_algorithm;
 	ops->config_frp = eqos_config_frp;
 	ops->update_frp_entry = eqos_update_frp_entry;
 	ops->update_frp_nve = eqos_update_frp_nve;
-#ifdef MACSEC_SUPPORT
+#if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
 	ops->read_macsec_reg = eqos_read_macsec_reg;
 	ops->write_macsec_reg = eqos_write_macsec_reg;
+#endif /*  MACSEC_SUPPORT */
+#ifdef MACSEC_SUPPORT
 	ops->macsec_config_mac = eqos_config_for_macsec;
 #endif /*  MACSEC_SUPPORT */
 	ops->config_l3l4_filters = eqos_config_l3l4_filters;

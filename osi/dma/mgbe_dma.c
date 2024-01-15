@@ -21,7 +21,6 @@
  */
 
 #ifndef OSI_STRIPPED_LIB
-#include <osi_common.h>
 #include "mgbe_dma.h"
 #include "dma_local.h"
 

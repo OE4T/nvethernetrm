@@ -3784,6 +3784,7 @@ fail:
 	return ret;
 }
 
+#if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
 /**
  * @brief mgbe_read_reg - Read a register
  *
@@ -3825,7 +3826,6 @@ static nveu32_t mgbe_write_reg(struct osi_core_priv_data *const osi_core,
 	return 0;
 }
 
-#ifdef MACSEC_SUPPORT
 /**
  * @brief mgbe_read_macsec_reg - Read a MACSEC register
  *
@@ -3868,20 +3868,6 @@ static nveu32_t mgbe_write_macsec_reg(struct osi_core_priv_data *const osi_core,
 #endif /*  MACSEC_SUPPORT */
 
 #ifndef OSI_STRIPPED_LIB
-/**
- * @brief eqos_write_reg - Write a reg
- *
- * @param[in] osi_core: OSI core private data structure.
- * @param[in] val:  Value to be written.
- * @param[in] reg: Register address.
- *
- * @note
- * API Group:
- * - Initialization: Yes
- * - Run time: Yes
- * - De-initialization: Yes
- * @retval 0
- */
 static nve32_t mgbe_config_tx_status(OSI_UNUSED
 				     struct osi_core_priv_data *const osi_core,
 				     OSI_UNUSED const nveu32_t tx_status)
@@ -3889,20 +3875,6 @@ static nve32_t mgbe_config_tx_status(OSI_UNUSED
 	return 0;
 }
 
-/**
- * @brief eqos_write_reg - Write a reg
- *
- * @param[in] osi_core: OSI core private data structure.
- * @param[in] val:  Value to be written.
- * @param[in] reg: Register address.
- *
- * @note
- * API Group:
- * - Initialization: Yes
- * - Run time: Yes
- * - De-initialization: Yes
- * @retval 0
- */
 static nve32_t mgbe_config_rx_crc_check(OSI_UNUSED
 					struct osi_core_priv_data *const osi_core,
 					OSI_UNUSED const nveu32_t crc_chk)
@@ -3910,20 +3882,6 @@ static nve32_t mgbe_config_rx_crc_check(OSI_UNUSED
 	return 0;
 }
 
-/**
- * @brief eqos_write_reg - Write a reg
- *
- * @param[in] osi_core: OSI core private data structure.
- * @param[in] val:  Value to be written.
- * @param[in] reg: Register address.
- *
- * @note
- * API Group:
- * - Initialization: Yes
- * - Run time: Yes
- * - De-initialization: Yes
- * @retval 0
- */
 static void mgbe_set_mdc_clk_rate(OSI_UNUSED
 				  struct osi_core_priv_data *const osi_core,
 				  OSI_UNUSED
@@ -4045,18 +4003,22 @@ void mgbe_init_core_ops(struct core_ops *ops)
 	ops->write_phy_reg = mgbe_write_phy_reg;
 	ops->read_phy_reg = mgbe_read_phy_reg;
 	ops->get_hw_features = mgbe_get_hw_features;
+#ifndef OSI_STRIPPED_LIB
 	ops->read_reg = mgbe_read_reg;
 	ops->write_reg = mgbe_write_reg;
+#endif
 	ops->set_avb_algorithm = mgbe_set_avb_algorithm;
 	ops->get_avb_algorithm = mgbe_get_avb_algorithm;
 	ops->config_frp = mgbe_config_frp;
 	ops->update_frp_entry = mgbe_update_frp_entry;
 	ops->update_frp_nve = mgbe_update_frp_nve;
-#ifdef MACSEC_SUPPORT
+#if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
 	ops->read_macsec_reg = mgbe_read_macsec_reg;
 	ops->write_macsec_reg = mgbe_write_macsec_reg;
-	ops->macsec_config_mac = mgbe_config_for_macsec;
 #endif /*  MACSEC_SUPPORT */
+#ifdef MACSEC_SUPPORT
+	ops->macsec_config_mac = mgbe_config_for_macsec;
+#endif
 	ops->config_l3l4_filters = mgbe_config_l3l4_filters;
 #ifndef OSI_STRIPPED_LIB
 	ops->config_tx_status = mgbe_config_tx_status;
