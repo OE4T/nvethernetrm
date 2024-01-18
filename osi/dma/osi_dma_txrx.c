@@ -1186,10 +1186,6 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 			    OSI_PTP_SYNC_ONESTEP) {
 				/* packet ID for Onestep is 0x0 always */
 				pkt_id = OSI_NONE;
-				if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
-					vdma_id = chan; //TODO: Need to update based on update of bug 4287805
-					tx_desc->tdes0 = (vdma_id << OSI_PTP_VDMA_SHIFT);
-				}
 			} else {
 				if (osi_dma->mac != OSI_MAC_HW_MGBE_T26X) {
 					pkt_id = GET_TX_TS_PKTID(l_dma->pkt_id, chan);
