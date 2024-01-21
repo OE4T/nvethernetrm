@@ -531,6 +531,7 @@ typedef my_lint_64		nvel64_t;
 #define OSI_FRP_MATCH_L3_SIP		3U
 /** @brief FRP MATCH in L3 destination IP */
 #define OSI_FRP_MATCH_L3_DIP		4U
+#ifndef OSI_STRIPPED_LIB
 /** @brief FRP MATCH in L4 source UDP port */
 #define OSI_FRP_MATCH_L4_S_UPORT	5U
 /** @brief FRP MATCH in L4 destination UDP port */
@@ -539,6 +540,7 @@ typedef my_lint_64		nvel64_t;
 #define OSI_FRP_MATCH_L4_S_TPORT	7U
 /** @brief FRP MATCH in L4 destination TCP port */
 #define OSI_FRP_MATCH_L4_D_TPORT	8U
+#endif /* !OSI_STRIPPED_LIB */
 /** @brief FRP MATCH in VLANID */
 #define OSI_FRP_MATCH_VLAN		9U
 /** @} */

@@ -685,11 +685,9 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 	}
 
 	if (osi_core->pause_frames == OSI_PAUSE_FRAMES_ENABLE) {
-		/* Pasing correct value - OSI_FLOW_CTRL_TX and OSI_FLOW_CTRL_RX
-		 * as arguments. So it will not return error
-		 */
+		/* Enable Tx and Rx flow control */
 		osi_core->flow_ctrl = (OSI_FLOW_CTRL_TX | OSI_FLOW_CTRL_RX);
-		(void)hw_config_flow_control(osi_core, osi_core->flow_ctrl);
+		hw_config_flow_control(osi_core);
 	}
 
 	/* By default set MAC to Full duplex mode.
@@ -1106,10 +1104,10 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 #if !defined(L3L4_WILDCARD_FILTER)
 	if (osi_core->l3l4_filter_bitmask != 0U) {
 		/* enable l3l4 filter */
-		ret = hw_config_l3_l4_filter_enable(osi_core, OSI_ENABLE);
+		hw_config_l3_l4_filter_enable(osi_core, OSI_ENABLE);
 	} else {
 		/* disable l3l4 filter */
-		ret = hw_config_l3_l4_filter_enable(osi_core, OSI_DISABLE);
+		hw_config_l3_l4_filter_enable(osi_core, OSI_DISABLE);
 	}
 #endif /* !L3L4_WILDCARD_FILTER */
 

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -229,8 +229,7 @@ struct core_ops {
 				    const nveu32_t pos,
 				    struct osi_core_frp_data *const data);
 	/** Called to update FRP NVE and  */
-	nve32_t (*update_frp_nve)(struct osi_core_priv_data *const osi_core,
-				  const nveu32_t nve);
+	void (*update_frp_nve)(struct osi_core_priv_data *const osi_core, const nveu32_t nve);
 #ifdef HSI_SUPPORT
 	/** Interface function called to initialize HSI */
 	nve32_t (*core_hsi_configure)(struct osi_core_priv_data *const osi_core,

@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -184,15 +185,14 @@ nve32_t hw_ptp_tsc_capture(struct osi_core_priv_data *const osi_core,
 nve32_t hw_config_mac_pkt_filter_reg(struct osi_core_priv_data *const osi_core,
 				     const struct osi_filter *filter);
 #if !defined(L3L4_WILDCARD_FILTER)
-nve32_t hw_config_l3_l4_filter_enable(struct osi_core_priv_data *const osi_core,
-				      const nveu32_t filter_enb_dis);
+void hw_config_l3_l4_filter_enable(struct osi_core_priv_data *const osi_core,
+				   const nveu32_t filter_enb_dis);
 #endif /* !L3L4_WILDCARD_FILTER */
 nve32_t hw_config_est(struct osi_core_priv_data *const osi_core,
 		      struct osi_est_config *const est);
 nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 		      struct osi_fpe_config *const fpe);
-void hw_tsn_init(struct osi_core_priv_data *osi_core,
-		 nveu32_t est_sel, nveu32_t fpe_sel);
+void hw_tsn_init(struct osi_core_priv_data *osi_core);
 void prepare_l3l4_registers(const struct osi_core_priv_data *const osi_core,
 			    const struct osi_l3_l4_filter *const l3_l4,
 #ifndef OSI_STRIPPED_LIB
@@ -210,7 +210,6 @@ void hsi_read_err(struct osi_core_priv_data *const osi_core);
 #endif
 nve32_t hw_validate_avb_input(struct osi_core_priv_data *const osi_core,
 			      const struct osi_core_avb_algorithm *const avb);
-nve32_t hw_config_flow_control(struct osi_core_priv_data *const osi_core,
-			       const nveu32_t flw_ctrl);
+void hw_config_flow_control(struct osi_core_priv_data *const osi_core);
 void core_get_systime_from_mac(void *addr, nveu32_t mac, nveu32_t *sec, nveu32_t *nsec);
 #endif /* INCLUDED_CORE_COMMON_H */

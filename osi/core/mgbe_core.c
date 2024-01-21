@@ -1110,21 +1110,11 @@ done:
  * @retval 0 on success
  * @retval -1 on failure.
  */
-static nve32_t mgbe_update_frp_nve(struct osi_core_priv_data *const osi_core,
-				   const nveu32_t nve)
+static void  mgbe_update_frp_nve(struct osi_core_priv_data *const osi_core,
+				 const nveu32_t nve)
 {
 	nveu32_t val;
 	nveu8_t *base = osi_core->base;
-	nve32_t ret;
-
-	/* Validate the NVE value */
-	if (nve >= OSI_FRP_MAX_ENTRY) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"Invalid NVE value\n",
-			nve);
-		ret = -1;
-		goto done;
-	}
 
 	/* Update NVE and NPE in MTL_RXP_Control_Status register */
 	val = osi_readla(osi_core, base + MGBE_MTL_RXP_CS);
@@ -1135,10 +1125,6 @@ static nve32_t mgbe_update_frp_nve(struct osi_core_priv_data *const osi_core,
 	val |= ((nve << MGBE_MTL_RXP_CS_NPE_SHIFT) & MGBE_MTL_RXP_CS_NPE);
 	osi_writela(osi_core, val, base + MGBE_MTL_RXP_CS);
 
-	ret = 0;
-
-done:
-	return ret;
 }
 
 /**
@@ -1808,7 +1794,7 @@ static nve32_t mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 	/* TODO: LPI need to be enabled during EEE implementation */
 #ifndef OSI_STRIPPED_LIB
 	value |= (MGBE_IMR_TXESIE);
-#endif
+#endif /* !OSI_STRIPPED_LIB */
 	/* Clear link status interrupt and enable after lane bring up done */
 	value &= ~MGBE_IMR_RGSMIIIE;
 	value |= MGBE_IMR_TSIE;
@@ -1827,10 +1813,12 @@ static nve32_t mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 	/* Enable VLAN Tag in RX Status
 	 * Disable double VLAN Tag processing on TX and RX
 	 */
+#ifndef OSI_STRIPPED_LIB
 	if (osi_core->strip_vlan_tag == OSI_ENABLE) {
 		/* Enable VLAN Tag stripping always */
 		value |= MGBE_MAC_VLANTR_EVLS_ALWAYS_STRIP;
 	}
+#endif /* !OSI_STRIPPED_LIB */
 	value |= MGBE_MAC_VLANTR_EVLRXS | MGBE_MAC_VLANTR_DOVLTC;
 	osi_writela(osi_core, value,
 		    (nveu8_t *)osi_core->base + MGBE_MAC_VLAN_TR);
@@ -2029,10 +2017,15 @@ static nve32_t mgbe_core_init(struct osi_core_priv_data *const osi_core)
 		 * Since this is a local function this will always return sucess,
 		 * so no need to check for return value
 		 */
+#ifndef OSI_STRIPPED_LIB
 		ret = hw_config_fw_err_pkts(osi_core, osi_core->mtl_queues[qinx], OSI_ENABLE);
 		if (ret < 0) {
 			goto fail;
 		}
+#else
+		(void)hw_config_fw_err_pkts(osi_core, osi_core->mtl_queues[qinx], OSI_ENABLE);
+#endif /* !OSI_STRIPPED_LIB */
+
 	}
 
 	/* configure MGBE MAC HW */
@@ -2046,8 +2039,7 @@ static nve32_t mgbe_core_init(struct osi_core_priv_data *const osi_core)
 
 	/* tsn initialization */
 	if (osi_core->hw_feature != OSI_NULL) {
-		hw_tsn_init(osi_core, osi_core->hw_feature->est_sel,
-			    osi_core->hw_feature->fpe_sel);
+		hw_tsn_init(osi_core);
 	}
 
 #if !defined(L3L4_WILDCARD_FILTER)
@@ -3508,7 +3500,9 @@ static nve32_t mgbe_get_hw_features(struct osi_core_priv_data *const osi_core,
 	nveu32_t mac_hfr1 = 0;
 	nveu32_t mac_hfr2 = 0;
 	nveu32_t mac_hfr3 = 0;
+#ifndef OSI_STRIPPED_LIB
 	nveu32_t val = 0;
+#endif /* !OSI_STRIPPED_LIB */
 
 	mac_hfr0 = osi_readla(osi_core, base + MGBE_MAC_HFR0);
 	mac_hfr1 = osi_readla(osi_core, base + MGBE_MAC_HFR1);
@@ -3615,6 +3609,7 @@ static nve32_t mgbe_get_hw_features(struct osi_core_priv_data *const osi_core,
 	hw_feat->ost_over_udp = ((mac_hfr3 >> MGBE_MAC_HFR3_POUOST_SHIFT) &
 				MGBE_MAC_HFR3_POUOST_MASK);
 
+#ifndef OSI_STRIPPED_LIB
 	val = ((mac_hfr3 >> MGBE_MAC_HFR3_FRPPB_SHIFT) &
 		MGBE_MAC_HFR3_FRPPB_MASK);
 	switch (val) {
@@ -3629,6 +3624,12 @@ static nve32_t mgbe_get_hw_features(struct osi_core_priv_data *const osi_core,
 		hw_feat->max_frp_bytes = MGBE_MAC_FRP_BYTES256;
 		break;
 	}
+#else
+	/* For safety fix the FRP bytes */
+	hw_feat->max_frp_bytes = MGBE_MAC_FRP_BYTES256;
+#endif /* !OSI_STRIPPED_LIB */
+
+#ifndef OSI_STRIPPED_LIB
 	val = ((mac_hfr3 >> MGBE_MAC_HFR3_FRPES_SHIFT) &
 	       MGBE_MAC_HFR3_FRPES_MASK);
 	switch (val) {
@@ -3643,6 +3644,10 @@ static nve32_t mgbe_get_hw_features(struct osi_core_priv_data *const osi_core,
 		hw_feat->max_frp_entries = MGBE_MAC_FRP_BYTES256;
 		break;
 	}
+#else
+	/* For Safety fix the FRP entries */
+	hw_feat->max_frp_entries = MGBE_MAC_FRP_BYTES256;
+#endif /* !OSI_STRIPPED_LIB */
 
 	hw_feat->double_vlan_en = ((mac_hfr3 >> MGBE_MAC_HFR3_DVLAN_SHIFT) &
 				   MGBE_MAC_HFR3_DVLAN_MASK);
@@ -3926,11 +3931,6 @@ static void mgbe_config_for_macsec(struct osi_core_priv_data *const osi_core,
 {
 	nveu32_t value = 0U, temp = 0U;
 
-	if ((enable != OSI_ENABLE) && (enable != OSI_DISABLE)) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "Failed to config MGBE per MACSEC\n", 0ULL);
-		goto done;
-	}
 	/* stop MAC Tx */
 	mgbe_config_mac_tx(osi_core, OSI_DISABLE);
 	if (enable == OSI_ENABLE) {
@@ -3991,7 +3991,7 @@ static void mgbe_config_for_macsec(struct osi_core_priv_data *const osi_core,
 				0ULL);
 		}
 	}
-done:
+
 	return;
 }
 #endif /*  MACSEC_SUPPORT */

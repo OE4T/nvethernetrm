@@ -368,14 +368,6 @@ static nve32_t eqos_config_frp(struct osi_core_priv_data *const osi_core,
 	nveu32_t op_mode = 0U, val = 0U;
 	nve32_t ret = 0;
 
-	if ((enabled != OSI_ENABLE) && (enabled != OSI_DISABLE)) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"Invalid enable input\n",
-			enabled);
-		ret = -1;
-		goto done;
-	}
-
 	/* Disable RE */
 	val = osi_readl(base + EQOS_MAC_MCR);
 	val &= ~EQOS_MCR_RE;
@@ -428,7 +420,6 @@ frp_enable_re:
 	val |= EQOS_MCR_RE;
 	osi_writela(osi_core, val, base + EQOS_MAC_MCR);
 
-done:
 	return ret;
 }
 
@@ -445,20 +436,10 @@ done:
  * @retval 0 on success
  * @retval -1 on failure.
  */
-static nve32_t eqos_update_frp_nve(struct osi_core_priv_data *const osi_core,
-				   const nveu32_t nve)
+static void eqos_update_frp_nve(struct osi_core_priv_data *const osi_core, const nveu32_t nve)
 {
 	nveu32_t val;
 	nveu8_t *base = osi_core->base;
-	nve32_t ret = -1;
-
-	/* Validate the NVE value */
-	if (nve >= OSI_FRP_MAX_ENTRY) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"Invalid NVE value\n",
-			nve);
-		goto done;
-	}
 
 	/* Update NVE and NPE in MTL_RXP_Control_Status register */
 	val = osi_readla(osi_core, base + EQOS_MTL_RXP_CS);
@@ -469,10 +450,7 @@ static nve32_t eqos_update_frp_nve(struct osi_core_priv_data *const osi_core,
 	val |= ((nve << EQOS_MTL_RXP_CS_NPE_SHIFT) & EQOS_MTL_RXP_CS_NPE);
 	osi_writela(osi_core, val, base + EQOS_MTL_RXP_CS);
 
-	ret = 0;
-
-done:
-	return ret;
+	return;
 }
 
 /**
@@ -1020,9 +998,11 @@ static void eqos_configure_mac(struct osi_core_priv_data *const osi_core)
 	 * Enable VLAN Tag in RX Status
 	 * Disable VLAN Type Check
 	 */
+#ifndef OSI_STRIPPED_LIB
 	if (osi_core->strip_vlan_tag == OSI_ENABLE) {
 		value |= EQOS_MAC_VLANTR_EVLS_ALWAYS_STRIP;
 	}
+#endif /* !OSI_STRIPPED_LIB */
 	value |= EQOS_MAC_VLANTR_EVLRXS | EQOS_MAC_VLANTR_DOVLTC;
 	value &= ~EQOS_MAC_VLANTR_ERIVLT;
 	osi_writela(osi_core, value,
@@ -1124,10 +1104,10 @@ static void eqos_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
 	}
 }
 
+#ifndef OSI_STRIPPED_LIB
 static void eqos_configure_asid(struct osi_core_priv_data *const osi_core)
 {
 	if (osi_core->use_virtualization == OSI_DISABLE) {
-#ifndef OSI_STRIPPED_LIB
 		if (osi_core->hv_base != OSI_NULL) {
 			osi_writela(osi_core, EQOS_5_30_ASID_CTRL_VAL,
 				    (nveu8_t *)osi_core->hv_base +
@@ -1137,7 +1117,6 @@ static void eqos_configure_asid(struct osi_core_priv_data *const osi_core)
 				    (nveu8_t *)osi_core->hv_base +
 				    EQOS_AXI_ASID1_CTRL);
 		}
-#endif
 
 		if (osi_core->mac_ver < OSI_EQOS_MAC_5_30) {
 			/* AXI ASID CTRL for channel 0 to 3 */
@@ -1154,6 +1133,7 @@ static void eqos_configure_asid(struct osi_core_priv_data *const osi_core)
 		}
 	}
 }
+#endif /* !OSI_STRIPPED_LIB */
 
 /**
  * @brief eqos_core_init - EQOS MAC, MTL and common DMA Initialization
@@ -1204,6 +1184,7 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 	osi_writela(osi_core, EQOS_MMC_CNTRL_CNTRST,
 		    (nveu8_t *)osi_core->base + EQOS_MMC_CNTRL);
 
+#ifndef OSI_STRIPPED_LIB
 	/* Configure ASID */
 	eqos_configure_asid(osi_core);
 
@@ -1215,6 +1196,11 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 		value = EQOS_RXQ_TO_DMA_CHAN_MAP;
 		value1 = EQOS_RXQ_TO_DMA_CHAN_MAP1;
 	}
+#else
+	/* DCS is enabled in safety by default */
+	value = EQOS_RXQ_TO_DMA_CHAN_MAP_DCS_EN;
+	value1 = EQOS_RXQ_TO_DMA_CHAN_MAP1_DCS_EN;
+#endif /* !OSI_STRIPPED_LIB */
 
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_MTL_RXQ_DMA_MAP0);
 
@@ -1257,8 +1243,7 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 
 	/* tsn initialization */
 	if (osi_core->hw_feature != OSI_NULL) {
-		hw_tsn_init(osi_core, osi_core->hw_feature->est_sel,
-			    osi_core->hw_feature->fpe_sel);
+		hw_tsn_init(osi_core);
 	}
 
 #if !defined(L3L4_WILDCARD_FILTER)
@@ -1266,9 +1251,8 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 	osi_core->l3l4_filter_bitmask = OSI_NONE;
 #endif /* !L3L4_WILDCARD_FILTER */
 
-	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
-		eqos_dma_chan_to_vmirq_map(osi_core);
-	}
+	/* Enabling by default from T23x */
+	eqos_dma_chan_to_vmirq_map(osi_core);
 fail:
 	return ret;
 }
@@ -4091,11 +4075,6 @@ static void eqos_config_for_macsec(struct osi_core_priv_data *const osi_core,
 {
 	nveu32_t value = 0U, temp = 0U;
 
-	if ((enable != OSI_ENABLE) && (enable != OSI_DISABLE)) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "Failed to config EQOS per MACSEC\n", 0ULL);
-		goto done;
-	}
 	if (osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
 		/* stop MAC Tx */
 		eqos_config_mac_tx(osi_core, OSI_DISABLE);
@@ -4162,7 +4141,7 @@ static void eqos_config_for_macsec(struct osi_core_priv_data *const osi_core,
 			OSI_LOG_ARG_HW_FAIL, "Error: osi_core->hw_feature is NULL\n",
 			0ULL);
 	}
-done:
+
 	return;
 }
 

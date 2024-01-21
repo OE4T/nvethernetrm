@@ -138,11 +138,6 @@ struct osi_core_priv_data *get_role_pointer(nveu32_t role)
 	nveu32_t i;
 	struct osi_core_priv_data *ret_ptr = OSI_NULL;
 
-	if ((role != OSI_PTP_M2M_PRIMARY) &&
-	    (role != OSI_PTP_M2M_SECONDARY)) {
-		goto done;
-	}
-
 	/* Current approch to give pointer for 1st role */
 	for (i = 0U; i < MAX_CORE_INSTANCES; i++) {
 		if ((g_core[i].if_init_done == OSI_ENABLE) &&
@@ -152,7 +147,6 @@ struct osi_core_priv_data *get_role_pointer(nveu32_t role)
 		}
 	}
 
-done:
 	return ret_ptr;
 }
 

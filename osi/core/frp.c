@@ -470,12 +470,7 @@ nve32_t frp_hw_write(struct osi_core_priv_data *const osi_core,
 		}
 
 		/* Update the NVE */
-		ret = ops_p->update_frp_nve(osi_core, frp_cnt);
-		if (ret < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-				"Fail to update FRP NVE\n",
-				OSI_NONE);
-		}
+		ops_p->update_frp_nve(osi_core, frp_cnt);
 
 		/* Enable the FRP in HW */
 hw_write_enable_frp:
@@ -512,6 +507,7 @@ static nve32_t frp_add_proto(struct osi_core_priv_data *const osi_core,
 	nveu8_t match_type = cmd->match_type;
 
 	switch (match_type) {
+#ifndef OSI_STRIPPED_LIB
 	case OSI_FRP_MATCH_L4_S_UPORT:
 		proto_entry = OSI_ENABLE;
 		proto_match[0] = FRP_L4_UDP_MD;
@@ -536,6 +532,7 @@ static nve32_t frp_add_proto(struct osi_core_priv_data *const osi_core,
 		proto_lendth = 1U;
 		proto_offset = FRP_L4_IP4_PROTO_OFFSET;
 		break;
+#endif /* !OSI_STRIPPED_LIB */
 	case OSI_FRP_MATCH_VLAN:
 		proto_entry = OSI_ENABLE;
 		proto_match[0] = FRP_L2_VLAN_MD0;
@@ -617,6 +614,7 @@ static void frp_parse_mtype(struct osi_core_frp_cmd *const cmd)
 	case OSI_FRP_MATCH_L3_DIP:
 		offset = FRP_L3_IP4_DIP_OFFSET;
 		break;
+#ifndef OSI_STRIPPED_LIB
 	case OSI_FRP_MATCH_L4_S_UPORT:
 		offset = FRP_L4_IP4_SPORT_OFFSET;
 		break;
@@ -629,6 +627,7 @@ static void frp_parse_mtype(struct osi_core_frp_cmd *const cmd)
 	case OSI_FRP_MATCH_L4_D_TPORT:
 		offset = FRP_L4_IP4_DPORT_OFFSET;
 		break;
+#endif /* !OSI_STRIPPED_LIB */
 	case OSI_FRP_MATCH_VLAN:
 		offset = FRP_L2_VLAN_TAG_OFFSET;
 		break;
@@ -751,10 +750,12 @@ static nve32_t frp_update(struct osi_core_priv_data *const osi_core,
 	/* Calculate the required FRP entries for Update Command. */
 	req = frp_req_entries(cmd->offset, cmd->match_length);
 	switch (cmd->match_type) {
+#ifndef OSI_STRIPPED_LIB
 	case OSI_FRP_MATCH_L4_S_UPORT:
 	case OSI_FRP_MATCH_L4_D_UPORT:
 	case OSI_FRP_MATCH_L4_S_TPORT:
 	case OSI_FRP_MATCH_L4_D_TPORT:
+#endif /* !OSI_STRIPPED_LIB */
 	case OSI_FRP_MATCH_VLAN:
 		req++;
 		break;

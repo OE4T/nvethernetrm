@@ -190,11 +190,12 @@ static inline nve32_t xpcs_write_safety(struct osi_core_priv_data *osi_core,
 		osi_core->osd_ops.udelay(OSI_DELAY_1US);
 	}
 
+#ifndef OSI_STRIPPED_LIB
 	if (ret != 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "xpcs_write_safety failed", reg_addr);
 	}
-
+#endif /* !OSI_STRIPPED_LIB */
 	return ret;
 }
 #endif /* INCLUDED_XPCS_H_ */

@@ -113,13 +113,15 @@ nve32_t hw_set_mode(struct osi_core_priv_data *const osi_core, const nve32_t mod
 	const nveu32_t bit_set[2] = { EQOS_MCR_DO, EQOS_MCR_DM };
 	const nveu32_t clear_bit[2] = { EQOS_MCR_DM, EQOS_MCR_DO };
 
-	/* don't allow only if loopback mode is other than 0 or 1 */
+#ifndef OSI_STRIPPED_LIB
+	/* don't allow only if mode is other than 0 or 1 */
 	if ((mode != OSI_FULL_DUPLEX) && (mode != OSI_HALF_DUPLEX)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 				"Invalid duplex mode\n", 0ULL);
 		ret = -1;
 		goto fail;
 	}
+#endif /* !OSI_STRIPPED_LIB */
 
 	if (osi_core->mac == OSI_MAC_HW_EQOS) {
 		mcr_val = osi_readla(osi_core, (nveu8_t *)base + EQOS_MAC_MCR);
@@ -127,7 +129,9 @@ nve32_t hw_set_mode(struct osi_core_priv_data *const osi_core, const nve32_t mod
 		mcr_val &= ~clear_bit[mode];
 		osi_writela(osi_core, mcr_val, ((nveu8_t *)base + EQOS_MAC_MCR));
 	}
+#ifndef OSI_STRIPPED_LIB
 fail:
+#endif /* !OSI_STRIPPED_LIB */
 	return ret;
 }
 
@@ -173,6 +177,7 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 
 	value = osi_readla(osi_core, ((nveu8_t *)base + mac_mcr[osi_core->mac]));
 	switch (speed) {
+#ifndef OSI_STRIPPED_LIB
 	case OSI_SPEED_10:
 		value |= EQOS_MCR_PS;
 		value &= ~EQOS_MCR_FES;
@@ -181,12 +186,13 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 		value |= EQOS_MCR_PS;
 		value |= EQOS_MCR_FES;
 		break;
+	case OSI_SPEED_2500:
+		value |= MGBE_MAC_TMCR_SS_2_5G;
+		break;
+#endif /* !OSI_STRIPPED_LIB */
 	case OSI_SPEED_1000:
 		value &= ~EQOS_MCR_PS;
 		value &= ~EQOS_MCR_FES;
-		break;
-	case OSI_SPEED_2500:
-		value |= MGBE_MAC_TMCR_SS_2_5G;
 		break;
 	case OSI_SPEED_5000:
 		value |= MGBE_MAC_TMCR_SS_5G;
@@ -195,20 +201,14 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 		value &= ~MGBE_MAC_TMCR_SS_10G;
 		break;
 	default:
-		if (osi_core->mac == OSI_MAC_HW_EQOS) {
-			value &= ~EQOS_MCR_PS;
-			value &= ~EQOS_MCR_FES;
-		} else if (osi_core->mac == OSI_MAC_HW_MGBE) {
-			value &= ~MGBE_MAC_TMCR_SS_10G;
-		} else {
-			/* Do Nothing */
-		}
+		ret = -1;
 		break;
 	}
-	osi_writela(osi_core, value, ((nveu8_t *)osi_core->base + mac_mcr[osi_core->mac]));
-
-	/* Validate PCS initialization */
-	ret = xpcs_init_start(osi_core);
+	if (ret != -1) {
+		osi_writela(osi_core, value, ((nveu8_t *)osi_core->base + mac_mcr[osi_core->mac]));
+		/* Validate PCS initialization */
+		ret = xpcs_init_start(osi_core);
+	}
 
 fail:
 	return ret;
@@ -305,6 +305,7 @@ nve32_t hw_config_rxcsum_offload(struct osi_core_priv_data *const osi_core,
 	const nveu32_t rxcsum_mode[2] = { EQOS_MAC_MCR, MGBE_MAC_RMCR};
 	const nveu32_t ipc_value[2] = { EQOS_MCR_IPC, MGBE_MAC_RMCR_IPC};
 
+#ifndef OSI_STRIPPED_LIB
 	if ((enabled != OSI_ENABLE) && (enabled != OSI_DISABLE)) {
 		ret = -1;
 		goto fail;
@@ -320,6 +321,16 @@ nve32_t hw_config_rxcsum_offload(struct osi_core_priv_data *const osi_core,
 	osi_writela(osi_core, value, ((nveu8_t *)addr + rxcsum_mode[osi_core->mac]));
 fail:
 	return ret;
+#else
+	/* using void to skip the misra error of unused variable */
+	(void)enabled;
+	/* For Safety Only enable is allowed, so enable by default */
+	value = osi_readla(osi_core, ((nveu8_t *)addr + rxcsum_mode[osi_core->mac]));
+	value |= ipc_value[osi_core->mac];
+	osi_writela(osi_core, value, ((nveu8_t *)addr + rxcsum_mode[osi_core->mac]));
+
+	return ret;
+#endif /* !OSI_STRIPPED_LIB */
 }
 
 nve32_t hw_set_systime_to_mac(struct osi_core_priv_data *const osi_core,
@@ -605,28 +616,16 @@ nve32_t hw_config_mac_pkt_filter_reg(struct osi_core_priv_data *const osi_core,
 }
 
 #if !defined(L3L4_WILDCARD_FILTER)
-nve32_t hw_config_l3_l4_filter_enable(struct osi_core_priv_data *const osi_core,
-				      const nveu32_t filter_enb_dis)
+void hw_config_l3_l4_filter_enable(struct osi_core_priv_data *const osi_core,
+				   const nveu32_t filter_enb_dis)
 {
 	nveu32_t value = 0U;
 	void *base = osi_core->base;
-	nve32_t ret = 0;
-
-	/* validate filter_enb_dis argument */
-	if ((filter_enb_dis != OSI_ENABLE) && (filter_enb_dis != OSI_DISABLE)) {
-		OSI_CORE_ERR(OSI_NULL, OSI_LOG_ARG_INVALID,
-			     "Invalid filter_enb_dis value\n",
-			     filter_enb_dis);
-		ret = -1;
-		goto fail;
-	}
 
 	value = osi_readla(osi_core, ((nveu8_t *)base + MAC_PKT_FILTER_REG));
 	value &= ~(MAC_PFR_IPFE);
 	value |= ((filter_enb_dis << MAC_PFR_IPFE_SHIFT) & MAC_PFR_IPFE);
 	osi_writela(osi_core, value, ((nveu8_t *)base + MAC_PKT_FILTER_REG));
-fail:
-	return ret;
 }
 #endif /* !L3L4_WILDCARD_FILTER */
 
@@ -1180,7 +1179,7 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 	}
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MTL_FPE_CTS[osi_core->mac & 0x1U]);
 
-	if ((fpe->rq == 0x0U) || (fpe->rq >= (max_number_queue[osi_core->mac] & 0x1U))) {
+	if ((fpe->rq == 0x0U) || (fpe->rq >= (max_number_queue[osi_core->mac & 0x1U]))) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 				"FPE init failed due to wrong RQ\n", fpe->rq);
 		ret = -1;
@@ -1188,7 +1187,7 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 	}
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			(MAC_RQC1R[osi_core->mac] & 0x1U));
+			(MAC_RQC1R[osi_core->mac & 0x1U]));
 	val &= ~MAC_RQC1R_RQ[osi_core->mac & 0x1U];
 	temp = fpe->rq;
 	temp = temp << ((MAC_RQC1R_RQ_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
@@ -1211,18 +1210,18 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 	}
 	/* initiate SVER for SMD-V and SMD-R */
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			(MTL_FPE_CTS[osi_core->mac] & 0x1U));
+			(MTL_FPE_CTS[osi_core->mac & 0x1U]));
 	val |= MAC_FPE_CTS_SVER;
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			(MAC_FPE_CTS[osi_core->mac] & 0x1U));
+			(MAC_FPE_CTS[osi_core->mac & 0x1U]));
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			(MTL_FPE_ADV[osi_core->mac] & 0x1U));
+			(MTL_FPE_ADV[osi_core->mac & 0x1U]));
 	val &= ~MTL_FPE_ADV_HADV_MASK;
 	//(minimum_fragment_size +IPG/EIPG + Preamble) *.8 ~98ns for10G
 	val |= MTL_FPE_ADV_HADV_VAL;
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			(MTL_FPE_ADV[osi_core->mac] & 0x1U));
+			(MTL_FPE_ADV[osi_core->mac & 0x1U]));
 
 	if (osi_core->mac == OSI_MAC_HW_MGBE) {
 #ifdef MACSEC_SUPPORT
@@ -1440,13 +1439,10 @@ static inline void save_gcl_params(struct osi_core_priv_data *osi_core)
  *   b) enable interrupts
  *
  * @param[in] osi_core: OSI core private data structure.
- * @param[in] est_sel: EST HW support present or not
- * @param[in] fpe_sel: FPE HW support present or not
  *
  * @note MAC should be init and started. see osi_start_mac()
  */
-void hw_tsn_init(struct osi_core_priv_data *osi_core,
-		 nveu32_t est_sel, nveu32_t fpe_sel)
+void hw_tsn_init(struct osi_core_priv_data *osi_core)
 {
 	nveu32_t val = 0x0;
 	nveu32_t temp = 0U;
@@ -1483,78 +1479,75 @@ void hw_tsn_init(struct osi_core_priv_data *osi_core,
 	const nveu32_t MAC_RQC1R_RQ_SHIFT[MAX_MAC_IP_TYPES] = {EQOS_MAC_RQC1R_FPRQ_SHIFT,
 							MGBE_MAC_RQC1R_RQ_SHIFT};
 
-	if (est_sel == OSI_ENABLE) {
-		save_gcl_params(osi_core);
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				 MTL_EST_CONTROL[osi_core->mac & 0x1U]);
+	/* Configure EST paramenters */
+	save_gcl_params(osi_core);
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+			 MTL_EST_CONTROL[osi_core->mac & 0x1U]);
 
-		/*
-		 * PTOV PTP clock period * 6
-		 * dual-port RAM based asynchronous FIFO controllers or
-		 * Single-port RAM based synchronous FIFO controllers
-		 * CTOV 96 x Tx clock period
-		 * :
-		 * :
-		 * set other default value
-		 */
-		val &= ~MTL_EST_CONTROL_PTOV[osi_core->mac & 0x1U];
-		temp = MTL_EST_PTOV_RECOMMEND[osi_core->mac & 0x1U];
-		temp = temp << ((MTL_EST_CONTROL_PTOV_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
-		val |= temp;
+	/*
+	 * PTOV PTP clock period * 6
+	 * dual-port RAM based asynchronous FIFO controllers or
+	 * Single-port RAM based synchronous FIFO controllers
+	 * CTOV 96 x Tx clock period
+	 * :
+	 * :
+	 * set other default value
+	 */
+	val &= ~MTL_EST_CONTROL_PTOV[osi_core->mac & 0x1U];
+	temp = MTL_EST_PTOV_RECOMMEND[osi_core->mac & 0x1U];
+	temp = temp << ((MTL_EST_CONTROL_PTOV_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
+	val |= temp;
 
-		val &= ~MTL_EST_CONTROL_CTOV[osi_core->mac & 0x1U];
-		temp = MTL_EST_CTOV_RECOMMEND[osi_core->mac & 0x1U];
-		temp = temp << ((MTL_EST_CONTROL_CTOV_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
-		val |= temp;
+	val &= ~MTL_EST_CONTROL_CTOV[osi_core->mac & 0x1U];
+	temp = MTL_EST_CTOV_RECOMMEND[osi_core->mac & 0x1U];
+	temp = temp << ((MTL_EST_CONTROL_CTOV_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
+	val |= temp;
 
-		/*Loop Count to report Scheduling Error*/
-		val &= ~MTL_EST_CONTROL_LCSE[osi_core->mac & 0x1U];
-		val |= MTL_EST_CONTROL_LCSE_VAL[osi_core->mac & 0x1U];
+	/*Loop Count to report Scheduling Error*/
+	val &= ~MTL_EST_CONTROL_LCSE[osi_core->mac & 0x1U];
+	val |= MTL_EST_CONTROL_LCSE_VAL[osi_core->mac & 0x1U];
 
-		if (osi_core->mac == OSI_MAC_HW_EQOS) {
-			val &= ~EQOS_MTL_EST_CONTROL_DFBS;
-		}
-		val &= ~MTL_EST_CONTROL_DDBF[osi_core->mac & 0x1U];
-		val |= MTL_EST_CONTROL_DDBF[osi_core->mac & 0x1U];
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			    MTL_EST_CONTROL[osi_core->mac & 0x1U]);
-
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				MTL_EST_OVERHEAD[osi_core->mac & 0x1U]);
-		val &= ~MTL_EST_OVERHEAD_OVHD[osi_core->mac & 0x1U];
-		/* As per hardware programming info */
-		val |= MTL_EST_OVERHEAD_RECOMMEND[osi_core->mac & 0x1U];
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			    MTL_EST_OVERHEAD[osi_core->mac & 0x1U]);
-
-		enable_mtl_interrupts(osi_core);
+	if (osi_core->mac == OSI_MAC_HW_EQOS) {
+		val &= ~EQOS_MTL_EST_CONTROL_DFBS;
 	}
+	val &= ~MTL_EST_CONTROL_DDBF[osi_core->mac & 0x1U];
+	val |= MTL_EST_CONTROL_DDBF[osi_core->mac & 0x1U];
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
+		    MTL_EST_CONTROL[osi_core->mac & 0x1U]);
 
-	if (fpe_sel == OSI_ENABLE) {
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+			 MTL_EST_OVERHEAD[osi_core->mac & 0x1U]);
+	val &= ~MTL_EST_OVERHEAD_OVHD[osi_core->mac & 0x1U];
+	/* As per hardware programming info */
+	val |= MTL_EST_OVERHEAD_RECOMMEND[osi_core->mac & 0x1U];
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
+		    MTL_EST_OVERHEAD[osi_core->mac & 0x1U]);
+
+	enable_mtl_interrupts(osi_core);
+
+	/* Configure FPE parameters */
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+			 MAC_RQC1R[osi_core->mac & 0x1U]);
+	val &= ~MAC_RQC1R_RQ[osi_core->mac & 0x1U];
+	temp = osi_core->residual_queue;
+	temp = temp << ((MAC_RQC1R_RQ_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
+	temp = (temp & MAC_RQC1R_RQ[osi_core->mac & 0x1U]);
+	val |= temp;
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
+			MAC_RQC1R[osi_core->mac & 0x1U]);
+
+	if (osi_core->mac == OSI_MAC_HW_MGBE) {
 		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				 MAC_RQC1R[osi_core->mac & 0x1U]);
-		val &= ~MAC_RQC1R_RQ[osi_core->mac & 0x1U];
+				 MGBE_MAC_RQC4R);
+		val &= ~MGBE_MAC_RQC4R_PMCBCQ;
 		temp = osi_core->residual_queue;
-		temp = temp << ((MAC_RQC1R_RQ_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
-		temp = (temp & MAC_RQC1R_RQ[osi_core->mac & 0x1U]);
+		temp = temp << MGBE_MAC_RQC4R_PMCBCQ_SHIFT;
+		temp = (temp & MGBE_MAC_RQC4R_PMCBCQ);
 		val |= temp;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			    MAC_RQC1R[osi_core->mac & 0x1U]);
-
-		if (osi_core->mac == OSI_MAC_HW_MGBE) {
-			val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-					 MGBE_MAC_RQC4R);
-			val &= ~MGBE_MAC_RQC4R_PMCBCQ;
-			temp = osi_core->residual_queue;
-			temp = temp << MGBE_MAC_RQC4R_PMCBCQ_SHIFT;
-			temp = (temp & MGBE_MAC_RQC4R_PMCBCQ);
-			val |= temp;
-			osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-				    MGBE_MAC_RQC4R);
-		}
-
-		enable_fpe_interrupts(osi_core);
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MGBE_MAC_RQC4R);
 	}
+
+	enable_fpe_interrupts(osi_core);
 
 	/* CBS setting for TC or TXQ for default configuration
 	   user application should use IOCTL to set CBS as per requirement
@@ -2016,37 +2009,21 @@ fail:
 	return ret;
 }
 
-nve32_t hw_config_flow_control(struct osi_core_priv_data *const osi_core,
-			       const nveu32_t flw_ctrl)
+void hw_config_flow_control(struct osi_core_priv_data *const osi_core)
 {
 	nveu8_t *addr = (nveu8_t *)osi_core->base;
-	nve32_t ret = -1;
 	nveu32_t val;
 
-	if (flw_ctrl <= (OSI_FLOW_CTRL_RX | OSI_FLOW_CTRL_TX)) {
-		/* Configure Tx flow control */
-		val = osi_readla(osi_core, addr + MAC_QX_TX_FLW_CTRL(0U));
+	/* Configure Tx flow control */
+	val = osi_readla(osi_core, addr + MAC_QX_TX_FLW_CTRL(0U));
+	val |= MAC_QX_TX_FLW_CTRL_TFE;
+	val &= ~MAC_PAUSE_TIME_MASK;
+	val |= MAC_PAUSE_TIME & MAC_PAUSE_TIME_MASK;
+	osi_writela(osi_core, val, addr + MAC_QX_TX_FLW_CTRL(0U));
 
-		if ((flw_ctrl & OSI_FLOW_CTRL_TX) == OSI_FLOW_CTRL_TX) {
-			val |= MAC_QX_TX_FLW_CTRL_TFE;
-			val &= ~MAC_PAUSE_TIME_MASK;
-			val |= MAC_PAUSE_TIME & MAC_PAUSE_TIME_MASK;
-		} else {
-			val &= ~MAC_QX_TX_FLW_CTRL_TFE;
-		}
-		osi_writela(osi_core, val, addr + MAC_QX_TX_FLW_CTRL(0U));
+	/* configure Rx flow control */
+	val = osi_readla(osi_core, addr + MAC_RX_FLW_CTRL);
+	val |= MAC_RX_FLW_CTRL_RFE;
+	osi_writela(osi_core, val, addr + MAC_RX_FLW_CTRL);
 
-		/* configure Rx flow control */
-		val = osi_readla(osi_core, addr + MAC_RX_FLW_CTRL);
-
-		if ((flw_ctrl & OSI_FLOW_CTRL_RX) == OSI_FLOW_CTRL_RX) {
-			val |= MAC_RX_FLW_CTRL_RFE;
-		} else {
-			val &= ~MAC_RX_FLW_CTRL_RFE;
-		}
-		osi_writela(osi_core, val, addr + MAC_RX_FLW_CTRL);
-		ret = 0;
-	}
-
-	return ret;
 }

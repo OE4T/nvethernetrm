@@ -31,17 +31,6 @@
 #define KEYSTR "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"
 #endif /* DEBUG_MACSEC */
 
-#define MAX_U64_VAL			0xFFFFFFFFFFFFFFFFU
-
-static inline void  CERT_C__POST_INC__U64(nveu64_t *a)
-{
-	if ((*a) < MAX_U64_VAL) {
-		(*a)++;
-	} else {
-		(*a) = 0;
-	}
-}
-
 /**
  * @addtogroup MACsec AMAP
  *
