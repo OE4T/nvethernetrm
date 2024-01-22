@@ -1,5 +1,5 @@
-/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -90,34 +90,7 @@ static inline nve32_t validate_dma_mac_ver_update_chans(nveu32_t mac_ver,
 
 	return ret;
 }
-/**
- * @brief osi_dma_memset - osi memset
- *
- * @param[out] s: source that need to be set
- * @param[in] c: value to fill in source
- * @param[in] count: first n bytes of source
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- */
-static inline void osi_dma_memset(void *s, nveu32_t c, nveu64_t count)
-{
-	nveu8_t *xs = OSI_NULL;
-	nveu64_t temp = count;
 
-	xs = (nveu8_t *)s;
-	while (temp != 0UL) {
-		if (c < OSI_UCHAR_MAX) {
-			*xs = (nveu8_t)c;
-			xs++;
-		}
-		temp--;
-	}
-	return;
-}
 /**
  * @brief osi_dma_readl - Read a memory mapped register.
  *
@@ -289,7 +262,7 @@ void eqos_init_desc_ops(struct desc_ops *p_dops);
  */
 void mgbe_init_desc_ops(struct desc_ops *p_dops);
 
-nve32_t init_desc_ops(const struct osi_dma_priv_data *const osi_dma);
+void init_desc_ops(const struct osi_dma_priv_data *const osi_dma);
 
 /**
  * @brief osi_hw_transmit - Initialize Tx DMA descriptors for a channel
@@ -367,6 +340,7 @@ static inline void update_rx_tail_ptr(const struct osi_dma_priv_data *const osi_
 
 /** @} */
 
+#ifndef OSI_STRIPPED_LIB
 /**
  * @brief
  * Description: dma_update_stats_counter - update value by increment passed
@@ -422,5 +396,5 @@ static inline nveu64_t dma_update_stats_counter(nveu64_t last_value,
 
 	return temp;
 }
-
+#endif /* !OSI_STRIPPED_LIB */
 #endif /* INCLUDED_DMA_LOCAL_H */

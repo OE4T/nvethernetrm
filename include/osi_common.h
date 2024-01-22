@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -152,7 +152,7 @@
 #define OSI_POLL_COUNT			1000U
 #ifndef UINT_MAX
 /** Max value of uint */
-#define UINT_MAX			(~0U)
+#define UINT_MAX			(0xFFFFFFFFU)
 #endif
 #ifndef INT_MAX
 #define INT_MAX				(0x7FFFFFFF)

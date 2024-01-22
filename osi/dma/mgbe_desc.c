@@ -239,8 +239,7 @@ static nve32_t mgbe_get_rx_hwstamp(const struct osi_dma_priv_data *const osi_dma
 		goto fail;
 	}
 
-	rx_pkt_cx->ns = context_desc->rdes0 +
-			(OSI_NSEC_PER_SEC * context_desc->rdes1);
+	rx_pkt_cx->ns = context_desc->rdes0 + (OSI_NSEC_PER_SEC * context_desc->rdes1);
 	if (rx_pkt_cx->ns < context_desc->rdes0) {
 		ret = -1;
 	}

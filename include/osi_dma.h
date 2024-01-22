@@ -1,6 +1,6 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -127,10 +127,10 @@
 #define OSI_PKT_CX_TSO			OSI_BIT(2)
 /** PTP packet */
 #define OSI_PKT_CX_PTP			OSI_BIT(3)
+#ifndef OSI_STRIPPED_LIB
 /** Paged buffer */
 #define OSI_PKT_CX_PAGED_BUF		OSI_BIT(4)
 /** Rx packet has RSS hash */
-#ifndef OSI_STRIPPED_LIB
 #define OSI_PKT_CX_RSS			OSI_BIT(5)
 #endif /* !OSI_STRIPPED_LIB */
 /** Valid packet */
@@ -163,9 +163,11 @@
  *
  * @{
  */
+#ifndef OSI_STRIPPED_LIB
 /** Flag to indicate if buffer programmed in desc. is DMA map'd from
  * linear/Paged buffer from OS layer */
 #define OSI_TXDONE_CX_PAGED_BUF		OSI_BIT(0)
+#endif /* !OSI_STRIPPED_LIB */
 /** Flag to indicate if there was any tx error */
 #define OSI_TXDONE_CX_ERROR		OSI_BIT(1)
 /** Flag to indicate the availability of time stamp */

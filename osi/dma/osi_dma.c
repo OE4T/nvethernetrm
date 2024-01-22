@@ -381,12 +381,8 @@ nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma)
 #ifndef OSI_STRIPPED_LIB
 	i_ops[osi_dma->mac](&dma_gops[osi_dma->mac]);
 #endif
-	if (init_desc_ops(osi_dma) < 0) {
-		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-			    "DMA desc ops init failed\n", 0ULL);
-		ret = -1;
-		goto fail;
-	}
+
+	init_desc_ops(osi_dma);
 
 #ifndef OSI_STRIPPED_LIB
 	if (validate_func_ptrs(osi_dma, &dma_gops[osi_dma->mac]) < 0) {
@@ -928,8 +924,7 @@ nve32_t osi_rx_dma_desc_init(struct osi_dma_priv_data *osi_dma,
 		rx_swcx = rx_ring->rx_swcx + rx_ring->refill_idx;
 		rx_desc = rx_ring->rx_desc + rx_ring->refill_idx;
 
-		if ((rx_swcx->flags & OSI_RX_SWCX_BUF_VALID) !=
-		    OSI_RX_SWCX_BUF_VALID) {
+		if ((rx_swcx->flags & OSI_RX_SWCX_BUF_VALID) != OSI_RX_SWCX_BUF_VALID) {
 			break;
 		}
 
@@ -1009,18 +1004,10 @@ fail:
 	return ret;
 }
 
-static nveu64_t dma_div_u64_rem(nveu64_t dividend, nveu64_t divisor, nveu64_t *remain)
+static nveu64_t dma_div_u64_rem(nveu64_t dividend, nveu64_t *remain)
 {
-	nveu64_t ret = 0;
-
-	if (divisor != 0U) {
-		*remain = dividend % divisor;
-		ret = dividend / divisor;
-	} else {
-		ret = 0;
-	}
-
-	return ret;
+	*remain = dividend % OSI_NSEC_PER_SEC;
+	return (dividend / OSI_NSEC_PER_SEC);
 }
 
 static nveul64_t read_systime_from_mac(void *addr, nveu32_t mac_type)
@@ -1047,15 +1034,11 @@ static nveul64_t read_systime_from_mac(void *addr, nveu32_t mac_type)
          */
         if (ns1 >= ns2) {
                 varmac_stsr = osi_dma_readl((nveu8_t *)addr + mac_stsr[mac_type]);
-                /* convert sec/high time value to nanosecond */
-                if (varmac_stsr < UINT_MAX) {
-                        ns = ns2 + (varmac_stsr * OSI_NSEC_PER_SEC);
-                }
+		ns = ns2 + (nveul64_t)(((nveul64_t)varmac_stsr * OSI_NSEC_PER_SEC) &
+			(nveul64_t)OSI_LLONG_MAX);
         } else {
-                /* convert sec/high time value to nanosecond */
-                if (varmac_stsr < UINT_MAX) {
-                        ns = ns1 + (varmac_stsr * OSI_NSEC_PER_SEC);
-                }
+		ns = ns1 + (nveul64_t)(((nveul64_t)varmac_stsr * OSI_NSEC_PER_SEC) &
+			(nveul64_t)OSI_LLONG_MAX);
         }
 
         return ns;
@@ -1070,17 +1053,9 @@ static void dma_get_systime_from_mac(void *addr, nveu32_t mac, nveu32_t *sec, nv
 
 	ns = read_systime_from_mac(addr, mac);
 
-	temp = dma_div_u64_rem((nveu64_t)ns, OSI_NSEC_PER_SEC, &remain);
-	if (temp < UINT_MAX) {
-		*sec = (nveu32_t)temp;
-	} else {
-		/* do nothing here */
-	}
-	if (remain < UINT_MAX) {
-		*nsec = (nveu32_t)remain;
-	} else {
-		/* do nothing here */
-	}
+	temp = dma_div_u64_rem((nveu64_t)ns, &remain);
+	*sec = (nveu32_t)(temp & UINT_MAX);
+	*nsec = (nveu32_t)(remain & UINT_MAX);
 }
 
 nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
@@ -1091,10 +1066,12 @@ nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
 
 	if (dma_validate_args(osi_dma, l_dma) < 0) {
 		ret = -1;
+		goto fail;
 	}
 
 	dma_get_systime_from_mac(osi_dma->base, osi_dma->mac, sec, nsec);
 
+fail:
 	return ret;
 }
 

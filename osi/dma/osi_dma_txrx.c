@@ -71,8 +71,7 @@ static inline nve32_t validate_rx_completions_arg(
 					      struct osi_dma_priv_data *osi_dma,
 					      nveu32_t chan,
 					      const nveu32_t *const more_data_avail,
-					      struct osi_rx_ring **rx_ring,
-					      struct osi_rx_pkt_cx **rx_pkt_cx)
+					      struct osi_rx_ring **rx_ring)
 {
 	const struct dma_local *const l_dma = (struct dma_local *)(void *)osi_dma;
 	nve32_t ret = 0;
@@ -92,18 +91,11 @@ static inline nve32_t validate_rx_completions_arg(
 		ret = -1;
 		goto fail;
 	}
-	*rx_pkt_cx = &(*rx_ring)->rx_pkt_cx;
-	if (osi_unlikely(*rx_pkt_cx == OSI_NULL)) {
-		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-			    "validate_input_rx_completions: Invalid pointers\n",
-			    0ULL);
-		ret = -1;
-		goto fail;
-	}
 
-	if ((*rx_ring)->cur_rx_idx >= osi_dma->rx_ring_sz) {
+	if (((*rx_ring)->cur_rx_idx >= osi_dma->rx_ring_sz) ||
+	     (osi_dma->rx_ring_sz == 0U)) {
 		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-			    "dma_txrx: Invalid cur_rx_idx\n", 0ULL);
+			    "dma_txrx: Invalid cur_rx_idx or rx ring size\n", 0ULL);
 		ret = -1;
 	}
 
@@ -116,7 +108,7 @@ static inline void process_rx_desc(struct osi_dma_priv_data *osi_dma,
 				   struct osi_rx_desc *rx_desc,
 				   struct osi_rx_swcx *rx_swcx,
 				   struct osi_rx_pkt_cx *rx_pkt_cx,
-				   nveu32_t chan)
+				   nveu32_t chan, const nveu32_t rx_ring_mask)
 {
 	const nveu32_t es_bits_mask[2U] = { RDES3_ES_BITS, RDES3_ES_MGBE };
 	struct osi_rx_desc *context_desc = OSI_NULL;
@@ -124,51 +116,51 @@ static inline void process_rx_desc(struct osi_dma_priv_data *osi_dma,
 	nveu32_t ip_type = osi_dma->mac;
 	nve32_t ret = 0;
 
-	if (osi_likely((rx_desc->rdes3 & RDES3_LD) == RDES3_LD)) {
-		if ((rx_desc->rdes3 & es_bits_mask[ip_type]) != 0U) {
-			/* reset validity if any of the error bits
-			 * are set
-			 */
-			rx_pkt_cx->flags &= ~OSI_PKT_CX_VALID;
+	if ((rx_desc->rdes3 & es_bits_mask[ip_type]) != 0U) {
+		/* reset validity if any of the error bits
+		 * are set
+		 */
+		rx_pkt_cx->flags &= ~OSI_PKT_CX_VALID;
 #ifndef OSI_STRIPPED_LIB
-			d_ops[ip_type].update_rx_err_stats(rx_desc, &osi_dma->pkt_err_stats);
+		d_ops[ip_type].update_rx_err_stats(rx_desc, &osi_dma->pkt_err_stats);
 #endif /* !OSI_STRIPPED_LIB */
-		}
-
-		/* Check if COE Rx checksum is valid */
-		d_ops[ip_type].get_rx_csum(rx_desc, rx_pkt_cx);
-
-#ifndef OSI_STRIPPED_LIB
-		/* Get Rx VLAN from descriptor */
-		d_ops[ip_type].get_rx_vlan(rx_desc, rx_pkt_cx);
-
-		/* get_rx_hash for RSS */
-		d_ops[ip_type].get_rx_hash(rx_desc, rx_pkt_cx);
-#endif /* !OSI_STRIPPED_LIB */
-		context_desc = rx_ring->rx_desc + rx_ring->cur_rx_idx;
-		/* Get rx time stamp */
-		ret = d_ops[ip_type].get_rx_hwstamp(osi_dma, rx_desc, context_desc, rx_pkt_cx);
-		if (ret == 0) {
-			ptp_rx_swcx = rx_ring->rx_swcx + rx_ring->cur_rx_idx;
-			/* Marking software context as PTP software
-			 * context so that OSD can skip DMA buffer
-			 * allocation and DMA mapping. DMA can use PTP
-			 * software context addresses directly since
-			 * those are valid.
-			 */
-			ptp_rx_swcx->flags |= OSI_RX_SWCX_REUSE;
-#ifdef OSI_DEBUG
-			dump_rx_descriptors(osi_dma, rx_ring, chan);
-#endif /* OSI_DEBUG */
-			/* Context descriptor was consumed. Its skb
-			 * and DMA mapping will be recycled
-			 */
-			INCR_RX_DESC_INDEX(rx_ring->cur_rx_idx, osi_dma->rx_ring_sz);
-		}
-
-		osi_dma->osd_ops.receive_packet(osi_dma->osd, rx_ring, chan,
-						osi_dma->rx_buf_len, rx_pkt_cx, rx_swcx);
 	}
+
+	/* Check if COE Rx checksum is valid */
+	d_ops[ip_type].get_rx_csum(rx_desc, rx_pkt_cx);
+
+#ifndef OSI_STRIPPED_LIB
+	/* Get Rx VLAN from descriptor */
+	d_ops[ip_type].get_rx_vlan(rx_desc, rx_pkt_cx);
+
+	/* get_rx_hash for RSS */
+	d_ops[ip_type].get_rx_hash(rx_desc, rx_pkt_cx);
+#endif /* !OSI_STRIPPED_LIB */
+	context_desc = rx_ring->rx_desc + rx_ring->cur_rx_idx;
+
+	/* Get rx time stamp */
+	ret = d_ops[ip_type].get_rx_hwstamp(osi_dma, rx_desc, context_desc, rx_pkt_cx);
+	if (ret == 0) {
+		ptp_rx_swcx = rx_ring->rx_swcx + rx_ring->cur_rx_idx;
+		/* Marking software context as PTP software
+		 * context so that OSD can skip DMA buffer
+		 * allocation and DMA mapping. DMA can use PTP
+		 * software context addresses directly since
+		 * those are valid.
+		 */
+		ptp_rx_swcx->flags |= OSI_RX_SWCX_REUSE;
+#ifdef OSI_DEBUG
+		dump_rx_descriptors(osi_dma, rx_ring, chan);
+#endif /* OSI_DEBUG */
+		/* Context descriptor was consumed. Its skb
+		 * and DMA mapping will be recycled
+		 */
+		rx_ring->cur_rx_idx = ((rx_ring->cur_rx_idx & (nveu32_t)INT_MAX) + 1U) &
+					rx_ring_mask;
+	}
+
+	osi_dma->osd_ops.receive_packet(osi_dma->osd, rx_ring, chan,
+					osi_dma->rx_buf_len, rx_pkt_cx, rx_swcx);
 }
 
 #ifndef OSI_STRIPPED_LIB
@@ -206,18 +198,24 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 	struct osi_rx_pkt_cx *rx_pkt_cx = OSI_NULL;
 	struct osi_rx_desc *rx_desc = OSI_NULL;
 	struct osi_rx_swcx *rx_swcx = OSI_NULL;
+	nveu32_t rx_ring_sz;
+	nveu32_t rx_ring_mask;
 	nve32_t received = 0;
 #ifndef OSI_STRIPPED_LIB
 	nve32_t received_resv = 0;
 #endif /* !OSI_STRIPPED_LIB */
 	nve32_t ret = 0;
 
-	ret = validate_rx_completions_arg(osi_dma, chan, more_data_avail,
-					  &rx_ring, &rx_pkt_cx);
+	ret = validate_rx_completions_arg(osi_dma, chan, more_data_avail, &rx_ring);
 	if (osi_unlikely(ret < 0)) {
 		received = -1;
 		goto fail;
 	}
+
+	rx_ring_sz = osi_dma->rx_ring_sz;
+	rx_ring_mask = rx_ring_sz - 1U;
+
+	rx_pkt_cx = &rx_ring->rx_pkt_cx;
 
 	/* Reset flag to indicate if more Rx frames available to OSD layer */
 	*more_data_avail = OSI_NONE;
@@ -234,12 +232,12 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 			break;
 		}
 		rx_swcx = rx_ring->rx_swcx + rx_ring->cur_rx_idx;
-		osi_dma_memset(rx_pkt_cx, 0U, sizeof(*rx_pkt_cx));
+		*rx_pkt_cx = (struct osi_rx_pkt_cx){0};
 #if defined OSI_DEBUG && !defined OSI_STRIPPED_LIB
 		dump_rx_descriptors(osi_dma, rx_ring, chan);
 #endif /* OSI_DEBUG */
 
-		INCR_RX_DESC_INDEX(rx_ring->cur_rx_idx, osi_dma->rx_ring_sz);
+		INCR_RX_DESC_INDEX(rx_ring->cur_rx_idx, rx_ring_sz);
 
 #ifndef OSI_STRIPPED_LIB
 		if (osi_unlikely(rx_swcx->buf_virt_addr ==
@@ -288,7 +286,7 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 		rx_pkt_cx->flags |= OSI_PKT_CX_VALID;
 
 		/* Process the Rx descriptor */
-		process_rx_desc(osi_dma, rx_ring, rx_desc, rx_swcx, rx_pkt_cx, chan);
+		process_rx_desc(osi_dma, rx_ring, rx_desc, rx_swcx, rx_pkt_cx, chan, rx_ring_mask);
 
 #ifndef OSI_STRIPPED_LIB
 		osi_dma->dstats.q_rx_pkt_n[chan] =
@@ -427,23 +425,15 @@ static inline void update_tx_done_ts(struct osi_tx_desc *tx_desc,
 				     struct osi_txdone_pkt_cx *txdone_pkt_cx)
 {
 	nveu64_t vartdes1;
-	nveul64_t ns;
 
 	/* check tx tstamp status */
 	if (((tx_desc->tdes3 & TDES3_LD) == TDES3_LD) &&
 	    ((tx_desc->tdes3 & TDES3_CTXT) != TDES3_CTXT) &&
 	    ((tx_desc->tdes3 & TDES3_TTSS) == TDES3_TTSS)) {
-		/* tx timestamp captured for this packet */
-		ns = tx_desc->tdes0;
-		vartdes1 = tx_desc->tdes1;
-		if (OSI_NSEC_PER_SEC > (OSI_ULLONG_MAX / vartdes1)) {
-			/* Will not hit this case */
-		} else if ((OSI_ULLONG_MAX - (vartdes1 * OSI_NSEC_PER_SEC)) < ns) {
-			/* Will not hit this case */
-		} else {
-			txdone_pkt_cx->flags |= OSI_TXDONE_CX_TS;
-			txdone_pkt_cx->ns = ns + (vartdes1 * OSI_NSEC_PER_SEC);
-		}
+		vartdes1 = ((nveu64_t)(tx_desc->tdes1) * OSI_NSEC_PER_SEC) &
+			    (nveu64_t)OSI_LLONG_MAX;
+		txdone_pkt_cx->flags |= OSI_TXDONE_CX_TS;
+		txdone_pkt_cx->ns = (nveu64_t)tx_desc->tdes0 + vartdes1;
 	}
 }
 
@@ -511,6 +501,7 @@ static inline nveu32_t is_ptp_twostep_or_slave_mode(nveu32_t ptp_flag)
 	       OSI_ENABLE : OSI_DISABLE;
 }
 
+#ifndef OSI_STRIPPED_LIB
 static inline void set_paged_buf_and_set_len(struct osi_tx_swcx *tx_swcx,
 					     struct osi_txdone_pkt_cx *txdone_pkt_cx)
 {
@@ -528,7 +519,6 @@ static inline void set_paged_buf_and_set_len(struct osi_tx_swcx *tx_swcx,
 	}
 }
 
-#ifndef OSI_STRIPPED_LIB
 static inline nve32_t process_last_desc(struct osi_dma_priv_data *osi_dma,
 					struct osi_tx_desc *tx_desc,
 					struct osi_txdone_pkt_cx *txdone_pkt_cx,
@@ -603,7 +593,7 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 #endif /* !OSI_STRIPPED_LIB */
 	while ((entry != tx_ring->cur_tx_idx) && (entry < osi_dma->tx_ring_sz) &&
 	       (processed < budget)) {
-		osi_dma_memset(txdone_pkt_cx, 0U, sizeof(*txdone_pkt_cx));
+		*txdone_pkt_cx = (struct osi_txdone_pkt_cx){ 0 };
 
 		tx_desc = tx_ring->tx_desc + entry;
 		tx_swcx = tx_ring->tx_swcx + entry;
@@ -636,8 +626,9 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 			/* Do nothing here */
 		}
 
+#ifndef OSI_STRIPPED_LIB
 		set_paged_buf_and_set_len(tx_swcx, txdone_pkt_cx);
-
+#endif /* !OSI_STRIPPED_LIB */
 		osi_dma->osd_ops.transmit_complete(osi_dma->osd, tx_swcx, txdone_pkt_cx);
 
 		tx_desc->tdes3 = 0;
@@ -1498,7 +1489,7 @@ fail:
 	return ret;
 }
 
-nve32_t init_desc_ops(const struct osi_dma_priv_data *const osi_dma)
+void init_desc_ops(const struct osi_dma_priv_data *const osi_dma)
 {
 	typedef void (*desc_ops_arr)(struct desc_ops *p_ops);
 
@@ -1507,7 +1498,4 @@ nve32_t init_desc_ops(const struct osi_dma_priv_data *const osi_dma)
 	};
 
 	desc_ops_a[osi_dma->mac](&d_ops[osi_dma->mac]);
-
-	/* TODO: validate function pointers */
-	return 0;
 }
