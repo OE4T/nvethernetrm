@@ -2162,8 +2162,13 @@ static void mgbe_handle_link_change_and_fpe_intrs(struct osi_core_priv_data *osi
 #ifdef HSI_SUPPORT
 			link_ok = 1;
 #endif /* HSI_SUPPORT */
+
+			/* re-enable interrupt */
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
+			value |= MGBE_IMR_RGSMIIIE;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
 		} else {
-			/* Do Nothing */
+			/* Do nothing */
 		}
 
 #ifdef HSI_SUPPORT
