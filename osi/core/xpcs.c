@@ -189,13 +189,6 @@ nve32_t xpcs_start(struct osi_core_priv_data *osi_core)
 	nve32_t ret = 0;
 	nve32_t cond = COND_NOT_MET;
 
-	if (osi_core->xpcs_base == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "XPCS base is NULL", 0ULL);
-		ret = -1;
-		goto fail;
-	}
-
 	if ((osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G) ||
 	    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G)) {
 		ctrl = xpcs_read(xpcs_base, XPCS_SR_MII_CTRL);
@@ -577,12 +570,6 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 	nveu32_t ctrl = 0;
 	nve32_t ret = 0;
 
-	if (osi_core->xpcs_base == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "XPCS base is NULL", 0ULL);
-		ret = -1;
-		goto fail;
-	}
 
 	if (xpcs_lane_bring_up(osi_core) < 0) {
 		ret = -1;

@@ -24,7 +24,7 @@
 #ifndef INCLUDED_XPCS_H_
 #define INCLUDED_XPCS_H_
 
-#include "../osi/common/common.h"
+#include "common.h"
 #include <osi_core.h>
 
 /**

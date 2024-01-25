@@ -23,7 +23,7 @@
 #ifdef MACSEC_SUPPORT
 #include <osi_macsec.h>
 #include "macsec.h"
-#include "../osi/common/common.h"
+#include "common.h"
 #include "core_local.h"
 
 #if 0 /* Qnx */
@@ -2502,15 +2502,6 @@ static nve32_t lut_config_inputs(const struct osi_macsec_lut_config *const lut_c
 		j <<= 1;
 	}
 
-	if ((flags & OSI_LUT_FLAGS_BYTE0_PATTERN_VALID) ==
-		    OSI_LUT_FLAGS_BYTE0_PATTERN_VALID) {
-		if (entry.byte_pattern_offset[0] >
-		    OSI_LUT_BYTE_PATTERN_MAX_OFFSET) {
-			ret = -1;
-			goto exit;
-		}
-	}
-
 	if ((flags & OSI_LUT_FLAGS_VLAN_VALID) == OSI_LUT_FLAGS_VLAN_VALID) {
 		if ((entry.vlan_pcp > OSI_VLAN_PCP_MAX) ||
 		    (entry.vlan_id > OSI_VLAN_ID_MAX)) {
@@ -4224,12 +4215,7 @@ static nve32_t macsec_deinit(struct osi_core_priv_data *const osi_core)
 	}
 
 	/* Update MAC as per macsec requirement */
-	if (l_core->ops_p->macsec_config_mac != OSI_NULL) {
-		l_core->ops_p->macsec_config_mac(osi_core, OSI_DISABLE);
-	} else {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "Failed config MAC per macsec\n", 0ULL);
-	}
+	l_core->ops_p->macsec_config_mac(osi_core, OSI_DISABLE);
 	osi_core->macsec_initialized = OSI_DISABLE;
 
 	return 0;
@@ -4605,12 +4591,7 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 	nve32_t ret = 0;
 
 	/* Update MAC value as per macsec requirement */
-	if (l_core->ops_p->macsec_config_mac != OSI_NULL) {
-		l_core->ops_p->macsec_config_mac(osi_core, OSI_ENABLE);
-	} else {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "Failed to config mac per macsec\n", 0ULL);
-	}
+	l_core->ops_p->macsec_config_mac(osi_core, OSI_ENABLE);
 	/* Set MTU */
 	ret = macsec_update_mtu(osi_core, mtu);
 	if (ret < 0) {

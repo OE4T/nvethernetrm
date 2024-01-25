@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "../osi/common/common.h"
+#include "common.h"
 #include "frp.h"
 
 /**

@@ -23,58 +23,10 @@
 
 #include <ivc_core.h>
 #include "core_local.h"
-#include "../osi/common/common.h"
+#include "common.h"
 
 /** core local data structure used within RM unit */
 static struct core_local g_core[MAX_CORE_INSTANCES];
-
-/**
- * @brief Function to validate function pointers.
- *
- * @param[in] osi_core: OSI Core private data structure.
- * @param[in] if_ops_p: pointer to interface core operations.
- *
- * @note
- * API Group:
- * - Initialization: Yes
- * - Run time: No
- * - De-initialization: No
- *
- * @retval 0 on Success
- * @retval -1 on Failure
- */
-static nve32_t validate_if_func_ptrs(struct osi_core_priv_data *const osi_core,
-				     struct if_core_ops *if_ops_p)
-{
-	nveu32_t i = 0;
-	void *temp_ops = (void *)if_ops_p;
-	nve32_t ret = 0;
-#if __SIZEOF_POINTER__ == 8
-	nveu64_t *l_ops = (nveu64_t *)temp_ops;
-#elif __SIZEOF_POINTER__ == 4
-	nveu32_t *l_ops = (nveu32_t *)temp_ops;
-#else
-	OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-		     "Undefined architecture\n", 0ULL);
-	ret = -1;
-	goto fail;
-#endif
-	(void) osi_core;
-
-	for (i = 0; i < (sizeof(*if_ops_p) / (nveu64_t)__SIZEOF_POINTER__);
-	     i++) {
-		if (*l_ops == 0U) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "failed at index : ", i);
-			ret = -1;
-			goto fail;
-		}
-
-		l_ops++;
-	}
-fail:
-	return ret;
-}
 
 /**
  * @brief Function to validate input arguments of API.
@@ -150,6 +102,45 @@ struct osi_core_priv_data *get_role_pointer(nveu32_t role)
 	return ret_ptr;
 }
 
+static nve32_t validate_init_core_ops_args(struct osi_core_priv_data *const osi_core)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	nve32_t ret = 0;
+
+	if (osi_core == OSI_NULL) {
+		ret = -1;
+		goto fail;
+	}
+
+	if ((osi_core->osd_ops.ops_log == OSI_NULL) ||
+	    (osi_core->osd_ops.udelay == OSI_NULL) ||
+	    (osi_core->osd_ops.msleep == OSI_NULL) ||
+#ifdef OSI_DEBUG
+	    (osi_core->osd_ops.printf == OSI_NULL) ||
+#endif /* OSI_DEBUG */
+	    (osi_core->osd_ops.usleep_range == OSI_NULL)) {
+		ret = -1;
+		goto fail;
+	}
+
+	if (osi_core->use_virtualization > OSI_ENABLE) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			     "CORE: wrong use_virtualization\n", 0ULL);
+		ret = -1;
+		goto fail;
+	}
+
+	if ((l_core->magic_num != (nveu64_t)osi_core) ||
+	    (l_core->if_init_done == OSI_ENABLE)) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			     "CORE: Invalid magic_num or if_init_done\n", 0ULL);
+		ret = -1;
+	}
+
+fail:
+	return ret;
+}
+
 nve32_t osi_init_core_ops(struct osi_core_priv_data *const osi_core)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
@@ -161,18 +152,7 @@ nve32_t osi_init_core_ops(struct osi_core_priv_data *const osi_core)
 	static struct if_core_ops if_ops[MAX_INTERFACE_OPS];
 	nve32_t ret = 0;
 
-	if (osi_core == OSI_NULL) {
-		ret = -1;
-		goto fail;
-	}
-
-	if (osi_core->use_virtualization > OSI_ENABLE) {
-		ret = -1;
-		goto fail;
-	}
-
-	if ((l_core->magic_num != (nveu64_t)osi_core) ||
-	    (l_core->if_init_done == OSI_ENABLE)) {
+	if (validate_init_core_ops_args(osi_core) < 0) {
 		ret = -1;
 		goto fail;
 	}
@@ -180,19 +160,13 @@ nve32_t osi_init_core_ops(struct osi_core_priv_data *const osi_core)
 	l_core->if_ops_p = &if_ops[osi_core->use_virtualization];
 	i_lcore_ops[osi_core->use_virtualization](l_core->if_ops_p);
 
-	if (validate_if_func_ptrs(osi_core, l_core->if_ops_p) < 0) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "Interface function validation failed\n", 0ULL);
-		ret = -1;
-		goto fail;
-	}
-
 	ret = l_core->if_ops_p->if_init_core_ops(osi_core);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "if_init_core_ops failed\n", 0ULL);
 		goto fail;
 	}
+
 	l_core->ts_lock = OSI_DISABLE;
 	l_core->ether_m2m_role = osi_core->m2m_role;
 	l_core->serv.count = SERVO_STATS_0;

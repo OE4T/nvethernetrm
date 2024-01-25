@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "../osi/common/common.h"
+#include "common.h"
 #include <osi_core.h>
 #include "eqos_core.h"
 #include "eqos_mmc.h"
@@ -931,19 +931,13 @@ static void eqos_configure_mac(struct osi_core_priv_data *const osi_core)
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_MAC_MCR);
 
 	/* Enable common interrupt at wrapper level */
-	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
-		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				   EQOS_WRAP_COMMON_INTR_ENABLE);
-		value |= EQOS_MAC_SBD_INTR;
-		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-			    EQOS_WRAP_COMMON_INTR_ENABLE);
-	}
+	value = osi_readla(osi_core, (nveu8_t *)osi_core->base + EQOS_WRAP_COMMON_INTR_ENABLE);
+	value |= EQOS_MAC_SBD_INTR;
+	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_WRAP_COMMON_INTR_ENABLE);
 
 	/* enable Packet Duplication Control */
 	value = osi_readla(osi_core, (nveu8_t *)osi_core->base + EQOS_MAC_EXTR);
-	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_00) {
-		value |= EQOS_MAC_EXTR_PDC;
-	}
+	value |= EQOS_MAC_EXTR_PDC;
 	/* Write to MAC Extension Register */
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_MAC_EXTR);
 
@@ -954,11 +948,7 @@ static void eqos_configure_mac(struct osi_core_priv_data *const osi_core)
 
 	/* Routing Multicast and Broadcast depending on mac version */
 	value &= ~(EQOS_MAC_RQC1R_MCBCQ);
-	if (osi_core->mac_ver > OSI_EQOS_MAC_5_00) {
-		value |= ((nveu32_t)EQOS_MAC_RQC1R_MCBCQ7) << EQOS_MAC_RQC1R_MCBCQ_SHIFT;
-	} else {
-		value |= ((nveu32_t)EQOS_MAC_RQC1R_MCBCQ3) << EQOS_MAC_RQC1R_MCBCQ_SHIFT;
-	}
+	value |= ((nveu32_t)EQOS_MAC_RQC1R_MCBCQ7) << EQOS_MAC_RQC1R_MCBCQ_SHIFT;
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_MAC_RQC1R);
 
 	/* Disable all MMC interrupts */
@@ -1203,10 +1193,7 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 #endif /* !OSI_STRIPPED_LIB */
 
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_MTL_RXQ_DMA_MAP0);
-
-	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
-		osi_writela(osi_core, value1, (nveu8_t *)osi_core->base + EQOS_MTL_RXQ_DMA_MAP1);
-	}
+	osi_writela(osi_core, value1, (nveu8_t *)osi_core->base + EQOS_MTL_RXQ_DMA_MAP1);
 
 	if (osi_unlikely(osi_core->num_mtl_queues > OSI_EQOS_MAX_NUM_QUEUES)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
@@ -1242,9 +1229,7 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 	eqos_configure_dma(osi_core);
 
 	/* tsn initialization */
-	if (osi_core->hw_feature != OSI_NULL) {
-		hw_tsn_init(osi_core);
-	}
+	hw_tsn_init(osi_core);
 
 #if !defined(L3L4_WILDCARD_FILTER)
 	/* initialize L3L4 Filters variable */
@@ -1322,6 +1307,7 @@ static void eqos_handle_mac_fpe_intrs(struct osi_core_priv_data *osi_core)
  */
 static void eqos_handle_mac_link_intrs(struct osi_core_priv_data *osi_core)
 {
+#ifndef OSI_STRIPPED_LIB
 	nveu32_t mac_pcs = 0;
 	nve32_t ret = 0;
 
@@ -1359,6 +1345,9 @@ static void eqos_handle_mac_link_intrs(struct osi_core_priv_data *osi_core)
 			/* Nothing here */
 		}
 	}
+#else
+	(void)osi_readla(osi_core, (nveu8_t *)osi_core->base + EQOS_MAC_PCS);
+#endif /* !OSI_STRIPPED_LIB */
 }
 
 /**
@@ -1400,22 +1389,19 @@ static void eqos_handle_mac_intrs(struct osi_core_priv_data *const osi_core,
 	/* Handle MAC interrupts */
 	if ((dma_isr & EQOS_DMA_ISR_MACIS) == EQOS_DMA_ISR_MACIS) {
 #ifdef HSI_SUPPORT
-		if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
-			/* T23X-EQOS_HSIv2-19: Consistency Monitor for TX Frame */
-			if ((dma_isr & EQOS_DMA_ISR_TXSTSIS) == EQOS_DMA_ISR_TXSTSIS) {
-				osi_core->hsi.tx_frame_err_count =
-					osi_update_stats_counter(osi_core->hsi.tx_frame_err_count,
-								 1UL);
-				tx_frame_err = osi_core->hsi.tx_frame_err_count /
-					       osi_core->hsi.err_count_threshold;
-				if (osi_core->hsi.tx_frame_err_threshold < tx_frame_err) {
-					osi_core->hsi.tx_frame_err_threshold = tx_frame_err;
-					osi_core->hsi.report_count_err[TX_FRAME_ERR_IDX] =
-					OSI_ENABLE;
-				}
-				osi_core->hsi.err_code[TX_FRAME_ERR_IDX] = OSI_TX_FRAME_ERR;
-				osi_core->hsi.report_err = OSI_ENABLE;
+		/* T23X-EQOS_HSIv2-19: Consistency Monitor for TX Frame */
+		if ((dma_isr & EQOS_DMA_ISR_TXSTSIS) == EQOS_DMA_ISR_TXSTSIS) {
+			osi_core->hsi.tx_frame_err_count =
+				osi_update_stats_counter(osi_core->hsi.tx_frame_err_count,
+							 1UL);
+			tx_frame_err = osi_core->hsi.tx_frame_err_count /
+				osi_core->hsi.err_count_threshold;
+			if (osi_core->hsi.tx_frame_err_threshold < tx_frame_err) {
+				osi_core->hsi.tx_frame_err_threshold = tx_frame_err;
+				osi_core->hsi.report_count_err[TX_FRAME_ERR_IDX] = OSI_ENABLE;
 			}
+			osi_core->hsi.err_code[TX_FRAME_ERR_IDX] = OSI_TX_FRAME_ERR;
+			osi_core->hsi.report_err = OSI_ENABLE;
 		}
 #endif
 		/* handle only those MAC interrupts which are enabled */
@@ -1754,15 +1740,13 @@ static void eqos_handle_common_intr(struct osi_core_priv_data *const osi_core)
 	nveu32_t mtl_isr = 0;
 	nveu32_t frp_isr = 0U;
 
-	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
-		osi_writela(osi_core, EQOS_MAC_SBD_INTR, (nveu8_t *)osi_core->base +
-			    EQOS_WRAP_COMMON_INTR_STATUS);
+	osi_writela(osi_core, EQOS_MAC_SBD_INTR, (nveu8_t *)osi_core->base +
+		    EQOS_WRAP_COMMON_INTR_STATUS);
 #ifdef HSI_SUPPORT
-		if (osi_core->hsi.enabled == OSI_ENABLE) {
-			eqos_handle_hsi_intr(osi_core);
-		}
-#endif
+	if (osi_core->hsi.enabled == OSI_ENABLE) {
+		eqos_handle_hsi_intr(osi_core);
 	}
+#endif
 
 	dma_isr = osi_readla(osi_core, (nveu8_t *)base + EQOS_DMA_ISR);
 	if (dma_isr != 0U) {
@@ -1988,12 +1972,18 @@ static void eqos_l2_filter_delete(struct osi_core_priv_data *osi_core,
 		    (nveu8_t *)osi_core->base + EQOS_MAC_ADDRL((idx)));
 
 	*value |= OSI_MASK_16BITS;
+#ifdef OSI_STRIPPED_LIB
+	(void)dma_routing_enable;
+#endif
+#ifndef OSI_STRIPPED_LIB
 	if ((dma_routing_enable == OSI_DISABLE) ||
 	    (osi_core->mac_ver < OSI_EQOS_MAC_5_00)) {
 		*value &= ~(EQOS_MAC_ADDRH_AE | EQOS_MAC_ADDRH_DCS);
 		osi_writela(osi_core, *value, (nveu8_t *)osi_core->base +
 			    EQOS_MAC_ADDRH((idx)));
-	} else {
+	} else
+#endif /* !OSI_STRIPPED_LIB */
+	{
 
 		dcs_check &= EQOS_MAC_ADDRH_DCS;
 		dcs_check = dcs_check >> EQOS_MAC_ADDRH_DCS_SHIFT;
@@ -3092,12 +3082,6 @@ static nve32_t eqos_set_avb_algorithm(
 	nve32_t ret = -1;
 	nveu32_t qinx;
 
-	if (avb == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "avb structure is NULL\n",	0ULL);
-		goto done;
-	}
-
 	/* queue index in range */
 	if (avb->qindex >= OSI_EQOS_MAX_NUM_QUEUES) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
@@ -3238,12 +3222,6 @@ static nve32_t eqos_get_avb_algorithm(struct osi_core_priv_data *const osi_core,
 	nveu32_t value;
 	nve32_t ret = -1;
 	nveu32_t qinx = 0U;
-
-	if (avb == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "avb structure is NULL\n", 0ULL);
-		goto done;
-	}
 
 	if ((avb->qindex >= OSI_EQOS_MAX_NUM_QUEUES) ||
 	    (avb->qindex == OSI_NONE)) {
@@ -3638,8 +3616,8 @@ static nve32_t eqos_config_mac_loopback(
 }
 #endif /* !OSI_STRIPPED_LIB */
 
-static nve32_t eqos_get_hw_features(struct osi_core_priv_data *const osi_core,
-				    struct osi_hw_features *hw_feat)
+static void eqos_get_hw_features(struct osi_core_priv_data *const osi_core,
+				 struct osi_hw_features *hw_feat)
 {
 	nveu32_t mac_hfr0 = 0;
 	nveu32_t mac_hfr1 = 0;
@@ -3763,7 +3741,6 @@ static nve32_t eqos_get_hw_features(struct osi_core_priv_data *const osi_core,
 			    EQOS_MAC_HFR3_TBSSEL_MASK);
 	hw_feat->auto_safety_pkg = ((mac_hfr3 >> EQOS_MAC_HFR3_ASP_SHIFT) &
 			EQOS_MAC_HFR3_ASP_MASK);
-	return 0;
 }
 
 #ifndef OSI_STRIPPED_LIB
@@ -4071,77 +4048,63 @@ static nve32_t eqos_config_rss(struct osi_core_priv_data *osi_core)
  * - De-initialization: No
  */
 static void eqos_config_for_macsec(struct osi_core_priv_data *const osi_core,
-			    const nveu32_t enable)
+				   const nveu32_t enable)
 {
 	nveu32_t value = 0U, temp = 0U;
 
-	if (osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
-		/* stop MAC Tx */
-		eqos_config_mac_tx(osi_core, OSI_DISABLE);
-		if (enable == OSI_ENABLE) {
-			/* Configure IPG  {EIPG,IPG} value according to macsec IAS in
-			 * MAC_Configuration and MAC_Extended_Configuration
-			 * IPG (12 B[default] + 32 B[sectag]) = 352 bits
-			 */
-			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-					   EQOS_MAC_MCR);
-			temp = EQOS_MCR_IPG;
-			temp = temp << EQOS_MCR_IPG_SHIFT;
-			value |= temp & EQOS_MCR_IPG_MASK;
-			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				    EQOS_MAC_MCR);
-			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-					   EQOS_MAC_EXTR);
-			value |= EQOS_MAC_EXTR_EIPGEN;
-			temp = EQOS_MAC_EXTR_EIPG;
-			temp = temp << EQOS_MAC_EXTR_EIPG_SHIFT;
-			value |= temp & EQOS_MAC_EXTR_EIPG_MASK;
-			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				    EQOS_MAC_EXTR);
-		} else {
-			/* reset to default IPG 12B */
-			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-					   EQOS_MAC_MCR);
-			value &= ~EQOS_MCR_IPG_MASK;
-			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				    EQOS_MAC_MCR);
-			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-					   EQOS_MAC_EXTR);
-			value &= ~EQOS_MAC_EXTR_EIPGEN;
-			value &= ~EQOS_MAC_EXTR_EIPG_MASK;
-			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				    EQOS_MAC_EXTR);
-		}
-		/* start MAC Tx */
-		eqos_config_mac_tx(osi_core, OSI_ENABLE);
-	}
-
-	if (osi_core->hw_feature != OSI_NULL) {
-		/* Updated MTL_EST depending on MACSEC enable/disable */
-		if (osi_core->hw_feature->est_sel == OSI_ENABLE) {
-			value = osi_readla(osi_core,
-					  (nveu8_t *)osi_core->base +
-					   EQOS_MTL_EST_CONTROL);
-			value &= ~EQOS_MTL_EST_CONTROL_CTOV;
-			if (enable == OSI_ENABLE) {
-				temp = EQOS_MTL_EST_CTOV_MACSEC_RECOMMEND;
-				temp = temp << EQOS_MTL_EST_CONTROL_CTOV_SHIFT;
-				value |= temp & EQOS_MTL_EST_CONTROL_CTOV;
-			} else {
-				temp = EQOS_MTL_EST_CTOV_RECOMMEND;
-				temp = temp << EQOS_MTL_EST_CONTROL_CTOV_SHIFT;
-				value |= temp & EQOS_MTL_EST_CONTROL_CTOV;
-			}
-			osi_writela(osi_core, value,
-				   (nveu8_t *)osi_core->base +
-				    EQOS_MTL_EST_CONTROL);
-		}
+	/* stop MAC Tx */
+	eqos_config_mac_tx(osi_core, OSI_DISABLE);
+	if (enable == OSI_ENABLE) {
+		/* Configure IPG  {EIPG,IPG} value according to macsec IAS in
+		 * MAC_Configuration and MAC_Extended_Configuration
+		 * IPG (12 B[default] + 32 B[sectag]) = 352 bits
+		 */
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+				EQOS_MAC_MCR);
+		temp = EQOS_MCR_IPG;
+		temp = temp << EQOS_MCR_IPG_SHIFT;
+		value |= temp & EQOS_MCR_IPG_MASK;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+				EQOS_MAC_MCR);
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+				EQOS_MAC_EXTR);
+		value |= EQOS_MAC_EXTR_EIPGEN;
+		temp = EQOS_MAC_EXTR_EIPG;
+		temp = temp << EQOS_MAC_EXTR_EIPG_SHIFT;
+		value |= temp & EQOS_MAC_EXTR_EIPG_MASK;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+				EQOS_MAC_EXTR);
 	} else {
-		OSI_CORE_ERR(osi_core->osd,
-			OSI_LOG_ARG_HW_FAIL, "Error: osi_core->hw_feature is NULL\n",
-			0ULL);
+		/* reset to default IPG 12B */
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+				EQOS_MAC_MCR);
+		value &= ~EQOS_MCR_IPG_MASK;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+				EQOS_MAC_MCR);
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+				EQOS_MAC_EXTR);
+		value &= ~EQOS_MAC_EXTR_EIPGEN;
+		value &= ~EQOS_MAC_EXTR_EIPG_MASK;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+				EQOS_MAC_EXTR);
 	}
+	/* start MAC Tx */
+	eqos_config_mac_tx(osi_core, OSI_ENABLE);
 
+	/* Updated MTL_EST depending on MACSEC enable/disable */
+	value = osi_readla(osi_core,
+			   (nveu8_t *)osi_core->base + EQOS_MTL_EST_CONTROL);
+	value &= ~EQOS_MTL_EST_CONTROL_CTOV;
+	if (enable == OSI_ENABLE) {
+		temp = EQOS_MTL_EST_CTOV_MACSEC_RECOMMEND;
+		temp = temp << EQOS_MTL_EST_CONTROL_CTOV_SHIFT;
+		value |= temp & EQOS_MTL_EST_CONTROL_CTOV;
+	} else {
+		temp = EQOS_MTL_EST_CTOV_RECOMMEND;
+		temp = temp << EQOS_MTL_EST_CONTROL_CTOV_SHIFT;
+		value |= temp & EQOS_MTL_EST_CONTROL_CTOV;
+	}
+	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_MTL_EST_CONTROL);
 	return;
 }
 
@@ -4182,7 +4145,6 @@ void eqos_init_core_ops(struct core_ops *ops)
 	ops->config_arp_offload = eqos_config_arp_offload;
 	ops->config_ptp_offload = eqos_config_ptp_offload;
 	ops->config_vlan_filtering = eqos_config_vlan_filtering;
-	ops->reset_mmc = eqos_reset_mmc;
 	ops->configure_eee = eqos_configure_eee;
 	ops->set_mdc_clk_rate = eqos_set_mdc_clk_rate;
 	ops->config_mac_loopback = eqos_config_mac_loopback;

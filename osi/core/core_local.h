@@ -146,8 +146,8 @@ struct core_ops {
 				const nveu32_t phyaddr,
 				const nveu32_t phyreg);
 	/** Called to get HW features */
-	nve32_t (*get_hw_features)(struct osi_core_priv_data *const osi_core,
-				   struct osi_hw_features *hw_feat);
+	void (*get_hw_features)(struct osi_core_priv_data *const osi_core,
+				struct osi_hw_features *hw_feat);
 #ifndef OSI_STRIPPED_LIB
 	/** Called to read reg */
 	nveu32_t (*read_reg)(struct osi_core_priv_data *const osi_core,
@@ -195,8 +195,6 @@ struct core_ops {
 				     const nveu32_t filter_enb_dis,
 				     const nveu32_t perfect_hash_filtering,
 				     const nveu32_t perfect_inverse_match);
-	/** Called to reset MMC HW counter structure */
-	void (*reset_mmc)(struct osi_core_priv_data *const osi_core);
 	/** Called to configure EEE Tx LPI */
 	void (*configure_eee)(struct osi_core_priv_data *const osi_core,
 			      const nveu32_t tx_lpi_enabled,
@@ -408,8 +406,6 @@ struct core_local {
 	struct osi_macsec_core_ops *macsec_ops;
 	/** structure to store tx time stamps */
 	struct osi_core_tx_ts ts[MAX_TX_TS_CNT];
-	/** Flag to represent initialization done or not */
-	nveu32_t init_done;
 	/** Flag to represent infterface initialization done or not */
 	nveu32_t if_init_done;
 	/** Magic number to validate osi core pointer */
@@ -448,6 +444,8 @@ struct core_local {
 	/** l3l4 wildcard filter configured (OSI_ENABLE) / not configured (OSI_DISABLE) */
 	nveu32_t l3l4_wildcard_filter_configured;
 #endif /* L3L4_WILDCARD_FILTER */
+	/** Hardware features */
+	struct osi_hw_features hw_features;
 };
 
 /**
@@ -462,15 +460,10 @@ struct core_local {
  * - Run time: No
  * - De-initialization: No
  */
-static inline void update_counter_u_local(nveu32_t *value, nveu32_t incr)
+static inline void update_counter_u_local(nveu32_t *value, OSI_UNUSED nveu32_t incr)
 {
-	nveu32_t temp = *value + incr;
-
-	if (temp < *value) {
-		/* Overflow, so reset it to zero */
-		*value = 0U;
-	}
-	*value = temp;
+	(void)incr;
+	*value = (((*value) & ((nveu32_t)INT_MAX)) + 1U) & (nveu32_t)INT_MAX;
 }
 
 /**
@@ -614,15 +607,9 @@ struct osi_core_priv_data *get_role_pointer(nveu32_t role);
  */
 #endif
 static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,
-						nveu64_t incr)
+						OSI_UNUSED nveu64_t incr)
 {
-	nveu64_t temp = last_value + incr;
-
-	if (temp < last_value) {
-		/* Stats overflow, so reset it to zero */
-		temp = 0UL;
-	}
-
-	return temp;
+	(void)incr;
+	return (((last_value) & ((nveu64_t)OSI_LLONG_MAX)) + 1UL) & (nveu64_t)OSI_LLONG_MAX;
 }
 #endif /* INCLUDED_CORE_LOCAL_H */

@@ -198,16 +198,4 @@
  *	2) osi_core->osd should be populated
  */
 void mgbe_read_mmc(struct osi_core_priv_data *const osi_core);
-
-/**
- * @brief mgbe_reset_mmc - To reset MMC registers and ether_mmc_counter
- *	  structure variable
- *
- * @param[in] osi_core: OSI core private data structure.
- *
- * @note
- *	1) MAC should be init and started. see osi_start_mac()
- *	2) osi_core->osd should be populated
- */
-void mgbe_reset_mmc(struct osi_core_priv_data *const osi_core);
 #endif /* INCLUDED_MGBE_MMC_H */

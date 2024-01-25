@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "../osi/common/common.h"
+#include "common.h"
 #include "core_common.h"
 #include "mgbe_core.h"
 #include "eqos_core.h"
@@ -141,6 +141,13 @@ static nve32_t xpcs_init_start(struct osi_core_priv_data *const osi_core)
 	nveu32_t  value;
 
 	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+		if (osi_core->xpcs_base == OSI_NULL) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "XPCS base is NULL", 0ULL);
+			ret = -1;
+			goto fail;
+		}
+
 		ret = xpcs_init(osi_core);
 		if (ret < 0) {
 			goto fail;
@@ -150,6 +157,7 @@ static nve32_t xpcs_init_start(struct osi_core_priv_data *const osi_core)
 		if (ret < 0) {
 			goto fail;
 		}
+
 		value = osi_readla(osi_core, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
 		/* Enable Link Status interrupt only after lane bring up success */
 		value |= MGBE_IMR_RGSMIIIE;
@@ -204,12 +212,12 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 		ret = -1;
 		break;
 	}
+
 	if (ret != -1) {
 		osi_writela(osi_core, value, ((nveu8_t *)osi_core->base + mac_mcr[osi_core->mac]));
 		/* Validate PCS initialization */
 		ret = xpcs_init_start(osi_core);
 	}
-
 fail:
 	return ret;
 }
@@ -305,7 +313,6 @@ nve32_t hw_config_rxcsum_offload(struct osi_core_priv_data *const osi_core,
 	const nveu32_t rxcsum_mode[2] = { EQOS_MAC_MCR, MGBE_MAC_RMCR};
 	const nveu32_t ipc_value[2] = { EQOS_MCR_IPC, MGBE_MAC_RMCR_IPC};
 
-#ifndef OSI_STRIPPED_LIB
 	if ((enabled != OSI_ENABLE) && (enabled != OSI_DISABLE)) {
 		ret = -1;
 		goto fail;
@@ -321,16 +328,6 @@ nve32_t hw_config_rxcsum_offload(struct osi_core_priv_data *const osi_core,
 	osi_writela(osi_core, value, ((nveu8_t *)addr + rxcsum_mode[osi_core->mac]));
 fail:
 	return ret;
-#else
-	/* using void to skip the misra error of unused variable */
-	(void)enabled;
-	/* For Safety Only enable is allowed, so enable by default */
-	value = osi_readla(osi_core, ((nveu8_t *)addr + rxcsum_mode[osi_core->mac]));
-	value |= ipc_value[osi_core->mac];
-	osi_writela(osi_core, value, ((nveu8_t *)addr + rxcsum_mode[osi_core->mac]));
-
-	return ret;
-#endif /* !OSI_STRIPPED_LIB */
 }
 
 nve32_t hw_set_systime_to_mac(struct osi_core_priv_data *const osi_core,
@@ -1064,14 +1061,6 @@ nve32_t hw_config_est(struct osi_core_priv_data *const osi_core,
 	const nveu32_t MTL_EST_BTR_HIGH[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_BTR_HIGH,
 						MGBE_MTL_EST_BTR_HIGH};
 
-	if ((osi_core->hw_feature != OSI_NULL) &&
-	    (osi_core->hw_feature->est_sel == OSI_DISABLE)) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "EST not supported in HW\n", 0ULL);
-		ret = -1;
-		goto done;
-	}
-
 	if (est->en_dis == OSI_DISABLE) {
 		val = osi_readla(osi_core, (nveu8_t *)base +
 				 MTL_EST_CONTROL[osi_core->mac]);
@@ -1260,14 +1249,6 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 	const nveu32_t MAC_FPE_CTS[MAX_MAC_IP_TYPES] = {EQOS_MAC_FPE_CTS,
 						MGBE_MAC_FPE_CTS};
 
-	if ((osi_core->hw_feature != OSI_NULL) &&
-	    (osi_core->hw_feature->fpe_sel == OSI_DISABLE)) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "FPE not supported in HW\n", 0ULL);
-		ret = -1;
-		goto error;
-	}
-
 	/* Only 8 TC */
 	if (fpe->tx_queue_preemption_enable > 0xFFU) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
@@ -1405,26 +1386,9 @@ static inline void save_gcl_params(struct osi_core_priv_data *osi_core)
 					 OSI_GCL_SIZE_256, OSI_GCL_SIZE_512,
 					 OSI_GCL_SIZE_1024};
 
-	if ((osi_core->hw_feature->gcl_width == 0U) ||
-	    (osi_core->hw_feature->gcl_width > 3U)) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "Wrong HW feature GCL width\n",
-			     (nveul64_t)osi_core->hw_feature->gcl_width);
-	} else {
-		l_core->gcl_width_val =
-				    gcl_widhth[osi_core->hw_feature->gcl_width];
-		l_core->ti_mask = gcl_ti_mask[osi_core->hw_feature->gcl_width];
-	}
-
-	if ((osi_core->hw_feature->gcl_depth == 0U) ||
-	    (osi_core->hw_feature->gcl_depth > 5U)) {
-		/* Do Nothing */
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "Wrong HW feature GCL depth\n",
-			   (nveul64_t)osi_core->hw_feature->gcl_depth);
-	} else {
-		l_core->gcl_dep = gcl_depthth[osi_core->hw_feature->gcl_depth];
-	}
+	l_core->gcl_width_val = gcl_widhth[l_core->hw_features.gcl_width];
+	l_core->ti_mask = gcl_ti_mask[l_core->hw_features.gcl_width];
+	l_core->gcl_dep = gcl_depthth[l_core->hw_features.gcl_depth];
 }
 
 /**

@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "../osi/common/common.h"
+#include "common.h"
 #include <osi_common.h>
 #include <osi_core.h>
 #include "mgbe_core.h"
@@ -1712,7 +1712,7 @@ static nve32_t mgbe_hsi_inject_err(struct osi_core_priv_data *const osi_core,
  * @retval 0 on success
  * @retval -1 on failure.
  */
-static nve32_t mgbe_configure_mac(struct osi_core_priv_data *osi_core)
+static void mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 {
 	nveu32_t value = 0U, max_queue = 0U, i = 0U;
 
@@ -1836,8 +1836,6 @@ static nve32_t mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 	/* RSS cofiguration */
 	mgbe_config_rss(osi_core);
 #endif /* !OSI_STRIPPED_LIB */
-
-	return 0;
 }
 
 /**
@@ -1903,8 +1901,10 @@ static nve32_t mgbe_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
 	nveu32_t sid[4] = { MGBE0_SID, MGBE1_SID, MGBE2_SID, MGBE3_SID };
 #endif
 	struct osi_vm_irq_data *irq_data;
+	nve32_t ret = 0;
 	nveu32_t i, j;
 	nveu32_t chan;
+
 
 	for (i = 0; i < osi_core->num_vm_irqs; i++) {
 		irq_data = &osi_core->irq_data[i];
@@ -1913,7 +1913,10 @@ static nve32_t mgbe_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
 			chan = irq_data->vm_chans[j];
 
 			if (chan >= OSI_MGBE_MAX_NUM_CHANS) {
-				continue;
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					     "Invalid channel number\n", chan);
+				ret = -1;
+				goto exit;
 			}
 
 			osi_writel(OSI_BIT(irq_data->vm_num),
@@ -1931,7 +1934,8 @@ static nve32_t mgbe_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				     "Wrong MAC instance-ID\n",
 				     osi_core->instance_id);
-			return -1;
+			ret = -1;
+			goto exit;
 		}
 
 		osi_writela(osi_core, MGBE_SID_VAL1(sid[osi_core->instance_id]),
@@ -1947,7 +1951,9 @@ static nve32_t mgbe_dma_chan_to_vmirq_map(struct osi_core_priv_data *osi_core)
 			    MGBE_WRAP_AXI_ASID2_CTRL);
 	}
 #endif
-	return 0;
+
+exit:
+	return ret;
 }
 
 
@@ -2029,18 +2035,13 @@ static nve32_t mgbe_core_init(struct osi_core_priv_data *const osi_core)
 	}
 
 	/* configure MGBE MAC HW */
-	ret = mgbe_configure_mac(osi_core);
-	if (ret < 0) {
-		goto fail;
-	}
+	mgbe_configure_mac(osi_core);
 
 	/* configure MGBE DMA */
 	mgbe_configure_dma(osi_core);
 
 	/* tsn initialization */
-	if (osi_core->hw_feature != OSI_NULL) {
-		hw_tsn_init(osi_core);
-	}
+	hw_tsn_init(osi_core);
 
 #if !defined(L3L4_WILDCARD_FILTER)
 	/* initialize L3L4 Filters variable */
@@ -2343,13 +2344,6 @@ static nve32_t validate_avb_args(struct osi_core_priv_data *const osi_core,
 {
 	nve32_t ret = -1;
 
-	if (avb == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"avb structure is NULL\n",
-			0ULL);
-		goto done;
-	}
-
 	/* queue index in range */
 	if (avb->qindex >= OSI_MGBE_MAX_NUM_QUEUES) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
@@ -2554,14 +2548,6 @@ static nve32_t mgbe_get_avb_algorithm(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = 0;
 	nveu32_t qinx = 0U;
 	nveu32_t tcinx = 0U;
-
-	if (avb == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"avb structure is NULL\n",
-			0ULL);
-		ret = -1;
-		goto fail;
-	}
 
 	if ((avb->qindex >= OSI_MGBE_MAX_NUM_QUEUES) ||
 	    (avb->qindex == OSI_NONE)) {
@@ -3492,8 +3478,8 @@ static void mgbe_configure_eee(struct osi_core_priv_data *const osi_core,
 }
 #endif /* !OSI_STRIPPED_LIB */
 
-static nve32_t mgbe_get_hw_features(struct osi_core_priv_data *const osi_core,
-				    struct osi_hw_features *hw_feat)
+static void mgbe_get_hw_features(struct osi_core_priv_data *const osi_core,
+				 struct osi_hw_features *hw_feat)
 {
 	nveu8_t *base = (nveu8_t *)osi_core->base;
 	nveu32_t mac_hfr0 = 0;
@@ -3667,8 +3653,6 @@ static nve32_t mgbe_get_hw_features(struct osi_core_priv_data *const osi_core,
 			    MGBE_MAC_HFR3_TBSSEL_MASK);
 	hw_feat->num_tbs_ch = ((mac_hfr3 >> MGBE_MAC_HFR3_TBS_CH_SHIFT) &
 			       MGBE_MAC_HFR3_TBS_CH_MASK);
-
-	return 0;
 }
 
 /**
@@ -3966,32 +3950,19 @@ static void mgbe_config_for_macsec(struct osi_core_priv_data *const osi_core,
 	/* start MAC Tx */
 	mgbe_config_mac_tx(osi_core, OSI_ENABLE);
 
-	if (osi_core->hw_feature != OSI_NULL) {
-		/* Program MTL_EST depending on MACSEC enable/disable */
-		if (osi_core->hw_feature->est_sel == OSI_ENABLE) {
-			value = osi_readla(osi_core,
-					  (nveu8_t *)osi_core->base +
-					   MGBE_MTL_EST_CONTROL);
-			value &= ~MGBE_MTL_EST_CONTROL_CTOV;
-			if (enable == OSI_ENABLE) {
-				temp = MGBE_MTL_EST_CTOV_MACSEC_RECOMMEND;
-				temp = temp << MGBE_MTL_EST_CONTROL_CTOV_SHIFT;
-				value |= temp & MGBE_MTL_EST_CONTROL_CTOV;
-			} else {
-				temp = MGBE_MTL_EST_CTOV_RECOMMEND;
-				temp = temp << MGBE_MTL_EST_CONTROL_CTOV_SHIFT;
-				value |= temp & MGBE_MTL_EST_CONTROL_CTOV;
-			}
-			osi_writela(osi_core, value,
-				   (nveu8_t *)osi_core->base +
-				    MGBE_MTL_EST_CONTROL);
-		} else {
-			OSI_CORE_ERR(osi_core->osd,
-				OSI_LOG_ARG_HW_FAIL, "Error: osi_core->hw_feature is NULL\n",
-				0ULL);
-		}
+	/* Configure EST */
+	value = osi_readla(osi_core, (nveu8_t *)osi_core->base + MGBE_MTL_EST_CONTROL);
+	value &= ~MGBE_MTL_EST_CONTROL_CTOV;
+	if (enable == OSI_ENABLE) {
+		temp = MGBE_MTL_EST_CTOV_MACSEC_RECOMMEND;
+		temp = temp << MGBE_MTL_EST_CONTROL_CTOV_SHIFT;
+		value |= temp & MGBE_MTL_EST_CONTROL_CTOV;
+	} else {
+		temp = MGBE_MTL_EST_CTOV_RECOMMEND;
+		temp = temp << MGBE_MTL_EST_CONTROL_CTOV_SHIFT;
+		value |= temp & MGBE_MTL_EST_CONTROL_CTOV;
 	}
-
+	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MTL_EST_CONTROL);
 	return;
 }
 #endif /*  MACSEC_SUPPORT */
@@ -4034,7 +4005,6 @@ void mgbe_init_core_ops(struct core_ops *ops)
 	ops->config_arp_offload = mgbe_config_arp_offload;
 	ops->config_ptp_offload = mgbe_config_ptp_offload;
 	ops->config_vlan_filtering = mgbe_config_vlan_filtering;
-	ops->reset_mmc = mgbe_reset_mmc;
 	ops->configure_eee = mgbe_configure_eee;
 	ops->set_mdc_clk_rate = mgbe_set_mdc_clk_rate;
 	ops->config_mac_loopback = mgbe_config_mac_loopback;

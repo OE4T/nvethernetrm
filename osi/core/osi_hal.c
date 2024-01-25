@@ -22,7 +22,7 @@
 
 #include <ivc_core.h>
 #include "core_local.h"
-#include "../osi/common/common.h"
+#include "common.h"
 #include "core_common.h"
 #include "eqos_core.h"
 #include "mgbe_core.h"
@@ -142,59 +142,11 @@ static inline nve32_t validate_args(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = 0;
 
 	if ((osi_core == OSI_NULL) || (osi_core->base == OSI_NULL) ||
-	    (l_core->init_done == OSI_DISABLE) ||
+	    (l_core->if_init_done == OSI_DISABLE) ||
 	    (l_core->magic_num != (nveu64_t)osi_core)) {
 		ret = -1;
 	}
 
-	return ret;
-}
-
-/**
- * @brief Function to validate function pointers.
- *
- * @param[in] osi_core: OSI Core private data structure.
- * @param[in] ops_p: OSI Core operations structure.
- *
- * @note
- * API Group:
- * - Initialization: Yes
- * - Run time: No
- * - De-initialization: No
- *
- * @retval 0 on Success
- * @retval -1 on Failure
- */
-static nve32_t validate_func_ptrs(struct osi_core_priv_data *const osi_core,
-				  struct core_ops *ops_p)
-{
-	nveu32_t i = 0;
-	nve32_t ret = 0;
-	void *temp_ops = (void *)ops_p;
-#if __SIZEOF_POINTER__ == 8
-	nveu64_t *l_ops = (nveu64_t *)temp_ops;
-#elif __SIZEOF_POINTER__ == 4
-	nveu32_t *l_ops = (nveu32_t *)temp_ops;
-#else
-	OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-		     "Undefined architecture\n", 0ULL);
-	ret = -1;
-	goto fail;
-#endif
-	(void) osi_core;
-
-	for (i = 0; i < (sizeof(*ops_p) / (nveu64_t)__SIZEOF_POINTER__); i++) {
-		if (*l_ops == 0U) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "core: fn ptr validation failed at\n",
-				     (nveu64_t)i);
-			ret = -1;
-			goto fail;
-		}
-
-		l_ops++;
-	}
-fail:
 	return ret;
 }
 
@@ -297,29 +249,15 @@ static nve32_t osi_hal_read_phy_reg(struct osi_core_priv_data *const osi_core,
 	return l_core->ops_p->read_phy_reg(osi_core, phyaddr, phyreg);
 }
 
-static nve32_t validate_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
+static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
 {
-	nve32_t ret = -1;
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if (osi_core == OSI_NULL) {
-		goto exit;
-	}
-
-	if ((l_core->magic_num != (nveu64_t)osi_core) ||
-	    (l_core->init_done == OSI_ENABLE)) {
-		goto exit;
-	}
-
-	if ((osi_core->osd_ops.ops_log == OSI_NULL) ||
-	    (osi_core->osd_ops.udelay == OSI_NULL) ||
-	    (osi_core->osd_ops.msleep == OSI_NULL) ||
-#ifdef OSI_DEBUG
-	    (osi_core->osd_ops.printf == OSI_NULL) ||
-#endif /* OSI_DEBUG */
-	    (osi_core->osd_ops.usleep_range == OSI_NULL)) {
-		goto exit;
-	}
+	typedef void (*init_core_ops_arr)(struct core_ops *local_ops);
+	static struct core_ops g_ops[MAX_MAC_IP_TYPES];
+	init_core_ops_arr i_ops[MAX_MAC_IP_TYPES] = {
+		eqos_init_core_ops, mgbe_init_core_ops
+	};
+	nve32_t ret = -1;
 
 	if (osi_core->mac > OSI_MAC_HW_MGBE) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
@@ -327,45 +265,9 @@ static nve32_t validate_hal_init_core_ops(struct osi_core_priv_data *const osi_c
 		goto exit;
 	}
 
-	if (osi_core->use_virtualization > OSI_ENABLE) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "Invalid use_virtualization value\n", 0ULL);
-		goto exit;
-	}
-	ret = 0;
-exit:
-	return ret;
-}
-
-static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
-{
-	struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	typedef void (*init_core_ops_arr)(struct core_ops *local_ops);
-	static struct core_ops g_ops[MAX_MAC_IP_TYPES];
-	init_core_ops_arr i_ops[MAX_MAC_IP_TYPES][MAX_MAC_IP_TYPES] = {
-		{ eqos_init_core_ops, OSI_NULL },
-		{ mgbe_init_core_ops, OSI_NULL }
-	};
-	nve32_t ret;
-
-	/* Validate hal initialization ops */
-	ret = validate_hal_init_core_ops(osi_core);
-	if (ret < 0) {
-		goto exit;
-	}
-
-	if (i_ops[osi_core->mac][osi_core->use_virtualization] != OSI_NULL) {
-		i_ops[osi_core->mac][osi_core->use_virtualization](&g_ops[osi_core->mac]);
-	}
-
-	if (validate_func_ptrs(osi_core, &g_ops[osi_core->mac]) < 0) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "core: function ptrs validation failed\n", 0ULL);
-		goto exit;
-	}
+	i_ops[osi_core->mac](&g_ops[osi_core->mac]);
 
 	l_core->ops_p = &g_ops[osi_core->mac];
-	l_core->init_done = OSI_ENABLE;
 
 	ret = 0;
 exit:
@@ -433,10 +335,7 @@ static nve32_t osi_hal_hw_core_deinit(struct osi_core_priv_data *const osi_core)
 	/* Disable MAC interrupts */
 	osi_writela(osi_core, 0U, ((nveu8_t *)osi_core->base + HW_MAC_IER));
 
-	if (l_core->l_mac_ver != MAC_CORE_VER_TYPE_EQOS) {
-		osi_writela(osi_core, 0U,
-			    ((nveu8_t *)osi_core->base + WRAP_COMMON_INTR_ENABLE));
-	}
+	osi_writela(osi_core, 0U, ((nveu8_t *)osi_core->base + WRAP_COMMON_INTR_ENABLE));
 
 	/* Handle the common interrupt if any status bits set */
 	l_core->ops_p->handle_common_intr(osi_core);
@@ -676,7 +575,6 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 
 #ifndef OSI_STRIPPED_LIB
 	init_vlan_filters(osi_core);
-
 #endif /* !OSI_STRIPPED_LIB */
 
 	ret = l_core->ops_p->core_init(osi_core);
@@ -696,12 +594,8 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 	 */
 	(void)hw_set_mode(osi_core, OSI_FULL_DUPLEX);
 
-	/* By default enable rxcsum */
-	ret = hw_config_rxcsum_offload(osi_core, OSI_ENABLE);
-	if (ret == 0) {
-		l_core->cfg.rxcsum = OSI_ENABLE;
-		l_core->cfg.flags |= DYNAMIC_CFG_RXCSUM;
-	}
+	/* By default enable rxcsum - since passing enable explicitely this API will never fail */
+	(void)hw_config_rxcsum_offload(osi_core, OSI_ENABLE);
 
 	/* Set default PTP settings */
 	osi_core->ptp_config.ptp_rx_queue = 3U;
@@ -1707,27 +1601,8 @@ static nve32_t configure_frp(struct osi_core_priv_data *const osi_core,
 			     struct osi_core_frp_cmd *const cmd)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	nve32_t ret;
 
-	if (cmd == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "FRP command invalid\n", 0ULL);
-		ret = -1;
-		goto done;
-	}
-
-	/* Check for supported MAC version */
-	if ((osi_core->mac == OSI_MAC_HW_EQOS) &&
-	    (osi_core->mac_ver < OSI_EQOS_MAC_5_30)) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "MAC doesn't support FRP\n", OSI_NONE);
-		ret = -1;
-		goto done;
-	}
-
-	ret = setup_frp(osi_core, l_core->ops_p, cmd);
-done:
-	return ret;
+	return setup_frp(osi_core, l_core->ops_p, cmd);
 }
 
 /**
@@ -1775,25 +1650,18 @@ static nve32_t config_est(struct osi_core_priv_data *osi_core,
 {
 	nve32_t ret;
 
-	if (est == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "EST data is NULL", 0ULL);
-		ret = -1;
-		goto done;
-	}
-
 	if ((osi_core->flow_ctrl & OSI_FLOW_CTRL_TX) ==
 	     OSI_FLOW_CTRL_TX) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "TX Flow control enabled, please disable it",
 			      0ULL);
 		ret = -1;
-		goto done;
+		goto fail;
 	}
 
 	ret = hw_config_est(osi_core, est);
 
-done:
+fail:
 	return ret;
 }
 
@@ -1833,19 +1701,7 @@ done:
 static nve32_t config_fpe(struct osi_core_priv_data *osi_core,
 			  struct osi_fpe_config *fpe)
 {
-	nve32_t ret;
-
-	if (fpe == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "FPE data is NULL", 0ULL);
-		ret = -1;
-		goto done;
-	}
-
-	ret = hw_config_fpe(osi_core, fpe);
-
-done:
-	return ret;
+	return hw_config_fpe(osi_core, fpe);
 }
 
 /**
@@ -2406,7 +2262,7 @@ static void cfg_l2_filter(struct core_local *l_core)
 static void cfg_rxcsum(struct core_local *l_core)
 {
 	(void)hw_config_rxcsum_offload((struct osi_core_priv_data *)(void *)l_core,
-						    l_core->cfg.rxcsum);
+					l_core->cfg.rxcsum);
 }
 
 #ifndef OSI_STRIPPED_LIB
@@ -2535,21 +2391,19 @@ static nve32_t handle_config_filters(struct osi_core_priv_data *osi_core,
 				     struct osi_ioctl *data)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	nve32_t ret = -1;
+	nve32_t ret;
 
 	if (data->cmd == OSI_CMD_L3L4_FILTER) {
 		ret = configure_l3l4_filter(osi_core, &data->l3l4_filter);
 		if (ret == 0) {
 			l_core->cfg.flags |= DYNAMIC_CFG_L3_L4;
 		}
-	} else if (data->cmd == OSI_CMD_L2_FILTER) {
+	} else {
 		ret = osi_l2_filter(osi_core, &data->l2_filter);
 		if (ret == 0) {
 			store_l2_filter(osi_core, &data->l2_filter);
 			l_core->cfg.flags |= DYNAMIC_CFG_L2;
 		}
-	} else {
-		/* do nothing */
 	}
 
 	return ret;
@@ -2559,7 +2413,7 @@ static nve32_t handle_config_est_fpe_ioctl(struct osi_core_priv_data *osi_core,
 					   struct osi_ioctl *data)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	nve32_t ret = -1;
+	nve32_t ret;
 
 	if (data->cmd == OSI_CMD_CONFIG_EST) {
 		ret = config_est(osi_core, &data->est);
@@ -2568,15 +2422,13 @@ static nve32_t handle_config_est_fpe_ioctl(struct osi_core_priv_data *osi_core,
 					 sizeof(struct osi_est_config));
 			l_core->cfg.flags |= DYNAMIC_CFG_EST;
 		}
-	} else if (data->cmd == OSI_CMD_CONFIG_FPE) {
+	} else {
 		ret = config_fpe(osi_core, &data->fpe);
 		if (ret == 0) {
 			(void)osi_memcpy(&l_core->cfg.fpe, &data->fpe,
 					 sizeof(struct osi_fpe_config));
 			l_core->cfg.flags |= DYNAMIC_CFG_FPE;
 		}
-	} else {
-		/* do nothing */
 	}
 
 	return ret;
@@ -2644,6 +2496,7 @@ exit:
 	return ret;
 }
 
+#ifndef OSI_STRIPPED_LIB
 static nve32_t handle_config_ptp_ioctl(struct osi_core_priv_data *osi_core,
 				       struct osi_ioctl *data)
 {
@@ -2691,6 +2544,7 @@ static nve32_t handle_config_ptp_ioctl(struct osi_core_priv_data *osi_core,
 exit:
 	return ret;
 }
+#endif /* !OSI_STRIPPED_LIB */
 
 static nve32_t handle_time_ether_m2m_role(struct osi_core_priv_data *osi_core)
 {
@@ -3073,11 +2927,6 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		ret = 0;
 		break;
 
-	case OSI_CMD_RESET_MMC:
-		ops_p->reset_mmc(osi_core);
-		ret = 0;
-		break;
-
 	case OSI_CMD_MAC_LB:
 		ret = conf_mac_loopback(osi_core, data->arg1_u32);
 		break;
@@ -3202,16 +3051,12 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		ret = handle_adjust_time_ioctl(osi_core, data);
 		break;
 
-	case OSI_CMD_CONFIG_PTP:
-		ret = handle_config_ptp_ioctl(osi_core, data);
-		break;
-
 	case OSI_CMD_GET_HW_FEAT:
-		ret = ops_p->get_hw_features(osi_core, &data->hw_feat);
-		if (ret >= 0) {
-			/* Get MAC version */
-			ret = osi_get_mac_version(osi_core, &data->arg1_u32);
-		}
+		/* get hw features */
+		l_core->ops_p->get_hw_features(osi_core, &l_core->hw_features);
+		osi_memcpy(&data->hw_feat, &l_core->hw_features, sizeof(struct osi_hw_features));
+		/* Get MAC version */
+		ret = osi_get_mac_version(osi_core, &data->arg1_u32);
 
 		break;
 
@@ -3220,6 +3065,9 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 #ifndef OSI_STRIPPED_LIB
+	case OSI_CMD_CONFIG_PTP:
+		ret = handle_config_ptp_ioctl(osi_core, data);
+		break;
 	case OSI_CMD_CONFIG_PTP_OFFLOAD:
 		ret = conf_ptp_offload(osi_core, &data->pto_config);
 		break;
@@ -3279,12 +3127,8 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_MAC_MTU:
-		ret = 0;
 #ifdef MACSEC_SUPPORT
-		if ((l_core->macsec_ops != OSI_NULL) &&
-		    (l_core->macsec_ops->update_mtu != OSI_NULL)) {
-			ret = l_core->macsec_ops->update_mtu(osi_core, data->arg1_u32);
-		}
+		ret = l_core->macsec_ops->update_mtu(osi_core, data->arg1_u32);
 #endif /*  MACSEC_SUPPORT */
 		break;
 

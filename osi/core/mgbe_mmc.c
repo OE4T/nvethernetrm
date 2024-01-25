@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,11 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "../osi/common/common.h"
+#include "common.h"
 #include <osi_common.h>
 #include <osi_core.h>
 #include "mgbe_mmc.h"
 #include "mgbe_core.h"
+#include "core_local.h"
 
 /**
  * @brief mgbe_update_mmc_val - function to read register and return value to callee
@@ -47,41 +48,9 @@ static inline nveu64_t mgbe_update_mmc_val(struct osi_core_priv_data *osi_core,
 					   nveu64_t last_value,
 					   nveu64_t offset)
 {
-	nveu64_t temp = 0;
-	nveu32_t value = osi_readl((nveu8_t *)osi_core->base +
-				       offset);
+	nveu32_t value = osi_readl((nveu8_t *)osi_core->base + offset);
 
-	temp = last_value + value;
-	if (temp < last_value) {
-		OSI_CORE_ERR(osi_core->osd,
-			OSI_LOG_ARG_OUTOFBOUND,
-			"Value overflow resetting  all counters\n",
-			(nveul64_t)offset);
-		mgbe_reset_mmc(osi_core);
-	}
-
-	return temp;
-}
-
-/**
- * @brief mgbe_reset_mmc - To reset MMC registers and ether_mmc_counter
- *	structure variable
- *
- * @param[in] osi_core: OSI core private data structure.
- *
- * @note
- *	1) MAC should be init and started. see osi_start_mac()
- *	2) osi_core->osd should be populated
- */
-void mgbe_reset_mmc(struct osi_core_priv_data *const osi_core)
-{
-	nveu32_t value;
-
-	value = osi_readl((nveu8_t *)osi_core->base + MGBE_MMC_CNTRL);
-	/* self-clear bit in one clock cycle */
-	value |= MGBE_MMC_CNTRL_CNTRST;
-	osi_writel(value, (nveu8_t *)osi_core->base + MGBE_MMC_CNTRL);
-	osi_memset(&osi_core->mmc, 0U, sizeof(struct osi_mmc_counters));
+	return osi_update_stats_counter(last_value, value);
 }
 
 /**
