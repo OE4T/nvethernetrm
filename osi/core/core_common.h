@@ -64,7 +64,6 @@
 					 OSI_BIT(12) | OSI_BIT(13) | \
 					 OSI_BIT(14) | OSI_BIT(15))
 #define MTL_FPE_CTS_PEC_SHIFT		8U
-#define MTL_FPE_CTS_PEC_MAX_SHIFT	16U
 #define MAC_FPE_CTS_EFPE		OSI_BIT(0)
 #define MAC_FPE_CTS_SVER		OSI_BIT(1)
 /* MTL FPE adv registers */

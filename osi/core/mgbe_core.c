@@ -941,13 +941,14 @@ done:
  * @retval -1 on failure.
  */
 static nve32_t mgbe_frp_write(struct osi_core_priv_data *osi_core,
-			      nveu32_t acc_sel,
+			      OSI_UNUSED nveu32_t acc_sel,
 			      nveu32_t addr,
 			      nveu32_t data)
 {
 	nve32_t ret = 0;
 	nveu8_t *base = osi_core->base;
 	nveu32_t val = 0U;
+	(void)acc_sel;
 
 	/* Wait for ready */
 	ret = osi_readl_poll_timeout((base + MGBE_MTL_RXP_IND_CS),
@@ -970,14 +971,12 @@ static nve32_t mgbe_frp_write(struct osi_core_priv_data *osi_core,
 
 	/* Program MTL_RXP_Indirect_Acc_Control_Status */
 	val = osi_readla(osi_core, base + MGBE_MTL_RXP_IND_CS);
-	/* Set/Reset ACCSEL for FRP Register block/Instruction Table */
-	if (acc_sel == OSI_ENABLE) {
-		/* Set ACCSEL bit */
-		val |= MGBE_MTL_RXP_IND_CS_ACCSEL;
-	} else {
-		/* Reset ACCSEL bit */
-		val &= ~MGBE_MTL_RXP_IND_CS_ACCSEL;
-	}
+
+	/* Currently acc_sel is always 0 which means FRP Indirect Access Selection
+	 * is Access FRP Instruction Table
+	 */
+	val &= ~MGBE_MTL_RXP_IND_CS_ACCSEL;
+
 	/* Set WRRDN for write */
 	val |= MGBE_MTL_RXP_IND_CS_WRRDN;
 	/* Clear and add ADDR */
@@ -1021,20 +1020,12 @@ done:
  * @retval -1 on failure.
  */
 static nve32_t mgbe_update_frp_entry(struct osi_core_priv_data *const osi_core,
-				     const nveu32_t pos,
+				     const nveu32_t pos_val,
 				     struct osi_core_frp_data *const data)
 {
 	nveu32_t val = 0U, tmp = 0U;
 	nve32_t ret = -1;
-
-	/* Validate pos value */
-	if (pos >= OSI_FRP_MAX_ENTRY) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"Invalid FRP table entry\n",
-			pos);
-		ret = -1;
-		goto done;
-	}
+	nveu32_t pos = (pos_val & 0xFFU);
 
 	/** Write Match Data into IE0 **/
 	val = data->match_data;
@@ -3712,7 +3703,7 @@ static inline nve32_t mgbe_poll_for_update_ts_complete(
 static nve32_t mgbe_adjust_mactime(struct osi_core_priv_data *const osi_core,
 				   const nveu32_t sec, const nveu32_t nsec,
 				   const nveu32_t add_sub,
-				   const nveu32_t one_nsec_accuracy)
+				   OSI_UNUSED const nveu32_t one_nsec_accuracy)
 {
 	void *addr = osi_core->base;
 	nveu32_t mac_tcr;
@@ -3722,6 +3713,7 @@ static nve32_t mgbe_adjust_mactime(struct osi_core_priv_data *const osi_core,
 	nveu32_t temp_nsec;
 	nve32_t ret = 0;
 
+	(void)one_nsec_accuracy;
 	temp_sec = sec;
 	temp_nsec = nsec;
 	/* To be sure previous write was flushed (if Any) */
@@ -3748,14 +3740,9 @@ static nve32_t mgbe_adjust_mactime(struct osi_core_priv_data *const osi_core,
 		 * MAC_TCR.TSCTRLSSR is set or
 		 * (2^32 - <new_nsec_value> if MAC_TCR.TSCTRLSSR is reset)
 		 */
-		if (one_nsec_accuracy == OSI_ENABLE) {
-			if (temp_nsec < UINT_MAX) {
-				temp_nsec = (TEN_POWER_9 - temp_nsec);
-			}
-		} else {
-			if (temp_nsec < UINT_MAX) {
-				temp_nsec = (TWO_POWER_31 - temp_nsec);
-			}
+		/* one_nsec_accuracy is always enabled*/
+		if (temp_nsec < UINT_MAX) {
+			temp_nsec = (TEN_POWER_9 - temp_nsec);
 		}
 	}
 

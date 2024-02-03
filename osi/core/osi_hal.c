@@ -1903,39 +1903,15 @@ static inline nvel64_t drift_calculation(struct osi_core_priv_data *const osi_co
 		 (nveul64_t)ptp_tsc1.tsc_low_bits);
 	sec = ptp_tsc1.ptp_high_bits;
 	nsec = ptp_tsc1.ptp_low_bits;
-	if ((OSI_LLONG_MAX - (nvel64_t)nsec) > ((nvel64_t)sec * OSI_NSEC_PER_SEC_SIGNED)) {
-		*primary_time = ((nvel64_t)sec * OSI_NSEC_PER_SEC_SIGNED) + (nvel64_t)nsec;
-	} else {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "CORE: Negative primary PTP time\n", 0ULL);
-#ifdef HSI_SUPPORT
-		osi_core->hsi.report_err = OSI_ENABLE;
-		osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_TIME_CAL_ERR;
-#endif
-		ret = -1;
-		goto fail;
-	}
+	*primary_time = ((nvel64_t)sec * OSI_NSEC_PER_SEC_SIGNED) + (nvel64_t)nsec;
 
 	time2 = ((nveul64_t)((nveul64_t)ptp_tsc2.tsc_high_bits << 32) +
 		 (nveul64_t)ptp_tsc2.tsc_low_bits);
 	secondary_sec = ptp_tsc2.ptp_high_bits;
 	secondary_nsec = ptp_tsc2.ptp_low_bits;
 
-	if ((OSI_LLONG_MAX - (nvel64_t)secondary_nsec) >
-	    ((nvel64_t)secondary_sec * OSI_NSEC_PER_SEC_SIGNED)) {
-		*secondary_time = ((nvel64_t)secondary_sec * OSI_NSEC_PER_SEC_SIGNED) +
+	*secondary_time = ((nvel64_t)secondary_sec * OSI_NSEC_PER_SEC_SIGNED) +
 				   (nvel64_t)secondary_nsec;
-	} else {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			     "CORE: Negative secondary PTP time\n", 0ULL);
-#ifdef HSI_SUPPORT
-		osi_core->hsi.report_err = OSI_ENABLE;
-		osi_core->hsi.err_code[MAC2MAC_ERR_IDX] = OSI_M2M_TIME_CAL_ERR;
-#endif
-		ret = -1;
-		goto fail;
-	}
-
 	if (time2 > time1) {
 		temp = time2 - time1;
 		if ((OSI_LLONG_MAX - (nvel64_t)temp) > *secondary_time) {
@@ -2320,6 +2296,7 @@ static void cfg_fpe(struct core_local *l_core)
 			 &l_core->cfg.fpe);
 }
 
+#ifndef OSI_STRIPPED_LIB
 static void cfg_ptp(struct core_local *l_core)
 {
 	struct osi_core_priv_data *osi_core = (struct osi_core_priv_data *)(void *)l_core;
@@ -2330,6 +2307,7 @@ static void cfg_ptp(struct core_local *l_core)
 
 	(void)osi_handle_ioctl(osi_core, &ioctl_data);
 }
+#endif /* !OSI_STRIPPED_LIB */
 
 static void cfg_frp(struct core_local *l_core)
 {
@@ -2350,11 +2328,11 @@ static void apply_dynamic_cfg(struct osi_core_priv_data *osi_core)
 		[DYNAMIC_CFG_VLAN_IDX] = cfg_vlan,
 		[DYNAMIC_CFG_FC_IDX] = cfg_fc,
 		[DYNAMIC_CFG_EEE_IDX] = cfg_eee,
+		[DYNAMIC_CFG_PTP_IDX] = cfg_ptp,
 #endif /* !OSI_STRIPPED_LIB */
 		[DYNAMIC_CFG_AVB_IDX] = cfg_avb,
 		[DYNAMIC_CFG_EST_IDX] = cfg_est,
 		[DYNAMIC_CFG_FPE_IDX] = cfg_fpe,
-		[DYNAMIC_CFG_PTP_IDX] = cfg_ptp,
 		[DYNAMIC_CFG_FRP_IDX] = cfg_frp
 	};
 	nveu32_t flags = l_core->cfg.flags;

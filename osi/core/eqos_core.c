@@ -539,20 +539,12 @@ done:
  * @retval -1 on failure.
  */
 static nve32_t eqos_update_frp_entry(struct osi_core_priv_data *const osi_core,
-				     const nveu32_t pos,
+				     const nveu32_t pos_val,
 				     struct osi_core_frp_data *const data)
 {
 	nveu32_t val = 0U, tmp = 0U;
 	nve32_t ret = -1;
-
-	/* Validate pos value */
-	if (pos >= OSI_FRP_MAX_ENTRY) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-			"Invalid FRP table entry\n",
-			pos);
-		ret = -1;
-		goto done;
-	}
+	nveu32_t pos = (pos_val & 0xFFU);
 
 	/** Write Match Data into IE0 **/
 	val = data->match_data;
@@ -2080,10 +2072,8 @@ static nve32_t eqos_update_mac_addr_low_high_reg(
 			goto fail;
 		}
 
-		/* Update AE bit if OSI_OPER_ADDR_UPDATE is set */
-		if ((filter->oper_mode & OSI_OPER_ADDR_UPDATE) == OSI_OPER_ADDR_UPDATE) {
-			value |= EQOS_MAC_ADDRH_AE;
-		}
+		/* Update AE bit */
+		value |= EQOS_MAC_ADDRH_AE;
 
 		/* Setting Source/Destination Address match valid for 1 to 32 index */
 		if (((idx > 0U) && (idx < EQOS_MAX_MAC_ADDR_REG)) && (src_dest <= OSI_SA_MATCH)) {
@@ -2368,7 +2358,7 @@ fail:
 static nve32_t eqos_adjust_mactime(struct osi_core_priv_data *const osi_core,
 				   const nveu32_t sec, const nveu32_t nsec,
 				   const nveu32_t add_sub,
-				   const nveu32_t one_nsec_accuracy)
+				   OSI_UNUSED const nveu32_t one_nsec_accuracy)
 {
 	void *addr = osi_core->base;
 	nveu32_t mac_tcr = 0U;
@@ -2378,6 +2368,7 @@ static nve32_t eqos_adjust_mactime(struct osi_core_priv_data *const osi_core,
 	nveu32_t nsec1 = nsec;
 	nve32_t ret = 0;
 
+	(void)one_nsec_accuracy;
 	ret = eqos_poll_for_update_ts_complete(osi_core, &mac_tcr);
 	if (ret == -1) {
 		goto fail;
@@ -2401,14 +2392,9 @@ static nve32_t eqos_adjust_mactime(struct osi_core_priv_data *const osi_core,
 		 * MAC_TCR.TSCTRLSSR is set or
 		 * (2^32 - <new_nsec_value> if MAC_TCR.TSCTRLSSR is reset)
 		 */
-		if (one_nsec_accuracy == OSI_ENABLE) {
-			if (nsec1 < UINT_MAX) {
-				nsec1 = (TEN_POWER_9 - nsec1);
-			}
-		} else {
-			if (nsec1 < UINT_MAX) {
-				nsec1 = (TWO_POWER_31 - nsec1);
-			}
+		/* one_nsec_accuracy is always enabled*/
+		if (nsec1 < UINT_MAX) {
+			nsec1 = (TEN_POWER_9 - nsec1);
 		}
 	}
 

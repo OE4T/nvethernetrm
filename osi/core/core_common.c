@@ -123,7 +123,8 @@ nve32_t hw_set_mode(struct osi_core_priv_data *const osi_core, const nve32_t mod
 	}
 #endif /* !OSI_STRIPPED_LIB */
 
-	if (osi_core->mac == OSI_MAC_HW_EQOS) {
+	if ((osi_core->mac == OSI_MAC_HW_EQOS) &&
+	    ((mode == OSI_FULL_DUPLEX) || (mode == OSI_HALF_DUPLEX))) {
 		mcr_val = osi_readla(osi_core, (nveu8_t *)base + EQOS_MAC_MCR);
 		mcr_val |= bit_set[mode];
 		mcr_val &= ~clear_bit[mode];
@@ -646,7 +647,7 @@ void hw_config_l3_l4_filter_enable(struct osi_core_priv_data *const osi_core,
  */
 static inline nve32_t hw_est_read(struct osi_core_priv_data *osi_core,
 				  nveu32_t addr_val, nveu32_t *data,
-				  nveu32_t gcla, nveu32_t bunk,
+				  OSI_UNUSED nveu32_t gcla, nveu32_t bunk,
 				  nveu32_t mac)
 {
 	nve32_t retry = 1000;
@@ -655,10 +656,11 @@ static inline nve32_t hw_est_read(struct osi_core_priv_data *osi_core,
 	const nveu32_t MTL_EST_GCL_CONTROL[MAX_MAC_IP_TYPES] = {
 			EQOS_MTL_EST_GCL_CONTROL, MGBE_MTL_EST_GCL_CONTROL};
 	const nveu32_t MTL_EST_DATA[MAX_MAC_IP_TYPES] = {EQOS_MTL_EST_DATA, MGBE_MTL_EST_DATA};
+	(void)gcla;
 
 	*data = 0U;
 	val &= ~MTL_EST_ADDR_MASK;
-	val |= (gcla == 1U) ? 0x0U : MTL_EST_GCRR;
+	val |= MTL_EST_GCRR;
 	val |= MTL_EST_SRWO | MTL_EST_R1W0 | MTL_EST_DBGM | bunk | addr_val;
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
 		    MTL_EST_GCL_CONTROL[mac]);
@@ -1157,13 +1159,9 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 			temp_shift = i;
 			temp_shift += MTL_FPE_CTS_PEC_SHIFT;
 			/* set queue for preemtable */
-			if (temp_shift < MTL_FPE_CTS_PEC_MAX_SHIFT) {
-				temp1 = OSI_ENABLE;
-				temp1 = temp1 << temp_shift;
-				val |= temp1;
-			} else {
-				/* Do nothing */
-			}
+			temp1 = OSI_ENABLE;
+			temp1 = temp1 << temp_shift;
+			val |= temp1;
 		}
 	}
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MTL_FPE_CTS[osi_core->mac & 0x1U]);

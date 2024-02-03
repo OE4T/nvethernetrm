@@ -239,7 +239,6 @@ typedef my_lint_64		nvel64_t;
 
 #define TEN_POWER_9		0x3B9ACA00U
 #define TWO_POWER_32		0x100000000ULL
-#define TWO_POWER_31		0x80000000U
 /* MDIO clause 45 bit */
 #define OSI_MII_ADDR_C45		OSI_BIT(30)
 /** @} */
@@ -303,10 +302,12 @@ typedef my_lint_64		nvel64_t;
  */
 #define OSI_CMD_ADJ_TIME		21U
 
+#ifndef OSI_STRIPPED_LIB
 /**
  * @brief Command to configure PTP
  */
 #define OSI_CMD_CONFIG_PTP		22U
+#endif
 
 /**
  * @brief Command to GET AVB
