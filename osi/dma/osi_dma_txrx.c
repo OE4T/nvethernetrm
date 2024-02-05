@@ -56,7 +56,6 @@ static inline void dump_rx_descriptors(struct osi_dma_priv_data *osi_dma,
  * @param[in] more_data_avail: Pointer to more data available flag. OSI fills
  *         this flag if more rx packets available to read(1) or not(0).
  * @param[out] rx_ring: OSI DMA channel Rx ring
- * @param[out] rx_pkt_cx: OSI DMA receive packet context
  *
  * @note
  * API Group:

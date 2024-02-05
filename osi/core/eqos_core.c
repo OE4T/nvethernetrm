@@ -833,7 +833,7 @@ static nve32_t eqos_hsi_configure(struct osi_core_priv_data *const osi_core,
  *  - Use error injection method induce error
  *
  * @param[in, out] osi_core: OSI core private data structure.
- * @param[in] type: UE_IDX/CE_IDX
+ * @param[in] error_code: UE_IDX/CE_IDX uncorrectable/correctable error
  *
  * @retval 0 on success
  * @retval -1 on failure
