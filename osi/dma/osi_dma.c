@@ -541,11 +541,7 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 	if (osi_dma->mac == OSI_MAC_HW_EQOS) {
 		val |= rx_pbl[osi_dma->mac];
 	} else {
-		if (rx_pbl[osi_dma->mac] >= MGBE_DMA_CHX_MAX_PBL) {
-			val |= MGBE_DMA_CHX_MAX_PBL_VAL;
-		} else {
-			val |= ((rx_pbl[osi_dma->mac] / 8U) << MGBE_DMA_CHX_CTRL_PBL_SHIFT);
-		}
+		val |= MGBE_DMA_CHX_MAX_PBL_VAL;
 	}
 	osi_dma_writel(val, (nveu8_t *)osi_dma->base + rx_ctrl_reg[osi_dma->mac]);
 
