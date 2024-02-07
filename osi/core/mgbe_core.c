@@ -2347,6 +2347,11 @@ static void mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 	value |= MGBE_IMR_TSIE;
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
 
+	/* Mask the mmc counters interrupts */
+	value = MGBE_MMC_IPC_RX_INT_MASK_VALUE;
+	osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+		    MGBE_MMC_IPC_RX_INT_MASK);
+
 	/* Enable common interrupt at wrapper level */
 	value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 			   intr_en[osi_core->mac]);
