@@ -1011,7 +1011,7 @@ done:
  * Algorithm:
  *
  * @param[in] osi_core: OSI core private data structure.
- * @param[in] pos: FRP Instruction Table entry location.
+ * @param[in] pos_val: FRP Instruction Table entry location.
  * @param[in] data: FRP entry data structure.
  *
  * @note MAC should be init and started. see osi_start_mac()
