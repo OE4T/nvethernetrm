@@ -412,8 +412,7 @@ typedef my_lint_64		nvel64_t;
  * @brief Command to handle resume event
  */
 #define OSI_CMD_RESUME			54U
-#ifdef HSI_SUPPORT
-
+#if defined HSI_SUPPORT && defined(NV_VLTEST_BUILD)
 /**
  * @brief Command to inject HSI error
  */

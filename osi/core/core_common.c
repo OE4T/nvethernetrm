@@ -1517,6 +1517,7 @@ void hw_tsn_init(struct osi_core_priv_data *osi_core)
 }
 
 #ifdef HSI_SUPPORT
+#ifdef NV_VLTEST_BUILD
 /**
  * @brief hsi_common_error_inject
  *
@@ -1607,6 +1608,7 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 
 	return ret;
 }
+#endif
 
 /**
  * @brief hsi_update_mmc_val - function to read register and return value to callee
