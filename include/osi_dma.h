@@ -127,9 +127,9 @@
 #define OSI_PKT_CX_TSO			OSI_BIT(2)
 /** PTP packet */
 #define OSI_PKT_CX_PTP			OSI_BIT(3)
-#ifndef OSI_STRIPPED_LIB
 /** Paged buffer */
 #define OSI_PKT_CX_PAGED_BUF		OSI_BIT(4)
+#ifndef OSI_STRIPPED_LIB
 /** Rx packet has RSS hash */
 #define OSI_PKT_CX_RSS			OSI_BIT(5)
 #endif /* !OSI_STRIPPED_LIB */
@@ -163,11 +163,9 @@
  *
  * @{
  */
-#ifndef OSI_STRIPPED_LIB
 /** Flag to indicate if buffer programmed in desc. is DMA map'd from
  * linear/Paged buffer from OS layer */
 #define OSI_TXDONE_CX_PAGED_BUF		OSI_BIT(0)
-#endif /* !OSI_STRIPPED_LIB */
 /** Flag to indicate if there was any tx error */
 #define OSI_TXDONE_CX_ERROR		OSI_BIT(1)
 /** Flag to indicate the availability of time stamp */
@@ -1542,6 +1540,7 @@ nve32_t osi_config_slot_function(struct osi_dma_priv_data *osi_dma,
  * @retval -1 on failure - invalid argument
  */
 nve32_t osi_clear_rx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
+#endif /* !OSI_STRIPPED_LIB */
 
 /**
  * @brief
@@ -1591,7 +1590,6 @@ nve32_t osi_clear_rx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
  */
 #endif
 nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
-#endif /* !OSI_STRIPPED_LIB */
 
 /**
  * @brief

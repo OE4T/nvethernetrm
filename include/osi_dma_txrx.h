@@ -55,9 +55,9 @@
 /** Increment the rx descriptor index */
 #define INCR_RX_DESC_INDEX(idx, x) ((idx) = (((idx) & ((nveu32_t)0x7FFFFFFFU)) + (1U)) & ((x) - 1U))
 
-#ifndef OSI_STRIPPED_LIB
 /** Decrement the tx descriptor index */
 #define DECR_TX_DESC_INDEX(idx, x) ((idx) = (((idx) & ((nveu32_t)0x7FFFFFFFU)) - (1U)) & ((x) - 1U))
+#ifndef OSI_STRIPPED_LIB
 /** Decrement the rx descriptor index */
 #define DECR_RX_DESC_INDEX(idx, x) (((idx) & ((nveu32_t)0x7FFFFFFFU)) = ((idx) - (1U)) & ((x) - 1U))
 #endif /* !OSI_STRIPPED_LIB */

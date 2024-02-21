@@ -302,12 +302,10 @@ typedef my_lint_64		nvel64_t;
  */
 #define OSI_CMD_ADJ_TIME		21U
 
-#ifndef OSI_STRIPPED_LIB
 /**
  * @brief Command to configure PTP
  */
 #define OSI_CMD_CONFIG_PTP		22U
-#endif
 
 /**
  * @brief Command to GET AVB

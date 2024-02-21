@@ -2474,7 +2474,6 @@ exit:
 	return ret;
 }
 
-#ifndef OSI_STRIPPED_LIB
 static nve32_t handle_config_ptp_ioctl(struct osi_core_priv_data *osi_core,
 				       struct osi_ioctl *data)
 {
@@ -2522,7 +2521,6 @@ static nve32_t handle_config_ptp_ioctl(struct osi_core_priv_data *osi_core,
 exit:
 	return ret;
 }
-#endif /* !OSI_STRIPPED_LIB */
 
 static nve32_t handle_time_ether_m2m_role(struct osi_core_priv_data *osi_core)
 {
@@ -3042,10 +3040,10 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		ret = handle_set_systohw_time_ioctl(osi_core, data);
 		break;
 
-#ifndef OSI_STRIPPED_LIB
 	case OSI_CMD_CONFIG_PTP:
 		ret = handle_config_ptp_ioctl(osi_core, data);
 		break;
+#ifndef OSI_STRIPPED_LIB
 	case OSI_CMD_CONFIG_PTP_OFFLOAD:
 		ret = conf_ptp_offload(osi_core, &data->pto_config);
 		break;

@@ -500,7 +500,6 @@ static inline nveu32_t is_ptp_twostep_or_slave_mode(nveu32_t ptp_flag)
 	       OSI_ENABLE : OSI_DISABLE;
 }
 
-#ifndef OSI_STRIPPED_LIB
 static inline void set_paged_buf_and_set_len(struct osi_tx_swcx *tx_swcx,
 					     struct osi_txdone_pkt_cx *txdone_pkt_cx)
 {
@@ -518,6 +517,7 @@ static inline void set_paged_buf_and_set_len(struct osi_tx_swcx *tx_swcx,
 	}
 }
 
+#ifndef OSI_STRIPPED_LIB
 static inline nve32_t process_last_desc(struct osi_dma_priv_data *osi_dma,
 					struct osi_tx_desc *tx_desc,
 					struct osi_txdone_pkt_cx *txdone_pkt_cx,
@@ -625,9 +625,7 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 			/* Do nothing here */
 		}
 
-#ifndef OSI_STRIPPED_LIB
 		set_paged_buf_and_set_len(tx_swcx, txdone_pkt_cx);
-#endif /* !OSI_STRIPPED_LIB */
 		osi_dma->osd_ops.transmit_complete(osi_dma->osd, tx_swcx, txdone_pkt_cx);
 
 		tx_desc->tdes3 = 0;
