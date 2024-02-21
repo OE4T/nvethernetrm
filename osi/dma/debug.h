@@ -23,10 +23,8 @@
 #ifndef INCLUDED_DMA_DEBUG_H
 #define INCLUDED_DMA_DEBUG_H
 
-#include <osi_common.h>
 #include <osi_dma.h>
 #include "hw_desc.h"
-#include "../osi/common/common.h"
 #include "dma_local.h"
 
 /**

@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MGBE_CORE_H_
-#define MGBE_CORE_H_
+#ifndef INCLUDED_MGBE_CORE_H_
+#define INCLUDED_MGBE_CORE_H_
 
 #ifndef OSI_STRIPPED_LIB
 #define MGBE_MAC_PFR				0x0008
@@ -35,8 +36,6 @@
 #define MGBE_MAC_RSS_CTRL			0x0C80
 #define MGBE_MAC_RSS_ADDR			0x0C88
 #define MGBE_MAC_RSS_DATA			0x0C8C
-#define MGBE_MAC_STSR				0x0D08
-#define MGBE_MAC_STNSR				0x0D0C
 #define MGBE_MAC_PTO_CR				0x0DC0
 #define MGBE_MAC_PIDR0				0x0DC4
 #define MGBE_MAC_PIDR1				0x0DC8
@@ -76,7 +75,6 @@
 
 #define MGBE_MAX_VLAN_FILTER		32U
 #define MGBE_MAC_RX_FLW_CTRL_RFE		OSI_BIT(0)
-#define MGBE_MAC_STNSR_TSSS_MASK		0x7FFFFFFFU
 #define MGBE_MAC_TCR_SNAPTYPSEL_SHIFT		16U
 #define MGBE_MAC_TCR_TSENMACADDR		OSI_BIT(18)
 #define MGBE_MAC_RQC1R_PTPQ_SHIFT		24U
@@ -152,6 +150,9 @@
 
 #endif /* !OSI_STRIPPED_LIB */
 
+#define MGBE_CORE_MAC_STSR			0x0D08
+#define MGBE_CORE_MAC_STNSR			0x0D0C
+#define MGBE_CORE_MAC_STNSR_TSSS_MASK		0x7FFFFFFFU
 #define MGBE_MAC_TMCR_IPG_MASK			0x700U
 #define MGBE_MAC_TMCR_IFP			OSI_BIT(11)
 #define MGBE_MAC_RX_TX_STS			0x00B8
@@ -986,6 +987,8 @@
 #define MGBE_MTL_ECC_DESCED			OSI_BIT(5)
 #define MGBE_MAC_FSM_CONTROL			0x158U
 #define MGBE_PRTYEN				OSI_BIT(1)
+#define MGBE_TMOUTEN				OSI_BIT(0)
+#define MGBE_RXCRCERPIE				OSI_BIT(5)
 #define MGBE_MAC_DPP_FSM_INTERRUPT_STATUS	0x150U
 #define MGBE_MTL_DPP_CONTROL			0x10E0U
 #define MGBE_DDPP				OSI_BIT(0)
@@ -993,4 +996,4 @@
 /** @} */
 #endif
 
-#endif /* MGBE_CORE_H_ */
+#endif /* INCLUDED_MGBE_CORE_H_ */

@@ -36,14 +36,10 @@ NV_COMPONENT_SOURCES           := \
 	$(NV_SOURCE)/nvethernetrm/osi/dma/mgbe_dma.c \
 	$(NV_SOURCE)/nvethernetrm/osi/dma/eqos_desc.c \
 	$(NV_SOURCE)/nvethernetrm/osi/dma/mgbe_desc.c \
-	$(NV_SOURCE)/nvethernetrm/osi/dma/debug.c \
-	$(NV_SOURCE)/nvethernetrm/osi/common/osi_common.c \
-	$(NV_SOURCE)/nvethernetrm/osi/common/eqos_common.c \
-	$(NV_SOURCE)/nvethernetrm/osi/common/mgbe_common.c
+	$(NV_SOURCE)/nvethernetrm/osi/dma/debug.c
 
 NV_COMPONENT_INCLUDES          := \
-	$(NV_SOURCE)/nvethernetrm/include \
-	$(NV_SOURCE)/nvethernetrm/osi/common/include
+	$(NV_SOURCE)/nvethernetrm/include
 
 ifeq ($(NV_BUILD_CONFIGURATION_IS_SAFETY),0)
 	NV_COMPONENT_CFLAGS            += -DOSI_DEBUG

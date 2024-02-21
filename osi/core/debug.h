@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2021-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
 
 #include <osi_core.h>
 #include <osi_macsec.h>
-#include "../osi/common/common.h"
+#include "common.h"
 #include "core_local.h"
 
 void core_reg_dump(struct osi_core_priv_data *osi_core);

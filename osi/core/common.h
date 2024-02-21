@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -215,6 +215,7 @@ static inline void osi_writel(nveu32_t val, void *addr)
  */
 static inline nveu32_t osi_readla(OSI_UNUSED void *priv, void *addr)
 {
+	(void)priv; // unused
 	return *(volatile nveu32_t *)addr;
 }
 
@@ -234,6 +235,7 @@ static inline nveu32_t osi_readla(OSI_UNUSED void *priv, void *addr)
  */
 static inline void osi_writela(OSI_UNUSED void *priv, nveu32_t val, void *addr)
 {
+	(void)priv; // unused
 	*(volatile nveu32_t *)addr = val;
 }
 
@@ -262,11 +264,13 @@ static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac_ver,
 	nve32_t ret;
 
 	switch (mac_ver) {
+#ifndef OSI_STRIPPED_LIB
 	case OSI_EQOS_MAC_5_00:
 		*num_max_chans = OSI_EQOS_XP_MAX_CHANS;
 		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS;
 		ret = 1;
 		break;
+#endif /* !OSI_STRIPPED_LIB */
 	case OSI_EQOS_MAC_5_30:
 		*num_max_chans = OSI_EQOS_MAX_NUM_CHANS;
 		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS_5_30;
@@ -301,24 +305,14 @@ static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac_ver,
  * - Run time: Yes
  * - De-initialization: No
  */
-static inline void osi_memset(void *s, nveu32_t c, nveu64_t count)
+static inline void osi_memset(void *s, nveu8_t c, nveu64_t count)
 {
-	nveu8_t *xs = OSI_NULL;
-	nveu64_t temp = count;
+	nveu8_t *xs = (nveu8_t *)s;
+	nveu64_t i = 0UL;
 
-	if (s == OSI_NULL) {
-		goto done;
+	for (i = 0UL; i < count; i++) {
+		xs[i] = c;
 	}
-	xs = (nveu8_t *)s;
-	while (temp != 0UL) {
-		if (c < OSI_UCHAR_MAX) {
-			*xs = (nveu8_t)c;
-			xs++;
-		}
-		temp--;
-	}
-done:
-	return;
 }
 
 /**
@@ -334,23 +328,15 @@ done:
  * - Run time: Yes
  * - De-initialization: No
  */
-static inline nve32_t osi_memcpy(void *dest, const void *src, nveu64_t n)
+static inline void osi_memcpy(void *dest, const void *src, nveu64_t n)
 {
 	nve8_t *cdest = dest;
 	const nve8_t *csrc = src;
-	nve32_t ret = 0;
 	nveu64_t i = 0;
 
-	if ((src == OSI_NULL) || (dest == OSI_NULL)) {
-		ret = -1;
-		goto fail;
-	}
 	for (i = 0; i < n; i++) {
 		cdest[i] = csrc[i];
 	}
-
-fail:
-	return ret;
 }
 
 static inline nve32_t osi_memcmp(const void *dest, const void *src, nve32_t n)
@@ -359,11 +345,6 @@ static inline nve32_t osi_memcmp(const void *dest, const void *src, nve32_t n)
 	const nve8_t *const csrc = src;
 	nve32_t ret = 0;
 	nve32_t i;
-
-	if ((src == OSI_NULL) || (dest == OSI_NULL)) {
-		ret = -1;
-		goto fail;
-	}
 
 	for (i = 0; i < n; i++) {
 		if (csrc[i] < cdest[i]) {

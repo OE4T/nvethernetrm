@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -30,17 +30,6 @@
 #define KEY2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7], (a)[8], (a)[9], (a)[10], (a)[11], (a)[12], (a)[13], (a)[14], (a)[15]
 #define KEYSTR "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"
 #endif /* DEBUG_MACSEC */
-
-#define MAX_U64_VAL			0xFFFFFFFFFFFFFFFFU
-
-#define CERT_C__POST_INC__U64(a)\
-	{\
-		if ((a) < MAX_U64_VAL) {\
-			(a)++;\
-		} else {\
-			(a) = 0;\
-		} \
-	} \
 
 /**
  * @addtogroup MACsec AMAP
@@ -169,6 +158,28 @@
 #define MACSEC_COMMON_SR_TX			OSI_BIT(0)
 /** @} */
 
+/* Helper MACROS to set which LUTs to be cleared in error scenario */
+#define CLEAR_KEY_LUT                   OSI_BIT(0)
+#define CLEAR_SA_STATE_LUT              OSI_BIT(1)
+#define CLEAR_SC_PARAM_LUT              OSI_BIT(2)
+#define CLEAR_SCI_LUT                   OSI_BIT(3)
+#define CLEAR_SCI_LUT_FOR_VLAN          OSI_BIT(4)
+
+/* LUT input fields flags bit offsets */
+#define OSI_LUT_FLAGS_DA_BYTE0_VALID    OSI_BIT(0)
+#define OSI_LUT_FLAGS_DA_BYTE1_VALID    OSI_BIT(1)
+#define OSI_LUT_FLAGS_DA_BYTE2_VALID    OSI_BIT(2)
+#define OSI_LUT_FLAGS_DA_BYTE3_VALID    OSI_BIT(3)
+#define OSI_LUT_FLAGS_DA_BYTE4_VALID    OSI_BIT(4)
+#define OSI_LUT_FLAGS_DA_BYTE5_VALID    OSI_BIT(5)
+
+#define OSI_LUT_FLAGS_SA_BYTE0_VALID    OSI_BIT(6)
+#define OSI_LUT_FLAGS_SA_BYTE1_VALID    OSI_BIT(7)
+#define OSI_LUT_FLAGS_SA_BYTE2_VALID    OSI_BIT(8)
+#define OSI_LUT_FLAGS_SA_BYTE3_VALID    OSI_BIT(9)
+#define OSI_LUT_FLAGS_SA_BYTE4_VALID    OSI_BIT(10)
+#define OSI_LUT_FLAGS_SA_BYTE5_VALID    OSI_BIT(11)
+
 /**
  * @addtogroup MACSEC_CONTROL0 register
  *
@@ -184,6 +195,30 @@
 #define MACSEC_RX_EN				OSI_BIT(16)
 #define MACSEC_TX_LKUP_MISS_BYPASS		OSI_BIT(3)
 #define MACSEC_TX_EN				OSI_BIT(0)
+/** @} */
+
+/**
+ * @addtogroup MACROS to increment
+ *
+ * @brief Helper macros to increment without MISRA errors
+ * @{
+ */
+#define INC_BYP_LUT_IDX(x) ((x) = ((nveu16_t)(((x) & (0xFFU)) + (1U))))
+/* To Obtained the SCI LUT Index SC index is multiplied by 2 because
+ * For each SC 2 SCI LUTs are added one for VLAN and another for non-VLAN
+ */
+#define GET_SCI_LUT_IDX(x)      ((nveu16_t)((((x) & 0xFFU) * 2U) & 0xFFU))
+#define GET_SCI_LUT_VLAN_IDX(x) ((nveu16_t)(((((x) & 0xFFU) * 2U) + 1U) & 0xFFU))
+/** @} */
+
+/**
+ * @addtogroup AES ciphers
+ *
+ * @brief Helper macro's for SC setup
+ * @{
+ */
+#define OSI_MACSEC_SC_VALID             0U
+#define OSI_MACSEC_SC_DUMMY             1U
 /** @} */
 
 /**
@@ -221,12 +256,10 @@
  * @{
  */
 #define MACSEC_SECURE_REG_VIOL_INT_EN		OSI_BIT(31)
-#ifdef DEBUG_MACSEC
 #define MACSEC_RX_UNINIT_KEY_SLOT_INT_EN	OSI_BIT(17)
 #define MACSEC_RX_LKUP_MISS_INT_EN		OSI_BIT(16)
 #define MACSEC_TX_UNINIT_KEY_SLOT_INT_EN	OSI_BIT(1)
 #define MACSEC_TX_LKUP_MISS_INT_EN		OSI_BIT(0)
-#endif /* DEBUG_MACSEC */
 /** @} */
 
 /**
@@ -236,7 +269,6 @@
  * @{
  */
 #define MACSEC_TX_MAC_CRC_ERROR_INT_EN		OSI_BIT(16)
-#ifdef DEBUG_MACSEC
 #define MACSEC_TX_DBG_BUF_CAPTURE_DONE_INT_EN	OSI_BIT(22)
 #define MACSEC_TX_MTU_CHECK_FAIL_INT_EN 	OSI_BIT(19)
 #define MACSEC_TX_AES_GCM_BUF_OVF_INT_EN	OSI_BIT(18)
@@ -256,7 +288,6 @@
 #define MACSEC_RX_MTU_CHECK_FAIL_INT_EN 	OSI_BIT(19)
 #define MACSEC_RX_AES_GCM_BUF_OVF_INT_EN	OSI_BIT(18)
 #define MACSEC_RX_PN_EXHAUSTED_INT_EN		OSI_BIT(1)
-#endif /* DEBUG_MACSEC */
 #define MACSEC_RX_ICV_ERROR_INT_EN		OSI_BIT(21)
 #define MACSEC_RX_MAC_CRC_ERROR_INT_EN		OSI_BIT(16)
 /** @} */

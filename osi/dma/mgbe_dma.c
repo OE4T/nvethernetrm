@@ -21,8 +21,6 @@
  */
 
 #ifndef OSI_STRIPPED_LIB
-#include "../osi/common/common.h"
-#include <osi_common.h>
 #include "mgbe_dma.h"
 #include "dma_local.h"
 
@@ -51,20 +49,20 @@ static void mgbe_config_slot(struct osi_dma_priv_data *osi_dma,
 #endif
 	if (set == OSI_ENABLE) {
 		/* Program SLOT CTRL register SIV and set ESC bit */
-		value = osi_readl((unsigned char *)osi_dma->base +
-				  MGBE_DMA_CHX_SLOT_CTRL(chan));
+		value = osi_dma_readl((unsigned char *)osi_dma->base +
+				      MGBE_DMA_CHX_SLOT_CTRL(chan));
 		/* Set ESC bit */
 		value |= MGBE_DMA_CHX_SLOT_ESC;
-		osi_writel(value, (unsigned char *)osi_dma->base +
-			   MGBE_DMA_CHX_SLOT_CTRL(chan));
+		osi_dma_writel(value, (unsigned char *)osi_dma->base +
+			       MGBE_DMA_CHX_SLOT_CTRL(chan));
 
 	} else {
 		/* Clear ESC bit of SLOT CTRL register */
-		value = osi_readl((unsigned char *)osi_dma->base +
-				  MGBE_DMA_CHX_SLOT_CTRL(chan));
+		value = osi_dma_readl((unsigned char *)osi_dma->base +
+				      MGBE_DMA_CHX_SLOT_CTRL(chan));
 		value &= ~MGBE_DMA_CHX_SLOT_ESC;
-		osi_writel(value, (unsigned char *)osi_dma->base +
-			   MGBE_DMA_CHX_SLOT_CTRL(chan));
+		osi_dma_writel(value, (unsigned char *)osi_dma->base +
+			       MGBE_DMA_CHX_SLOT_CTRL(chan));
 	}
 }
 
@@ -88,30 +86,30 @@ static void mgbe_debug_intr_config(struct osi_dma_priv_data *osi_dma)
 	if (enable == OSI_ENABLE) {
 		for (chinx = 0; chinx < osi_dma->num_dma_chans; chinx++) {
 			chan = osi_dma->dma_chans[chinx];
-			val = osi_readl((nveu8_t *)osi_dma->base +
-					MGBE_DMA_CHX_INTR_ENA(chan));
+			val = osi_dma_readl((nveu8_t *)osi_dma->base +
+					    MGBE_DMA_CHX_INTR_ENA(chan));
 
 			val |= (MGBE_DMA_CHX_INTR_AIE |
 				MGBE_DMA_CHX_INTR_FBEE |
 				MGBE_DMA_CHX_INTR_RBUE |
 				MGBE_DMA_CHX_INTR_TBUE |
 				MGBE_DMA_CHX_INTR_NIE);
-			osi_writel(val, (nveu8_t *)osi_dma->base +
-				   MGBE_DMA_CHX_INTR_ENA(chan));
+			osi_dma_writel(val, (nveu8_t *)osi_dma->base +
+				       MGBE_DMA_CHX_INTR_ENA(chan));
 		}
 
 	} else {
 		for (chinx = 0; chinx < osi_dma->num_dma_chans; chinx++) {
 			chan = osi_dma->dma_chans[chinx];
-			val = osi_readl((nveu8_t *)osi_dma->base +
-					MGBE_DMA_CHX_INTR_ENA(chan));
+			val = osi_dma_readl((nveu8_t *)osi_dma->base +
+					    MGBE_DMA_CHX_INTR_ENA(chan));
 			val &= (~MGBE_DMA_CHX_INTR_AIE &
 				~MGBE_DMA_CHX_INTR_FBEE &
 				~MGBE_DMA_CHX_INTR_RBUE &
 				~MGBE_DMA_CHX_INTR_TBUE &
 				~MGBE_DMA_CHX_INTR_NIE);
-			osi_writel(val, (nveu8_t *)osi_dma->base +
-				   MGBE_DMA_CHX_INTR_ENA(chan));
+			osi_dma_writel(val, (nveu8_t *)osi_dma->base +
+				       MGBE_DMA_CHX_INTR_ENA(chan));
 		}
 	}
 }

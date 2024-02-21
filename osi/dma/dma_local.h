@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,14 +21,125 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-
 #ifndef INCLUDED_DMA_LOCAL_H
 #define INCLUDED_DMA_LOCAL_H
 
-#include "../osi/common/common.h"
 #include <osi_dma.h>
 #include "eqos_dma.h"
 #include "mgbe_dma.h"
+
+/**
+ * @brief Maximum number of supported MAC IP types (EQOS and MGBE)
+ */
+#define MAX_MAC_IP_TYPES       2U
+/** MAC version type for EQOS version previous to 5.30 */
+#define MAC_CORE_VER_TYPE_EQOS		0U
+/** MAC version type for EQOS version 5.30 */
+#define MAC_CORE_VER_TYPE_EQOS_5_30	1U
+/** MAC version type for MGBE IP */
+#define MAC_CORE_VER_TYPE_MGBE		2U
+/**
+ * @brief validate_dma_mac_ver_update_chans - Validates mac version and update chan
+ *
+ * @param[in] mac_ver: MAC version read.
+ * @param[out] num_max_chans: Maximum channel number.
+ * @param[out] l_mac_ver: local mac version.
+ *
+ * @note MAC has to be out of reset.
+ *
+ * @note
+ * API Group:
+ * - Initialization: Yes
+ * - Run time: No
+ * - De-initialization: No
+ *
+ * @retval 0 - for not Valid MAC
+ * @retval 1 - for Valid MAC
+ */
+static inline nve32_t validate_dma_mac_ver_update_chans(nveu32_t mac_ver,
+						        nveu32_t *num_max_chans,
+						        nveu32_t *l_mac_ver)
+{
+	nve32_t ret;
+
+	switch (mac_ver) {
+#ifndef OSI_STRIPPED_LIB
+	case OSI_EQOS_MAC_5_00:
+		*num_max_chans = OSI_EQOS_XP_MAX_CHANS;
+		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS;
+		ret = 1;
+		break;
+#endif
+	case OSI_EQOS_MAC_5_30:
+		*num_max_chans = OSI_EQOS_MAX_NUM_CHANS;
+		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS_5_30;
+		ret = 1;
+		break;
+	case OSI_MGBE_MAC_3_10:
+#ifndef OSI_STRIPPED_LIB
+	case OSI_MGBE_MAC_4_00:
+#endif /* !OSI_STRIPPED_LIB */
+		*num_max_chans = OSI_MGBE_MAX_NUM_CHANS;
+		*l_mac_ver = MAC_CORE_VER_TYPE_MGBE;
+		ret = 1;
+		break;
+	default:
+		ret = 0;
+		break;
+	}
+
+	return ret;
+}
+
+/**
+ * @brief osi_dma_readl - Read a memory mapped register.
+ *
+ * @param[in] addr: Memory mapped address.
+ *
+ * @pre Physical address has to be memory mapped.
+ *
+ * @return Data from memory mapped register - success.
+ *
+ * @note
+ * API Group:
+ * - Initialization: Yes
+ * - Run time: Yes
+ * - De-initialization: Yes
+ */
+static inline nveu32_t osi_dma_readl(void *addr)
+{
+	return *(volatile nveu32_t *)addr;
+}
+/**
+ * @brief osi_dma_writel - Write to a memory mapped register.
+ *
+ * @param[in] val:  Value to be written.
+ * @param[in] addr: Memory mapped address.
+ *
+ * @pre Physical address has to be memory mapped.
+ *
+ * @note
+ * API Group:
+ * - Initialization: Yes
+ * - Run time: Yes
+ * - De-initialization: Yes
+ */
+static inline void osi_dma_writel(nveu32_t val, void *addr)
+{
+	*(volatile nveu32_t *)addr = val;
+}
+
+/**
+ * @brief TX timestamp helper MACROS
+ * @{
+ */
+#define CHAN_START_POSITION 6U
+#define PKT_ID_CNT	((nveu32_t)1 << CHAN_START_POSITION)
+/* First 6 bytes of idx and last 4 bytes of chan(+1 to avoid pkt_id to be 0) */
+#define INC_TX_TS_PKTID(idx) ((idx) = (((idx) & 0x7FFFFFFFU) + 1U))
+#define GET_TX_TS_PKTID(idx, c) (((idx) & (PKT_ID_CNT - 1U)) | \
+				 (((c) + 1U) << CHAN_START_POSITION))
+/** @} */
 
 /**
  * @brief Maximum number of OSI DMA instances.
@@ -150,7 +262,7 @@ void eqos_init_desc_ops(struct desc_ops *p_dops);
  */
 void mgbe_init_desc_ops(struct desc_ops *p_dops);
 
-nve32_t init_desc_ops(const struct osi_dma_priv_data *const osi_dma);
+void init_desc_ops(const struct osi_dma_priv_data *const osi_dma);
 
 /**
  * @brief osi_hw_transmit - Initialize Tx DMA descriptors for a channel
@@ -186,7 +298,6 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
  *    required values so that MAC DMA can understand and act accordingly.
  *
  * @param[in, out] osi_dma: OSI DMA private data structure.
- * @param[in] ops: DMA channel operations.
  *
  * @note
  * API Group:
@@ -224,9 +335,66 @@ static inline void update_rx_tail_ptr(const struct osi_dma_priv_data *const osi_
 		MGBE_DMA_CHX_RDTLP(chan)
 	};
 
-	osi_writel(L32(tailptr), (nveu8_t *)osi_dma->base + tail_ptr_reg[osi_dma->mac]);
+	osi_dma_writel(L32(tailptr), (nveu8_t *)osi_dma->base + tail_ptr_reg[osi_dma->mac]);
 }
 
 /** @} */
 
+#ifndef OSI_STRIPPED_LIB
+/**
+ * @brief
+ * Description: dma_update_stats_counter - update value by increment passed
+ * as parameter
+ *
+ * @param[in] last_value: last value of stat counter
+ *   * Range: 0 to UINT64_MAX
+ * @param[in] incr: increment value
+ *   * Range: 0 to UINT64_MAX
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: Yes
+ *  - Signal handler: Yes
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ *  - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
+ * @pre
+ *  - MAC needs to be out of reset and proper clocks need to be configured.
+ *  - DMA HW init need to be completed successfully, see osi_hw_dma_init
+ *
+ * @retval 0 on success 
+ * @retval -1 on failure
+ */
+#ifndef DOXYGEN_ICD
+/**
+ *
+ * Traceability Details:
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_016
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_042
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+static inline nveu64_t dma_update_stats_counter(nveu64_t last_value,
+						nveu64_t incr)
+{
+	nveu64_t temp = last_value + incr;
+
+	if (temp < last_value) {
+		/* Stats overflow, so reset it to zero */
+		temp = 0UL;
+	}
+
+	return temp;
+}
+#endif /* !OSI_STRIPPED_LIB */
 #endif /* INCLUDED_DMA_LOCAL_H */

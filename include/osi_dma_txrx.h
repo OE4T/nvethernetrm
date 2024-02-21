@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -29,13 +30,17 @@
  * @brief Helper macros for defining Tx/Rx descriptor count
  * @{
  */
+/** EQOS Tx descriptor count */
 #define OSI_EQOS_TX_DESC_CNT		1024U
+/** EQOS Rx descriptor count */
 #define OSI_EQOS_RX_DESC_CNT		1024U
+/** MGBE Tx descriptor count */
 #define OSI_MGBE_TX_DESC_CNT		4096U
+/** MGBE Max Rx descriptor count */
 #define OSI_MGBE_MAX_RX_DESC_CNT	16384U
 /** @} */
 
-/** TSO Header length divisor */
+/* TSO Header length divisor */
 #define OSI_TSO_HDR_LEN_DIVISOR	4U
 
 /**
@@ -45,14 +50,16 @@
  * @{
  */
 /** Increment the tx descriptor index */
-#define INCR_TX_DESC_INDEX(idx, x) ((idx) = ((idx) + (1U)) & ((x) - 1U))
+#define INCR_TX_DESC_INDEX(idx, x) ((idx) = (((idx) & ((nveu32_t)0x7FFFFFFFU)) + (1U)) & ((x) - 1U))
+
 /** Increment the rx descriptor index */
-#define INCR_RX_DESC_INDEX(idx, x) ((idx) = ((idx) + (1U)) & ((x) - 1U))
-/** Decrement the tx descriptor index */
-#define DECR_TX_DESC_INDEX(idx, x) ((idx) = ((idx) - (1U)) & ((x) - 1U))
+#define INCR_RX_DESC_INDEX(idx, x) ((idx) = (((idx) & ((nveu32_t)0x7FFFFFFFU)) + (1U)) & ((x) - 1U))
+
 #ifndef OSI_STRIPPED_LIB
+/** Decrement the tx descriptor index */
+#define DECR_TX_DESC_INDEX(idx, x) ((idx) = (((idx) & ((nveu32_t)0x7FFFFFFFU)) - (1U)) & ((x) - 1U))
 /** Decrement the rx descriptor index */
-#define DECR_RX_DESC_INDEX(idx, x) ((idx) = ((idx) - (1U)) & ((x) - 1U))
+#define DECR_RX_DESC_INDEX(idx, x) (((idx) & ((nveu32_t)0x7FFFFFFFU)) = ((idx) - (1U)) & ((x) - 1U))
 #endif /* !OSI_STRIPPED_LIB */
 /** @} */
 #endif /* INCLUDED_OSI_DMA_TXRX_H */

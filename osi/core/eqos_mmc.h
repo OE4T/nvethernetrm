@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -122,5 +123,4 @@
 /** @} */
 
 void eqos_read_mmc(struct osi_core_priv_data *const osi_core);
-void eqos_reset_mmc(struct osi_core_priv_data *const osi_core);
 #endif /* INCLUDED_EQOS_MMC_H */

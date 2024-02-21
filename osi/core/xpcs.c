@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -135,6 +135,40 @@ static inline nve32_t xpcs_set_speed(struct osi_core_priv_data *osi_core,
 	return xpcs_write_safety(osi_core, XPCS_SR_MII_CTRL, ctrl);
 }
 
+static nve32_t xpcs_poll_rx_link(struct osi_core_priv_data *osi_core)
+{
+	void *xpcs_base = osi_core->xpcs_base;
+	nve32_t cond = COND_NOT_MET;
+	nveu32_t retry = RETRY_COUNT;
+	nveu32_t count = 0;
+	nve32_t ret = 0;
+	nveu32_t ctrl = 0;
+
+	/* poll for Rx link up */
+	while (cond == COND_NOT_MET) {
+		if (count > retry) {
+			ret = -1;
+			break;
+		}
+
+		count++;
+
+		ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_STS1);
+		if ((ctrl & XPCS_SR_XS_PCS_STS1_RLU) == XPCS_SR_XS_PCS_STS1_RLU) {
+			cond = COND_MET;
+		} else {
+			/* Maximum wait delay as per HW team is 1msec.
+			 * So add a loop for 1000 iterations with 1usec delay,
+			 * so that if check get satisfies before 1msec will come
+			 * out of loop and it can save some boot time
+			 */
+			osi_core->osd_ops.udelay(1U);
+		}
+	}
+
+	return ret;
+}
+
 /**
  * @brief xpcs_start - Start XPCS
  *
@@ -154,13 +188,6 @@ nve32_t xpcs_start(struct osi_core_priv_data *osi_core)
 	nveu32_t ctrl = 0;
 	nve32_t ret = 0;
 	nve32_t cond = COND_NOT_MET;
-
-	if (osi_core->xpcs_base == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "XPCS base is NULL", 0ULL);
-		ret = -1;
-		goto fail;
-	}
 
 	if ((osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G) ||
 	    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G)) {
@@ -201,29 +228,8 @@ nve32_t xpcs_start(struct osi_core_priv_data *osi_core)
 	}
 
 	/* poll for Rx link up */
-	cond = COND_NOT_MET;
-	count = 0;
-	while (cond == COND_NOT_MET) {
-		if (count > retry) {
-			ret = -1;
-			break;
-		}
+	ret = xpcs_poll_rx_link(osi_core);
 
-		count++;
-
-		ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_STS1);
-		if ((ctrl & XPCS_SR_XS_PCS_STS1_RLU) ==
-		    XPCS_SR_XS_PCS_STS1_RLU) {
-			cond = COND_MET;
-		} else {
-			/* Maximum wait delay as per HW team is 1msec.
-			 * So add a loop for 1000 iterations with 1usec delay,
-			 * so that if check get satisfies before 1msec will come
-			 * out of loop and it can save some boot time
-			 */
-			osi_core->osd_ops.udelay(1U);
-		}
-	}
 fail:
 	return ret;
 }
@@ -474,25 +480,15 @@ static nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
 		ret = -1;
 		goto fail;
 	} else {
-		OSI_CORE_INFO(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			      "PCS block lock SUCCESS\n", 0ULL);
+		OSI_CORE_INFO((osi_core->osd), (OSI_LOG_ARG_HW_FAIL),
+			      ("PCS block lock SUCCESS\n"), (0ULL));
 		l_core->lane_status = OSI_ENABLE;
 	}
 fail:
 	return ret;
 }
 
-/**
- * @brief xpcs_init - XPCS initialization
- *
- * Algorithm: This routine initialize XPCS in USXMII mode.
- *
- * @param[in] osi_core: OSI core data structure.
- *
- * @retval 0 on success
- * @retval -1 on failure.
- */
-nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
+static nve32_t vendor_specifc_sw_rst_usxgmii_an_en(struct osi_core_priv_data *osi_core)
 {
 	void *xpcs_base = osi_core->xpcs_base;
 	nveu32_t retry = 1000;
@@ -501,51 +497,6 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 	nve32_t cond = 1;
 	nve32_t ret = 0;
 
-	if (osi_core->xpcs_base == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "XPCS base is NULL", 0ULL);
-		ret = -1;
-		goto fail;
-	}
-
-	if (xpcs_lane_bring_up(osi_core) < 0) {
-		ret = -1;
-		goto fail;
-	}
-
-	/* Switching to USXGMII Mode based on
-	 * XPCS programming guideline 7.6
-	 */
-
-	/* 1. switch DWC_xpcs to BASE-R mode */
-	ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_CTRL2);
-	ctrl |= XPCS_SR_XS_PCS_CTRL2_PCS_TYPE_SEL_BASE_R;
-	ret = xpcs_write_safety(osi_core, XPCS_SR_XS_PCS_CTRL2, ctrl);
-	if (ret != 0) {
-		goto fail;
-	}
-	/* 2. enable USXGMII Mode inside DWC_xpcs */
-
-	/* 3.  USXG_MODE = 10G - default it will be 10G mode */
-	if ((osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G) ||
-	    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G)) {
-		ctrl = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_KR_CTRL);
-		ctrl &= ~(XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_MASK);
-
-		if (osi_core->uphy_gbe_mode == OSI_DISABLE) {
-			ctrl |= XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_5G;
-		}
-	}
-
-	ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_KR_CTRL, ctrl);
-	if (ret != 0) {
-		goto fail;
-	}
-	/* 4. Program PHY to operate at 10Gbps/5Gbps/2Gbps
-         * this step not required since PHY speed programming
-         * already done as part of phy INIT
-	 */
-	/* 5. Vendor specific software reset */
 	ctrl = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_DIG_CTRL1);
 	ctrl |= XPCS_VR_XS_PCS_DIG_CTRL1_USXG_EN;
 	ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_DIG_CTRL1, ctrl);
@@ -599,15 +550,67 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 			goto fail;
 		}
 	}
+fail:
+	return ret;
+}
 
-	/* TODO: 9. MII_AN_INTR_EN to 1, to enable auto-negotiation
-	 * complete interrupt */
+/**
+ * @brief xpcs_init - XPCS initialization
+ *
+ * Algorithm: This routine initialize XPCS in USXMII mode.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
+{
+	void *xpcs_base = osi_core->xpcs_base;
+	nveu32_t ctrl = 0;
+	nve32_t ret = 0;
 
-	/* 10. (Optional step) Duration of link timer change */
 
-	/* 11. XPCS configured as MAC-side USGMII - NA */
+	if (xpcs_lane_bring_up(osi_core) < 0) {
+		ret = -1;
+		goto fail;
+	}
 
-	/* 13.  TODO: If there is interrupt enabled for AN interrupt */
+	/* Switching to USXGMII Mode based on
+	 * XPCS programming guideline 7.6
+	 */
+
+	/* 1. switch DWC_xpcs to BASE-R mode */
+	ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_CTRL2);
+	ctrl |= XPCS_SR_XS_PCS_CTRL2_PCS_TYPE_SEL_BASE_R;
+	ret = xpcs_write_safety(osi_core, XPCS_SR_XS_PCS_CTRL2, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+	/* 2. enable USXGMII Mode inside DWC_xpcs */
+
+	/* 3.  USXG_MODE = 10G - default it will be 10G mode */
+	if ((osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G) ||
+	    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G)) {
+		ctrl = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_KR_CTRL);
+		ctrl &= ~(XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_MASK);
+
+		if (osi_core->uphy_gbe_mode == OSI_DISABLE) {
+			ctrl |= XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_5G;
+		}
+	}
+
+	ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_KR_CTRL, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+	/* 4. Program PHY to operate at 10Gbps/5Gbps/2Gbps
+         * this step not required since PHY speed programming
+         * already done as part of phy INIT
+	 */
+	/* 5. Vendor specific software reset */
+	ret = vendor_specifc_sw_rst_usxgmii_an_en(osi_core);
+
 fail:
 	return ret;
 }

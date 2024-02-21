@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -67,7 +68,7 @@ static inline void mgbe_update_rx_err_stats(struct osi_rx_desc *rx_desc,
 	/* increment rx crc if we see CE bit set */
 	if ((rx_desc->rdes3 & RDES3_ERR_MGBE_CRC) == RDES3_ERR_MGBE_CRC) {
 		stats->rx_crc_error =
-			osi_update_stats_counter(stats->rx_crc_error, 1UL);
+			dma_update_stats_counter(stats->rx_crc_error, 1UL);
 	}
 
 	/* Update FRP Counters */
@@ -76,22 +77,22 @@ static inline void mgbe_update_rx_err_stats(struct osi_rx_desc *rx_desc,
 	/* Increment FRP parsed count */
 	if ((frpsm == OSI_NONE) && (frpsl == OSI_NONE)) {
 		stats->frp_parsed =
-			osi_update_stats_counter(stats->frp_parsed, 1UL);
+			dma_update_stats_counter(stats->frp_parsed, 1UL);
 	}
 	/* Increment FRP dropped count */
 	if ((frpsm == OSI_NONE) && (frpsl == MGBE_RDES3_FRPSL)) {
 		stats->frp_dropped =
-			osi_update_stats_counter(stats->frp_dropped, 1UL);
+			dma_update_stats_counter(stats->frp_dropped, 1UL);
 	}
 	/* Increment FRP Parsing Error count */
 	if ((frpsm == MGBE_RDES2_FRPSM) && (frpsl == OSI_NONE)) {
 		stats->frp_err =
-			osi_update_stats_counter(stats->frp_err, 1UL);
+			dma_update_stats_counter(stats->frp_err, 1UL);
 	}
 	/* Increment FRP Incomplete Parsing count */
 	if ((frpsm == MGBE_RDES2_FRPSM) && (frpsl == MGBE_RDES3_FRPSL)) {
 		stats->frp_incomplete =
-			osi_update_stats_counter(stats->frp_incomplete, 1UL);
+			dma_update_stats_counter(stats->frp_incomplete, 1UL);
 	}
 }
 
@@ -192,6 +193,7 @@ static void mgbe_get_rx_csum(const struct osi_rx_desc *const rx_desc,
  *	3) If yes, set a bit and update nano seconds in rx_pkt_cx so that OSD
  *	layer can extract the time by checking this bit.
  *
+ * @param[in] osi_dma: OSI DMA private data structure.
  * @param[in] rx_desc: Rx descriptor
  * @param[in] context_desc: Rx context descriptor
  * @param[in] rx_pkt_cx: Rx packet context
@@ -213,10 +215,8 @@ static nve32_t mgbe_get_rx_hwstamp(const struct osi_dma_priv_data *const osi_dma
 	}
 
 	for (retry = 0; retry < 10; retry++) {
-		if (((context_desc->rdes3 & RDES3_OWN) == 0U) &&
-		    ((context_desc->rdes3 & RDES3_CTXT) == RDES3_CTXT) &&
-		    ((context_desc->rdes3 & RDES3_TSA) == RDES3_TSA) &&
-		    ((context_desc->rdes3 & RDES3_TSD) != RDES3_TSD)) {
+		if ((context_desc->rdes3 & (RDES3_OWN | RDES3_CTXT | RDES3_TSA | RDES3_TSD)) ==
+		    (RDES3_CTXT | RDES3_TSA)) {
 			if ((context_desc->rdes0 == OSI_INVALID_VALUE) &&
 			    (context_desc->rdes1 == OSI_INVALID_VALUE)) {
 				/* Invalid time stamp */
@@ -239,8 +239,7 @@ static nve32_t mgbe_get_rx_hwstamp(const struct osi_dma_priv_data *const osi_dma
 		goto fail;
 	}
 
-	rx_pkt_cx->ns = context_desc->rdes0 +
-			(OSI_NSEC_PER_SEC * context_desc->rdes1);
+	rx_pkt_cx->ns = context_desc->rdes0 + (OSI_NSEC_PER_SEC * context_desc->rdes1);
 	if (rx_pkt_cx->ns < context_desc->rdes0) {
 		ret = -1;
 	}

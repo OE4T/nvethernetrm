@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -43,6 +44,7 @@
  */
 #define OSI_UNLOCKED		0x0U
 #define OSI_LOCKED		0x1U
+/** @brief Number of Nano seconds per second */
 #define OSI_NSEC_PER_SEC	1000000000ULL
 #ifndef OSI_STRIPPED_LIB
 #define OSI_MAX_RX_COALESCE_USEC	1020U
@@ -62,12 +64,14 @@
  * @addtogroup FC-Helper Flow control enable/disable macros.
  * @{
  */
+/** @brief flag to disable pause frames */
 #define OSI_PAUSE_FRAMES_DISABLE	0U
+/** @brief flag to enable pause frames */
 #define OSI_PAUSE_FRAMES_ENABLE		1U
 /** @} */
 
 /**
- * @addtogroup Helper MACROS
+ * @addtogroup helper MACROS
  *
  * @brief EQOS generic helper MACROS.
  * @{
@@ -147,7 +151,8 @@
 #define OSI_PTP_REQ_CLK_FREQ		250000000U
 #define OSI_POLL_COUNT			1000U
 #ifndef UINT_MAX
-#define UINT_MAX			(~0U)
+/** Max value of uint */
+#define UINT_MAX			(0xFFFFFFFFU)
 #endif
 #ifndef INT_MAX
 #define INT_MAX				(0x7FFFFFFF)
@@ -178,7 +183,7 @@
 #define OSI_LOG_ARG_INVALID		2U
 #define OSI_LOG_ARG_HW_FAIL		4U
 #define OSI_LOG_ARG_OPNOTSUPP		3U
-/* Default maximum Giant Packet Size Limit is 16K */
+/** Default maximum Giant Packet Size Limit is 16383 */
 #define OSI_MAX_MTU_SIZE	16383U
 
 /* MAC Tx/Rx Idle retry and delay count */
@@ -190,14 +195,25 @@
 #define EQOS_DMA_CHX_IER(x)		((0x0080U * (x)) + 0x1134U)
 
 /* FIXME add logic based on HW version */
+/**
+ * @brief Maximum number of channels in EQOS
+ */
 #define OSI_EQOS_MAX_NUM_CHANS		8U
+/** @brief Maximum number of queues in EQOS */
 #define OSI_EQOS_MAX_NUM_QUEUES		8U
+/** @brief Maximum number of L3L4 filters supported */
 #define OSI_MGBE_MAX_L3_L4_FILTER	8U
+/**
+ * @brief Maximum number of channels in MGBE
+ */
 #define OSI_MGBE_MAX_NUM_CHANS		10U
+/** @brief Maximum number of queues in MGBE */
 #define OSI_MGBE_MAX_NUM_QUEUES		10U
 #define OSI_EQOS_XP_MAX_CHANS		4U
 
-/* MACSEC max SC's supported 16*/
+/**
+ * @brief Maximum number of Secure Channels supported
+ */
 #define OSI_MACSEC_SC_INDEX_MAX		16
 
 #ifndef OSI_STRIPPED_LIB
@@ -208,19 +224,22 @@
 #define MAC_VERSION		0x110
 #define MAC_VERSION_SNVER_MASK	0x7FU
 
+/** @brief flag indicating EQOS MAC */
 #define OSI_MAC_HW_EQOS		0U
+/** @brief flag indicating MGBE MAC */
 #define OSI_MAC_HW_MGBE		1U
-#define OSI_MAX_VM_IRQS		5U
 
 #define OSI_NULL                ((void *)0)
+/** Enable Flag */
 #define OSI_ENABLE		1U
 #define OSI_NONE		0U
 #define OSI_NONE_SIGNED		0
+/** Disable Flag */
 #define OSI_DISABLE		0U
 #define OSI_H_DISABLE		0x10101010U
 #define OSI_H_ENABLE		(~OSI_H_DISABLE)
 
-#define OSI_BIT(nr)             ((nveu32_t)1 << (nr))
+#define OSI_BIT(nr)             ((nveu32_t)1 << (((nveu32_t)nr) & 0x1FU))
 
 #ifndef OSI_STRIPPED_LIB
 #define OSI_MGBE_MAC_3_00	0x30U
@@ -229,10 +248,16 @@
 #define OSI_MGBE_MAC_4_00	0x40U
 #endif /* OSI_STRIPPED_LIB */
 
+/** @brief EQOS MAC version before Orin */
 #define OSI_EQOS_MAC_5_00       0x50U
+/** @brief EQOS MAC version Orin */
 #define OSI_EQOS_MAC_5_30       0x53U
+/** @brief MGBE MAC version Orin */
 #define OSI_MGBE_MAC_3_10	0x31U
 
+/**
+ * @brief Maximum number of VM IRQs
+ */
 #define OSI_MAX_VM_IRQS              5U
 
 #ifndef OSI_STRIPPED_LIB
@@ -263,37 +288,7 @@
  */
 #define OSI_UNUSED  __attribute__((__unused__))
 
-/**
- * @brief osi_update_stats_counter - update value by increment passed
- *	as parameter
- * @note
- * Algorithm:
- *  - Check for boundary and return sum
- *
- * @param[in] last_value: last value of stat counter
- * @param[in] incr: increment value
- *
- * @note Input parameter should be only nveu64_t type
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on sucess
- * @retval -1 on failure
- */
-static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,
-						nveu64_t incr)
-{
-	nveu64_t temp = last_value + incr;
+/** @brief macro for 1 micro second delay */
+#define OSI_DELAY_1US			1U
 
-	if (temp < last_value) {
-		/* Stats overflow, so reset it to zero */
-		temp = 0UL;
-	}
-
-	return temp;
-}
 #endif /* OSI_COMMON_H */

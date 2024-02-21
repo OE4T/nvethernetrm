@@ -32,43 +32,60 @@
  */
 struct osi_macsec_mmc_counters {
 	/** This counter provides the number of controller port macsec
-	 * untaged packets */
+	 * untaged packets
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_no_tag;
 	/** This counter provides the number of controller port macsec
-	 * untaged packets validateFrame != strict */
+	 * untaged packets validateFrame != strict
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_untagged;
-	/** This counter provides the number of invalid tag or icv packets */
+	/** This counter provides the number of invalid tag or icv packets
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_bad_tag;
 	/** This counter provides the number of no sc lookup hit or sc match
-	 * packets */
+	 * packets
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_no_sa_err;
 	/** This counter provides the number of no sc lookup hit or sc match
-	 * packets validateFrame != strict */
+	 * packets validateFrame != strict
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_no_sa;
 	/** This counter provides the number of late packets
-	 *received PN < lowest PN */
+	 *received PN < lowest PN
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_late[OSI_MACSEC_SC_INDEX_MAX];
-	/** This counter provides the number of overrun packets */
+	/** This counter provides the number of overrun packets
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_overrun;
-	/** This counter provides the number of octets after IVC passing */
+	/** This counter provides the number of octets after IVC passing
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_octets_validated;
-	/** This counter provides the number not valid packets */
+	/** This counter provides the number not valid packets
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_not_valid[OSI_MACSEC_SC_INDEX_MAX];
-	/** This counter provides the number of invalid packets */
+	/** This counter provides the number of invalid packets
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t in_pkts_invalid[OSI_MACSEC_SC_INDEX_MAX];
-	/** This counter provides the number of in packet delayed */
+	/** This counter provides the number of in packet delayed
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_delayed[OSI_MACSEC_SC_INDEX_MAX];
-	/** This counter provides the number of in packets un checked */
+	/** This counter provides the number of in packets un checked
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_unchecked[OSI_MACSEC_SC_INDEX_MAX];
-	/** This counter provides the number of in packets ok */
+	/** This counter provides the number of in packets ok
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_ok[OSI_MACSEC_SC_INDEX_MAX];
-	/** This counter provides the number of out packets untaged */
+	/** This counter provides the number of out packets untaged
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t tx_pkts_untaged;
-	/** This counter provides the number of out too long */
+	/** This counter provides the number of out too long
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t tx_pkts_too_long;
-	/** This counter provides the number of out packets protected */
+	/** This counter provides the number of out packets protected
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t tx_pkts_protected[OSI_MACSEC_SC_INDEX_MAX];
-	/** This counter provides the number of out octets protected */
+	/** This counter provides the number of out octets protected/
+	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t tx_octets_protected;
 };
 #endif /* MACSEC_SUPPORT */

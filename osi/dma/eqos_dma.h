@@ -94,4 +94,23 @@
 #define EQOS_DMA_CHX_SLOT_ESC			0x1U
 #endif /* !OSI_STRIPPED_LIB */
 /** @} */
+
+/**
+ * @brief PTP Time read registers
+ * @{
+ */
+#define EQOS_MAC_STSR			0x0B08
+#define EQOS_MAC_STNSR			0x0B0C
+#define EQOS_MAC_STNSR_TSSS_MASK	0x7FFFFFFFU
+/** @} */
+
+/**
+ * @brief Common MAC MCR register and its bits
+ * @{
+ */
+#define EQOS_MAC_MCR			0x0000
+#define EQOS_MCR_TE			OSI_BIT(0)
+#define EQOS_MCR_RE			OSI_BIT(1)
+/** @} */
+
 #endif /* INCLUDED_EQOS_DMA_H */

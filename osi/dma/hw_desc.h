@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -72,8 +73,6 @@
 #define RDES1_IPV4		OSI_BIT(4)
 #define RDES1_IPHE		OSI_BIT(3)
 #define RDES1_PT_MASK		(OSI_BIT(2) | OSI_BIT(1) | OSI_BIT(0))
-#define RDES1_PT_TCP		OSI_BIT(1)
-#define RDES1_PT_UDP		OSI_BIT(0)
 #define RDES3_ELLT		0xF0000U
 #define RDES3_ELLT_IPHE		0x50000U
 #define RDES3_ELLT_CSUM_ERR	0x60000U

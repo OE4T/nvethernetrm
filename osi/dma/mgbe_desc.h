@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MGBE_DESC_H_
-#define MGBE_DESC_H_
+#ifndef INCLUDED_MGBE_DESC_H_
+#define INCLUDED_MGBE_DESC_H_
 
 #ifndef OSI_STRIPPED_LIB
 /**
@@ -49,4 +50,4 @@
 #define MGBE_RDES3_PT_IPV6_UDP	(OSI_BIT(21) | OSI_BIT(23))
 /** @} */
 
-#endif /* MGBE_DESC_H_ */
+#endif /* INCLUDED_MGBE_DESC_H_ */

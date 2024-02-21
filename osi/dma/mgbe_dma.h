@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,7 +25,7 @@
 #define INCLUDED_MGBE_DMA_H
 
 /**
- * @addtogroup MGBE AXI Clock defines
+ * @addtogroup MGBE_AXI_Clock defines
  *
  * @brief AXI Clock defines
  * @{
@@ -87,7 +88,7 @@
 /** @} */
 
 /**
- * @addtogroup MGBE PBL settings.
+ * @addtogroup MGBE_PBL_settings.
  *
  * @brief Values defined for PBL settings
  * @{
@@ -102,4 +103,18 @@
 /* AXI Data width */
 #define MGBE_AXI_DATAWIDTH		128U
 /** @} */
+
+/**
+ * @addtogroup MGBE-MAC MAC register offsets
+ *
+ * @{
+ */
+#define MGBE_MAC_STSR			0x0D08
+#define MGBE_MAC_STNSR			0x0D0C
+#define MGBE_MAC_STNSR_TSSS_MASK	0x7FFFFFFFU
+
+#define MGBE_MAC_TX			0x0000
+#define MGBE_MCR_TE			OSI_BIT(0)
+/** @} */
+
 #endif

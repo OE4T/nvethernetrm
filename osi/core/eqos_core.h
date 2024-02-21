@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,6 @@
 #define EQOS_MAC_LPI_TIMER_CTRL		0x00D4
 #define EQOS_MAC_LPI_EN_TIMER		0x00D8
 #define EQOS_MAC_RX_FLW_CTRL		0x0090
-#define EQOS_MAC_STNSR			0x0B0C
-#define EQOS_MAC_STSR			0x0B08
 #define EQOS_MAC_MA0LR			0x0304
 #define EQOS_MAC_PIDR0			0x0BC4
 #define EQOS_MAC_PTO_CR			0x0BC0
@@ -130,6 +128,9 @@
 #define EQOS_MAC_LPI_CSR_PLS			OSI_BIT(17)
 #define EQOS_MAC_LPI_CSR_LPIEN			OSI_BIT(16)
 #endif /* !OSI_STRIPPED_LIB */
+
+#define EQOS_CORE_MAC_STSR		0x0B08
+#define EQOS_CORE_MAC_STNSR		0x0B0C
 #define EQOS_MCR_IPG_MASK			0x7000000U
 #define EQOS_MCR_IPG_SHIFT			24U
 #define EQOS_MCR_IPG				0x7U
@@ -417,7 +418,6 @@
 #define EQOS_MAC_VLAN_TR_VTIM			OSI_BIT(17)
 #define EQOS_MAC_VLAN_TR_VTIM_SHIFT		17
 #define EQOS_MAC_VLAN_TR_VTHM			OSI_BIT(25)
-#define EQOS_MAC_STNSR_TSSS_MASK		0x7FFFFFFFU
 #define EQOS_MAC_PFR_SHIFT			16
 #define EQOS_MTL_OP_MODE_DTXSTS			OSI_BIT(1)
 #define EQOS_MAC_EXTR_DCRCC			OSI_BIT(16)
@@ -431,6 +431,7 @@
 #define EQOS_MTL_TXQ_ETS_CR_CC_SHIFT		3U
 #define EQOS_MAC_EXTR_PDC			OSI_BIT(19)
 #endif /* !OSI_STRIPPED_LIB */
+#define EQOS_CORE_MAC_STNSR_TSSS_MASK		0x7FFFFFFFU
 #define EQOS_MAC_EXTR_EIPG			0x3U
 #define EQOS_MAC_EXTR_EIPG_MASK			0x3E000000U
 #define EQOS_MAC_EXTR_EIPG_SHIFT		25U
@@ -783,10 +784,11 @@ void update_ehfc_rfa_rfd(nveu32_t rx_fifo, nveu32_t *value);
 #define EQOS_TMR_MASK				0x3FFU
 #define EQOS_MAC_FSM_CONTROL			0x148U
 #define EQOS_PRTYEN				OSI_BIT(1)
+#define EQOS_TMOUTEN				OSI_BIT(0)
 #define EQOS_MAC_DPP_FSM_INTERRUPT_STATUS       0x140U
 #define EQOS_MTL_DPP_CONTROL			0xCE0U
 #define EQOS_EDPP				OSI_BIT(0)
-#define EQOS_MAC_DPP_FSM_INTERRUPT_STATUS	0x140U
+#define EQOS_OPE				OSI_BIT(1)
 #define EQOS_MTL_DBG_CTL			0xC08U
 #define EQOS_MTL_DBG_CTL_EIEC			OSI_BIT(18)
 #define EQOS_MTL_DBG_CTL_EIEE			OSI_BIT(16)

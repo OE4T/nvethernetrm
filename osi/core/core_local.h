@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,7 +24,9 @@
 #define INCLUDED_CORE_LOCAL_H
 
 #include <osi_core.h>
-#include <local_common.h>
+#ifdef MACSEC_SUPPORT
+#include <osi_macsec.h>
+#endif /* MACSEC_SUPPORT */
 
 /**
  * @brief Maximum number of OSI core instances.
@@ -38,6 +40,8 @@
  */
 #define MAX_INTERFACE_OPS	2U
 
+#define CHAN_START_POSITION 6U
+#define PKT_ID_CNT	((nveu32_t)1 << CHAN_START_POSITION)
 /**
  * @brief Maximum number of timestamps stored in OSI from HW FIFO.
  */
@@ -68,13 +72,13 @@
 #define DYNAMIC_CFG_FC_IDX	1U
 #define DYNAMIC_CFG_VLAN_IDX	5U
 #define DYNAMIC_CFG_EEE_IDX	6U
+#define DYNAMIC_CFG_PTP_IDX	7U
 #endif /* !OSI_STRIPPED_LIB */
 
 #define DYNAMIC_CFG_L3_L4_IDX	0U
 #define DYNAMIC_CFG_AVB_IDX	2U
 #define DYNAMIC_CFG_L2_IDX	3U
 #define DYNAMIC_CFG_RXCSUM_IDX	4U
-#define DYNAMIC_CFG_PTP_IDX	7U
 #define DYNAMIC_CFG_EST_IDX	8U
 #define DYNAMIC_CFG_FPE_IDX	9U
 #define DYNAMIC_CFG_FRP_IDX	10U
@@ -142,8 +146,9 @@ struct core_ops {
 				const nveu32_t phyaddr,
 				const nveu32_t phyreg);
 	/** Called to get HW features */
-	nve32_t (*get_hw_features)(struct osi_core_priv_data *const osi_core,
-				   struct osi_hw_features *hw_feat);
+	void (*get_hw_features)(struct osi_core_priv_data *const osi_core,
+				struct osi_hw_features *hw_feat);
+#ifndef OSI_STRIPPED_LIB
 	/** Called to read reg */
 	nveu32_t (*read_reg)(struct osi_core_priv_data *const osi_core,
 			     const nve32_t reg);
@@ -151,7 +156,8 @@ struct core_ops {
 	nveu32_t (*write_reg)(struct osi_core_priv_data *const osi_core,
 			      const nveu32_t val,
 			      const nve32_t reg);
-#ifdef MACSEC_SUPPORT
+#endif
+#if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
 	/** Called to read macsec reg */
 	nveu32_t (*read_macsec_reg)(struct osi_core_priv_data *const osi_core,
 				    const nve32_t reg);
@@ -159,6 +165,8 @@ struct core_ops {
 	nveu32_t (*write_macsec_reg)(struct osi_core_priv_data *const osi_core,
 				     const nveu32_t val,
 				     const nve32_t reg);
+#endif /*  MACSEC_SUPPORT */
+#ifdef MACSEC_SUPPORT
 	void (*macsec_config_mac)(struct osi_core_priv_data *const osi_core,
 				  const nveu32_t enable);
 #endif /*  MACSEC_SUPPORT */
@@ -187,8 +195,6 @@ struct core_ops {
 				     const nveu32_t filter_enb_dis,
 				     const nveu32_t perfect_hash_filtering,
 				     const nveu32_t perfect_inverse_match);
-	/** Called to reset MMC HW counter structure */
-	void (*reset_mmc)(struct osi_core_priv_data *const osi_core);
 	/** Called to configure EEE Tx LPI */
 	void (*configure_eee)(struct osi_core_priv_data *const osi_core,
 			      const nveu32_t tx_lpi_enabled,
@@ -221,8 +227,7 @@ struct core_ops {
 				    const nveu32_t pos,
 				    struct osi_core_frp_data *const data);
 	/** Called to update FRP NVE and  */
-	nve32_t (*update_frp_nve)(struct osi_core_priv_data *const osi_core,
-				  const nveu32_t nve);
+	void (*update_frp_nve)(struct osi_core_priv_data *const osi_core, const nveu32_t nve);
 #ifdef HSI_SUPPORT
 	/** Interface function called to initialize HSI */
 	nve32_t (*core_hsi_configure)(struct osi_core_priv_data *const osi_core,
@@ -332,6 +337,61 @@ struct dynamic_cfg {
 	struct core_l2 l2[EQOS_MAX_MAC_ADDRESS_FILTER];
 };
 
+#ifdef MACSEC_SUPPORT
+/**
+ * @brief MACSEC core operations structure
+ */
+struct osi_macsec_core_ops {
+	/** macsec init */
+	nve32_t (*init)(struct osi_core_priv_data *const osi_core,
+			nveu32_t mtu, nveu8_t *const mac_addr);
+	/** macsec de-init */
+	nve32_t (*deinit)(struct osi_core_priv_data *const osi_core);
+	/** Macsec irq handler */
+	void (*handle_irq)(struct osi_core_priv_data *const osi_core);
+	/** macsec lut config */
+	nve32_t (*lut_config)(struct osi_core_priv_data *const osi_core,
+			struct osi_macsec_lut_config *const lut_config);
+#ifdef MACSEC_KEY_PROGRAM
+	/** macsec kt config */
+	nve32_t (*kt_config)(struct osi_core_priv_data *const osi_core,
+			struct osi_macsec_kt_config *const kt_config);
+#endif /* MACSEC_KEY_PROGRAM */
+	/** macsec cipher config */
+	nve32_t (*cipher_config)(struct osi_core_priv_data *const osi_core,
+			nveu32_t cipher);
+#ifdef DEBUG_MACSEC
+	/** macsec loopback config */
+	nve32_t (*loopback_config)(struct osi_core_priv_data *const osi_core,
+			nveu32_t enable);
+#endif /* DEBUG_MACSEC */
+	/** macsec config SA in HW LUT */
+	nve32_t (*config)(struct osi_core_priv_data *const osi_core,
+			struct osi_macsec_sc_info *const sc,
+			nveu32_t enable, nveu16_t ctlr, nveu16_t *kt_idx);
+	/** macsec read mmc counters */
+	void (*read_mmc)(struct osi_core_priv_data *const osi_core);
+#ifdef DEBUG_MACSEC
+	/** macsec debug buffer config */
+	nve32_t (*dbg_buf_config)(struct osi_core_priv_data *const osi_core,
+			struct osi_macsec_dbg_buf_config *const dbg_buf_config);
+	/** macsec debug buffer config */
+	nve32_t (*dbg_events_config)(struct osi_core_priv_data *const osi_core,
+			struct osi_macsec_dbg_buf_config *const dbg_buf_config);
+#endif /* DEBUG_MACSEC */
+	/** macsec get Key Index start for a given SCI */
+	nve32_t (*get_sc_lut_key_index)(struct osi_core_priv_data *const osi_core,
+			nveu8_t *sci, nveu32_t *key_index, nveu16_t ctlr);
+	/** macsec set MTU size */
+	nve32_t (*update_mtu)(struct osi_core_priv_data *const osi_core, nveu32_t mtu);
+#ifdef DEBUG_MACSEC
+	/** macsec interrupts configuration */
+	void (*intr_config)(struct osi_core_priv_data *const osi_core, nveu32_t enable);
+#endif /* DEBUG_MACSEC */
+};
+
+#endif /* MACSEC_SUPPORT */
+
 /**
  * @brief Core local data structure.
  */
@@ -342,10 +402,10 @@ struct core_local {
 	struct core_ops *ops_p;
 	/** interface core local operations variable */
 	struct if_core_ops *if_ops_p;
+	/** Address of MACsec HW operations structure */
+	struct osi_macsec_core_ops *macsec_ops;
 	/** structure to store tx time stamps */
 	struct osi_core_tx_ts ts[MAX_TX_TS_CNT];
-	/** Flag to represent initialization done or not */
-	nveu32_t init_done;
 	/** Flag to represent infterface initialization done or not */
 	nveu32_t if_init_done;
 	/** Magic number to validate osi core pointer */
@@ -384,10 +444,12 @@ struct core_local {
 	/** l3l4 wildcard filter configured (OSI_ENABLE) / not configured (OSI_DISABLE) */
 	nveu32_t l3l4_wildcard_filter_configured;
 #endif /* L3L4_WILDCARD_FILTER */
+	/** Hardware features */
+	struct osi_hw_features hw_features;
 };
 
 /**
- * @brief update_counter_u - Increment nveu32_t counter
+ * @brief update_counter_u_local - Increment nveu32_t counter
  *
  * @param[out] value: Pointer to value to be incremented.
  * @param[in] incr: increment value
@@ -398,15 +460,10 @@ struct core_local {
  * - Run time: No
  * - De-initialization: No
  */
-static inline void update_counter_u(nveu32_t *value, nveu32_t incr)
+static inline void update_counter_u_local(nveu32_t *value, OSI_UNUSED nveu32_t incr)
 {
-	nveu32_t temp = *value + incr;
-
-	if (temp < *value) {
-		/* Overflow, so reset it to zero */
-		*value = 0U;
-	}
-	*value = temp;
+	(void)incr;
+	*value = (((*value) & ((nveu32_t)INT_MAX)) + 1U) & (nveu32_t)INT_MAX;
 }
 
 /**
@@ -505,4 +562,54 @@ void ivc_interface_init_core_ops(struct if_core_ops *if_ops_p);
  * @retval NULL on failure.
  */
 struct osi_core_priv_data *get_role_pointer(nveu32_t role);
+
+/**
+ * @brief
+ * Description: osi_update_stats_counter - update value by increment passed
+ * as parameter
+ *
+ * @param[in] last_value: last value of stat counter
+ *   * Range: 0 to UINT64_MAX
+ * @param[in] incr: increment value
+ *   * Range: 0 to UINT64_MAX
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: Yes
+ *  - Signal handler: Yes
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ *  - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: Yes
+ *  - De-initialization: No
+ *
+ * @pre
+ *  - MAC needs to be out of reset and proper clocks need to be configured.
+ *  - DMA HW init need to be completed successfully, see osi_hw_dma_init
+ *
+ * @retval 0 on sucess
+ * @retval -1 on failure
+ */
+#ifndef DOXYGEN_ICD
+/**
+ *
+ * Traceability Details:
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETCL_016
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_042
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,
+						OSI_UNUSED nveu64_t incr)
+{
+	(void)incr;
+	return (((last_value) & ((nveu64_t)OSI_LLONG_MAX)) + 1UL) & (nveu64_t)OSI_LLONG_MAX;
+}
 #endif /* INCLUDED_CORE_LOCAL_H */

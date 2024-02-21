@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,10 +21,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef XPCS_H_
-#define XPCS_H_
+#ifndef INCLUDED_XPCS_H_
+#define INCLUDED_XPCS_H_
 
-#include "../osi/common/common.h"
+#include "common.h"
 #include <osi_core.h>
 
 /**
@@ -108,6 +109,9 @@
 #define XPCS_VR_XS_PCS_SFTY_TMR_CTRL			0xE03D4
 #define XPCS_SFTY_1US_MULT_MASK				0xFFU
 #define XPCS_SFTY_1US_MULT_SHIFT			0U
+#define XPCS_FSM_TO_SEL_SHIFT				10U
+#define XPCS_FSM_TO_SEL_MASK				0xC00U
+#define XPCS_FEC_EN					OSI_BIT(0)
 #endif
 /** @} */
 
@@ -186,11 +190,12 @@ static inline nve32_t xpcs_write_safety(struct osi_core_priv_data *osi_core,
 		osi_core->osd_ops.udelay(OSI_DELAY_1US);
 	}
 
+#ifndef OSI_STRIPPED_LIB
 	if (ret != 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "xpcs_write_safety failed", reg_addr);
 	}
-
+#endif /* !OSI_STRIPPED_LIB */
 	return ret;
 }
-#endif
+#endif /* INCLUDED_XPCS_H_ */
