@@ -259,6 +259,16 @@ static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
 	};
 	nve32_t ret = -1;
 
+	if ((osi_core->osd_ops.ops_log == OSI_NULL) ||
+	    (osi_core->osd_ops.udelay == OSI_NULL) ||
+	    (osi_core->osd_ops.msleep == OSI_NULL) ||
+#ifdef OSI_DEBUG
+	    (osi_core->osd_ops.printf == OSI_NULL) ||
+#endif /* OSI_DEBUG */
+	    (osi_core->osd_ops.usleep_range == OSI_NULL)) {
+		goto exit;
+	}
+
 	if (osi_core->mac > OSI_MAC_HW_MGBE) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "Invalid MAC HW type\n", 0ULL);
