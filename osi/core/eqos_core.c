@@ -922,14 +922,18 @@ static void eqos_configure_mac(struct osi_core_priv_data *const osi_core)
 
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_MAC_MCR);
 
-	/* Enable common interrupt at wrapper level */
-	value = osi_readla(osi_core, (nveu8_t *)osi_core->base + EQOS_WRAP_COMMON_INTR_ENABLE);
-	value |= EQOS_MAC_SBD_INTR;
-	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_WRAP_COMMON_INTR_ENABLE);
+	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
+		/* Enable common interrupt at wrapper level */
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base + EQOS_WRAP_COMMON_INTR_ENABLE);
+		value |= EQOS_MAC_SBD_INTR;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_WRAP_COMMON_INTR_ENABLE);
+	}
 
 	/* enable Packet Duplication Control */
 	value = osi_readla(osi_core, (nveu8_t *)osi_core->base + EQOS_MAC_EXTR);
-	value |= EQOS_MAC_EXTR_PDC;
+	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_00) {
+		value |= EQOS_MAC_EXTR_PDC;
+	}
 	/* Write to MAC Extension Register */
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_MAC_EXTR);
 
@@ -940,7 +944,11 @@ static void eqos_configure_mac(struct osi_core_priv_data *const osi_core)
 
 	/* Routing Multicast and Broadcast depending on mac version */
 	value &= ~(EQOS_MAC_RQC1R_MCBCQ);
-	value |= ((nveu32_t)EQOS_MAC_RQC1R_MCBCQ7) << EQOS_MAC_RQC1R_MCBCQ_SHIFT;
+	if (osi_core->mac_ver > OSI_EQOS_MAC_5_00) {
+		value |= ((nveu32_t)EQOS_MAC_RQC1R_MCBCQ7) << EQOS_MAC_RQC1R_MCBCQ_SHIFT;
+	} else {
+		value |= ((nveu32_t)EQOS_MAC_RQC1R_MCBCQ3) << EQOS_MAC_RQC1R_MCBCQ_SHIFT;
+	}
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_MAC_RQC1R);
 
 	/* Disable all MMC interrupts */
@@ -1185,7 +1193,9 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 #endif /* !OSI_STRIPPED_LIB */
 
 	osi_writela(osi_core, value, (nveu8_t *)osi_core->base + EQOS_MTL_RXQ_DMA_MAP0);
-	osi_writela(osi_core, value1, (nveu8_t *)osi_core->base + EQOS_MTL_RXQ_DMA_MAP1);
+	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
+		osi_writela(osi_core, value1, (nveu8_t *)osi_core->base + EQOS_MTL_RXQ_DMA_MAP1);
+	}
 
 	if (osi_unlikely(osi_core->num_mtl_queues > OSI_EQOS_MAX_NUM_QUEUES)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
@@ -1228,8 +1238,10 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 	osi_core->l3l4_filter_bitmask = OSI_NONE;
 #endif /* !L3L4_WILDCARD_FILTER */
 
-	/* Enabling by default from T23x */
-	eqos_dma_chan_to_vmirq_map(osi_core);
+	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
+		/* Enabling by default from T23x */
+		eqos_dma_chan_to_vmirq_map(osi_core);
+	}
 fail:
 	return ret;
 }
@@ -1381,19 +1393,21 @@ static void eqos_handle_mac_intrs(struct osi_core_priv_data *const osi_core,
 	/* Handle MAC interrupts */
 	if ((dma_isr & EQOS_DMA_ISR_MACIS) == EQOS_DMA_ISR_MACIS) {
 #ifdef HSI_SUPPORT
-		/* T23X-EQOS_HSIv2-19: Consistency Monitor for TX Frame */
-		if ((dma_isr & EQOS_DMA_ISR_TXSTSIS) == EQOS_DMA_ISR_TXSTSIS) {
-			osi_core->hsi.tx_frame_err_count =
-				osi_update_stats_counter(osi_core->hsi.tx_frame_err_count,
-							 1UL);
-			tx_frame_err = osi_core->hsi.tx_frame_err_count /
-				osi_core->hsi.err_count_threshold;
-			if (osi_core->hsi.tx_frame_err_threshold < tx_frame_err) {
-				osi_core->hsi.tx_frame_err_threshold = tx_frame_err;
-				osi_core->hsi.report_count_err[TX_FRAME_ERR_IDX] = OSI_ENABLE;
+		if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
+			/* T23X-EQOS_HSIv2-19: Consistency Monitor for TX Frame */
+			if ((dma_isr & EQOS_DMA_ISR_TXSTSIS) == EQOS_DMA_ISR_TXSTSIS) {
+				osi_core->hsi.tx_frame_err_count =
+					osi_update_stats_counter(osi_core->hsi.tx_frame_err_count,
+							1UL);
+				tx_frame_err = osi_core->hsi.tx_frame_err_count /
+					osi_core->hsi.err_count_threshold;
+				if (osi_core->hsi.tx_frame_err_threshold < tx_frame_err) {
+					osi_core->hsi.tx_frame_err_threshold = tx_frame_err;
+					osi_core->hsi.report_count_err[TX_FRAME_ERR_IDX] = OSI_ENABLE;
+				}
+				osi_core->hsi.err_code[TX_FRAME_ERR_IDX] = OSI_TX_FRAME_ERR;
+				osi_core->hsi.report_err = OSI_ENABLE;
 			}
-			osi_core->hsi.err_code[TX_FRAME_ERR_IDX] = OSI_TX_FRAME_ERR;
-			osi_core->hsi.report_err = OSI_ENABLE;
 		}
 #endif
 		/* handle only those MAC interrupts which are enabled */
@@ -1732,13 +1746,15 @@ static void eqos_handle_common_intr(struct osi_core_priv_data *const osi_core)
 	nveu32_t mtl_isr = 0;
 	nveu32_t frp_isr = 0U;
 
-	osi_writela(osi_core, EQOS_MAC_SBD_INTR, (nveu8_t *)osi_core->base +
-		    EQOS_WRAP_COMMON_INTR_STATUS);
+	if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
+		osi_writela(osi_core, EQOS_MAC_SBD_INTR, (nveu8_t *)osi_core->base +
+			    EQOS_WRAP_COMMON_INTR_STATUS);
 #ifdef HSI_SUPPORT
-	if (osi_core->hsi.enabled == OSI_ENABLE) {
-		eqos_handle_hsi_intr(osi_core);
-	}
+		if (osi_core->hsi.enabled == OSI_ENABLE) {
+			eqos_handle_hsi_intr(osi_core);
+		}
 #endif
+	}
 
 	dma_isr = osi_readla(osi_core, (nveu8_t *)base + EQOS_DMA_ISR);
 	if (dma_isr != 0U) {
@@ -4038,44 +4054,46 @@ static void eqos_config_for_macsec(struct osi_core_priv_data *const osi_core,
 {
 	nveu32_t value = 0U, temp = 0U;
 
-	/* stop MAC Tx */
-	eqos_config_mac_tx(osi_core, OSI_DISABLE);
-	if (enable == OSI_ENABLE) {
-		/* Configure IPG  {EIPG,IPG} value according to macsec IAS in
-		 * MAC_Configuration and MAC_Extended_Configuration
-		 * IPG (12 B[default] + 32 B[sectag]) = 352 bits
-		 */
-		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				EQOS_MAC_MCR);
-		temp = EQOS_MCR_IPG;
-		temp = temp << EQOS_MCR_IPG_SHIFT;
-		value |= temp & EQOS_MCR_IPG_MASK;
-		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				EQOS_MAC_MCR);
-		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				EQOS_MAC_EXTR);
-		value |= EQOS_MAC_EXTR_EIPGEN;
-		temp = EQOS_MAC_EXTR_EIPG;
-		temp = temp << EQOS_MAC_EXTR_EIPG_SHIFT;
-		value |= temp & EQOS_MAC_EXTR_EIPG_MASK;
-		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				EQOS_MAC_EXTR);
-	} else {
-		/* reset to default IPG 12B */
-		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				EQOS_MAC_MCR);
-		value &= ~EQOS_MCR_IPG_MASK;
-		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				EQOS_MAC_MCR);
-		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				EQOS_MAC_EXTR);
-		value &= ~EQOS_MAC_EXTR_EIPGEN;
-		value &= ~EQOS_MAC_EXTR_EIPG_MASK;
-		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				EQOS_MAC_EXTR);
+	if (osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
+		/* stop MAC Tx */
+		eqos_config_mac_tx(osi_core, OSI_DISABLE);
+		if (enable == OSI_ENABLE) {
+			/* Configure IPG  {EIPG,IPG} value according to macsec IAS in
+			 * MAC_Configuration and MAC_Extended_Configuration
+			 * IPG (12 B[default] + 32 B[sectag]) = 352 bits
+			 */
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+					   EQOS_MAC_MCR);
+			temp = EQOS_MCR_IPG;
+			temp = temp << EQOS_MCR_IPG_SHIFT;
+			value |= temp & EQOS_MCR_IPG_MASK;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+				    EQOS_MAC_MCR);
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+					   EQOS_MAC_EXTR);
+			value |= EQOS_MAC_EXTR_EIPGEN;
+			temp = EQOS_MAC_EXTR_EIPG;
+			temp = temp << EQOS_MAC_EXTR_EIPG_SHIFT;
+			value |= temp & EQOS_MAC_EXTR_EIPG_MASK;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+				    EQOS_MAC_EXTR);
+		} else {
+			/* reset to default IPG 12B */
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+					   EQOS_MAC_MCR);
+			value &= ~EQOS_MCR_IPG_MASK;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+				    EQOS_MAC_MCR);
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+					   EQOS_MAC_EXTR);
+			value &= ~EQOS_MAC_EXTR_EIPGEN;
+			value &= ~EQOS_MAC_EXTR_EIPG_MASK;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+				    EQOS_MAC_EXTR);
+		}
+		/* start MAC Tx */
+		eqos_config_mac_tx(osi_core, OSI_ENABLE);
 	}
-	/* start MAC Tx */
-	eqos_config_mac_tx(osi_core, OSI_ENABLE);
 
 	/* Updated MTL_EST depending on MACSEC enable/disable */
 	value = osi_readla(osi_core,

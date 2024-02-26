@@ -335,7 +335,9 @@ static nve32_t osi_hal_hw_core_deinit(struct osi_core_priv_data *const osi_core)
 	/* Disable MAC interrupts */
 	osi_writela(osi_core, 0U, ((nveu8_t *)osi_core->base + HW_MAC_IER));
 
-	osi_writela(osi_core, 0U, ((nveu8_t *)osi_core->base + WRAP_COMMON_INTR_ENABLE));
+	if (l_core->l_mac_ver != MAC_CORE_VER_TYPE_EQOS) {
+		osi_writela(osi_core, 0U, ((nveu8_t *)osi_core->base + WRAP_COMMON_INTR_ENABLE));
+	}
 
 	/* Handle the common interrupt if any status bits set */
 	l_core->ops_p->handle_common_intr(osi_core);
