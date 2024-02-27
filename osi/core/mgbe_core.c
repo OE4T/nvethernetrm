@@ -1505,7 +1505,10 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 		value = (0x198U << MGBE_TMR_SHIFT) & MGBE_TMR_MASK;
 		value |= ((nveu32_t)0x0U << MGBE_CTMR_SHIFT) & MGBE_CTMR_MASK;
 		value |= ((nveu32_t)0x2U << MGBE_LTMRMD_SHIFT) & MGBE_LTMRMD_MASK;
-		value |= ((nveu32_t)0x2U << MGBE_NTMRMD_SHIFT) & MGBE_NTMRMD_MASK;
+		/** Based on software experiments and the hardware team's sign-off in
+		 * bug 3584387 comment 36, using a 256ms interval for NTMRMD(0x5).
+		 */
+		value |= ((nveu32_t)0x5U << MGBE_NTMRMD_SHIFT) & MGBE_NTMRMD_MASK;
 		osi_writela(osi_core, value,
 			    (nveu8_t *)osi_core->base + MGBE_DWCXG_CORE_MAC_FSM_ACT_TIMER);
 
