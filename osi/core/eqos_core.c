@@ -1161,7 +1161,22 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 	nveu32_t qinx = 0;
 	nveu32_t value = 0;
 	nveu32_t value1 = 0;
+	nveu16_t frp_cnt = 0;
+	struct osi_core_frp_data bypass_entry = {0};
 
+	/* Add Bypass entry in all FRP entries to initlize the FRP table */
+	bypass_entry.match_en = 0x0U;
+	bypass_entry.accept_frame = 1;
+	bypass_entry.reject_frame = 1;
+	for (frp_cnt = 0; frp_cnt < OSI_FRP_MAX_ENTRY; frp_cnt++) {
+		ret = eqos_update_frp_entry(osi_core, frp_cnt, &bypass_entry);
+		if (ret < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				"Fail to update BYPASS entry for max FRP entries\n",
+				OSI_NONE);
+			goto fail;
+		}
+	}
 	/* PAD calibration */
 	ret = eqos_pad_calibrate(osi_core);
 	if (ret < 0) {
