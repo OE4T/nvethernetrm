@@ -609,6 +609,6 @@ struct osi_core_priv_data *get_role_pointer(nveu32_t role);
 static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,
 						nveu64_t incr)
 {
-	return (((last_value) & ((nveu64_t)OSI_LLONG_MAX)) + incr) & (nveu64_t)OSI_LLONG_MAX;
+	return ((last_value & (nveu64_t)OSI_LLONG_MAX) + (incr & (nveu64_t)OSI_LLONG_MAX));
 }
 #endif /* INCLUDED_CORE_LOCAL_H */
