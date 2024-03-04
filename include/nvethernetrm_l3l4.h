@@ -26,10 +26,10 @@
 #include <nvethernet_type.h>
 
 /** helper macro for enable */
-#define OSI_TRUE  (0x12A456F3U)
+#define OSI_TRUE  (((nveu32_t)1U) << 0)
 
 /** helper macro to disable */
-#define OSI_FALSE (0xD4EA8494U)
+#define OSI_FALSE ((~(OSI_TRUE)) & 0x1U)
 
 /**
  * @brief L3/L4 filter function dependent parameter
