@@ -1225,6 +1225,13 @@ static nve32_t osi_adjust_freq(struct osi_core_priv_data *const osi_core, nve32_
 	nve32_t ret = -1;
 	nve32_t ppb1 = ppb;
 
+	if ((ppb > MAX_FREQ_POS) || (ppb < MAX_FREQ_NEG)) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			     "PPB > MAX_FREQ_POS or < MAX_FREQ_NEG\n",
+                             (nvel64_t)ppb);
+		goto fail;
+	}
+
 	addend = osi_core->default_addend;
 	if (ppb1 < 0) {
 		neg_adj = 1U;
