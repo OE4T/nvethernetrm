@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -36,28 +36,28 @@
  * @brief Helper macros for LUT programming
  * @{
  */
-/* @brief valid AN0 flag */
+/** @brief valid AN0 flag */
 #define OSI_AN0_VALID			OSI_BIT(0)
-/* @brief valid AN1 flag */
+/** @brief valid AN1 flag */
 #define OSI_AN1_VALID			OSI_BIT(1)
-/* @brief valid AN2 flag */
+/** @brief valid AN2 flag */
 #define OSI_AN2_VALID			OSI_BIT(2)
-/* @brief valid AN3 flag */
+/** @brief valid AN3 flag */
 #define OSI_AN3_VALID			OSI_BIT(3)
-/* @brief maximum number of SAs supported */
+/** @brief maximum number of SAs supported */
 #define OSI_MAX_NUM_SA			4U
 #ifdef DEBUG_MACSEC
 #define OSI_CURR_AN_MAX 		3
 #endif /* DEBUG_MACSEC */
-/* @brief maximum key index */
+/** @brief maximum key index */
 #define OSI_KEY_INDEX_MAX		31U
-/* @brief maximum PN by default */
+/** @brief maximum PN by default */
 #define OSI_PN_MAX_DEFAULT		0xFFFFFFFFU
-/* @brief threshold PN by default */
+/** @brief threshold PN by default */
 #define OSI_PN_THRESHOLD_DEFAULT	0xC0000000U
-/* @brief TCI by default */
+/** @brief TCI by default */
 #define OSI_TCI_DEFAULT 		0x1
-/* @brief maximum SCs index */
+/** @brief maximum SCs index */
 #define OSI_SC_INDEX_MAX		15U
 /**
  * @brief Length of ethernet type field
@@ -67,57 +67,57 @@
  * @brief Maximum bype pattern match
  */
 #define OSI_LUT_BYTE_PATTERN_MAX	4U
-/* LUT byte pattern offset range 0-63 */
+/** @brief LUT byte pattern offset range 0-63 */
 #define OSI_LUT_BYTE_PATTERN_MAX_OFFSET 63U
-/* @brief VLAN PCP range 0-7 */
+/** @brief VLAN PCP range 0-7 */
 #define OSI_VLAN_PCP_MAX		7U
-/* @brief VLAN ID range 1-4095 */
+/** @brief VLAN ID range 1-4095 */
 #define OSI_VLAN_ID_MAX 		4095U
-/* @brief flag to select BYPASS LUT */
+/** @brief flag to select BYPASS LUT */
 #define OSI_LUT_SEL_BYPASS		0U
-/* @brief flag to select SCI LUT */
+/** @brief flag to select SCI LUT */
 #define OSI_LUT_SEL_SCI 		1U
-/* @brief flag to select SC_PARAM LUT */
+/** @brief flag to select SC_PARAM LUT */
 #define OSI_LUT_SEL_SC_PARAM		2U
-/* @brief flag to select SC_STATE LUT */
+/** @brief flag to select SC_STATE LUT */
 #define OSI_LUT_SEL_SC_STATE		3U
-/* @brief flag to select SA_STATE LUT */
+/** @brief flag to select SA_STATE LUT */
 #define OSI_LUT_SEL_SA_STATE		4U
-/* @brief maximum LUTs to select */
+/** @brief maximum LUTs to select */
 #define OSI_LUT_SEL_MAX 		4U
-/* @brief Flag indicating which bytes of DA is valid */
+/** @brief Flag indicating which bytes of DA is valid */
 #define OSI_LUT_FLAGS_DA_VALID		(OSI_BIT(0) | OSI_BIT(1) | OSI_BIT(2) |\
 					 OSI_BIT(3) | OSI_BIT(4) | OSI_BIT(5))
-/* @brief Flag indicating which bytes of SA is valid */
+/** @brief Flag indicating which bytes of SA is valid */
 #define OSI_LUT_FLAGS_SA_VALID		(OSI_BIT(6) | OSI_BIT(7) | OSI_BIT(8) |\
 					 OSI_BIT(9) | OSI_BIT(10) | OSI_BIT(11))
-/* @brief Flag indicating ethernet type is valid */
+/** @brief Flag indicating ethernet type is valid */
 #define OSI_LUT_FLAGS_ETHTYPE_VALID	OSI_BIT(12)
-/* @brief Flag indicating vlan PCP is valid */
+/** @brief Flag indicating vlan PCP is valid */
 #define OSI_LUT_FLAGS_VLAN_PCP_VALID	OSI_BIT(13)
-/* @brief Flag indicating vlan ID is valid */
+/** @brief Flag indicating vlan ID is valid */
 #define OSI_LUT_FLAGS_VLAN_ID_VALID	OSI_BIT(14)
-/* @brief Flag indicating vlan is present */
+/** @brief Flag indicating vlan is present */
 #define OSI_LUT_FLAGS_VLAN_VALID	OSI_BIT(15)
-/* @brief Flag indicating BYTE0 pattern is present */
+/** @brief Flag indicating BYTE0 pattern is present */
 #define OSI_LUT_FLAGS_BYTE0_PATTERN_VALID	OSI_BIT(16)
-/* @brief Flag indicating BYTE1 pattern is present */
+/** @brief Flag indicating BYTE1 pattern is present */
 #define OSI_LUT_FLAGS_BYTE1_PATTERN_VALID	OSI_BIT(17)
-/* @brief Flag indicating BYTE2 pattern is present */
+/** @brief Flag indicating BYTE2 pattern is present */
 #define OSI_LUT_FLAGS_BYTE2_PATTERN_VALID	OSI_BIT(18)
-/* @brief Flag indicating BYTE3 pattern is present */
+/** @brief Flag indicating BYTE3 pattern is present */
 #define OSI_LUT_FLAGS_BYTE3_PATTERN_VALID	OSI_BIT(19)
-/* @brief Flag indicating preemptable frame */
+/** @brief Flag indicating preemptable frame */
 #define OSI_LUT_FLAGS_PREEMPT		OSI_BIT(20)
-/* @brief Flag indicating preemptable field is valid */
+/** @brief Flag indicating preemptable field is valid */
 #define OSI_LUT_FLAGS_PREEMPT_VALID	OSI_BIT(21)
-/* @brief Flag indicating controlled port */
+/** @brief Flag indicating controlled port */
 #define OSI_LUT_FLAGS_CONTROLLED_PORT	OSI_BIT(22)
-/* @brief Flag indicating Double VLAN packet */
+/** @brief Flag indicating Double VLAN packet */
 #define OSI_LUT_FLAGS_DVLAN_PKT		OSI_BIT(23)
-/* @brief Flag indicating Double VLAN INNER tag select */
+/** @brief Flag indicating Double VLAN INNER tag select */
 #define OSI_LUT_FLAGS_DVLAN_OUTER_INNER_TAG_SEL	OSI_BIT(24)
-/* @brief Flag indicating flags entry is valid */
+/** @brief Flag indicating flags entry is valid */
 #define OSI_LUT_FLAGS_ENTRY_VALID	OSI_BIT(31)
 /** @} */
 
@@ -127,21 +127,21 @@
  * @brief Helper macros for generic table CONFIG register programming
  * @{
  */
-/* @brief TX MACSEC controller */
+/** @brief TX MACSEC controller */
 #define OSI_CTLR_SEL_TX		0U
-/* @brief RX MACSEC controller */
+/** @brief RX MACSEC controller */
 #define OSI_CTLR_SEL_RX		1U
 #define OSI_CTLR_SEL_MAX	1U
-/* @brief LUT read operation */
+/** @brief LUT read operation */
 #define OSI_LUT_READ		0U
-/* @brief LUT write operation */
+/** @brief LUT write operation */
 #define OSI_LUT_WRITE		1U
 #define OSI_RW_MAX		1U
-/* @brief Maximum table index */
+/** @brief Maximum table index */
 #define OSI_TABLE_INDEX_MAX	31U
-/* @brief Maximum bypass lut table index */
+/** @brief Maximum bypass lut table index */
 #define OSI_BYP_LUT_MAX_INDEX	OSI_TABLE_INDEX_MAX
-/* @brief Maximum number of SCs */
+/** @brief Maximum number of SCs */
 #define OSI_SC_LUT_MAX_INDEX	15U
 #define OSI_SA_LUT_MAX_INDEX	OSI_TABLE_INDEX_MAX
 /** @} */
@@ -153,9 +153,9 @@
  * @brief Helper macros for debug buffer table CONFIG register programming
  * @{
  */
-/* Num of Tx debug buffers */
+/** Num of Tx debug buffers */
 #define OSI_TX_DBG_BUF_IDX_MAX		12U
-/* Num of Rx debug buffers */
+/** Num of Rx debug buffers */
 #define OSI_RX_DBG_BUF_IDX_MAX		13U
 /** flag - encoding various debug event bits */
 #define OSI_TX_DBG_LKUP_MISS_EVT	OSI_BIT(0)
@@ -179,9 +179,9 @@
  * @brief Helper macro's for AES ciphers
  * @{
  */
-/* @brief select CIPHER AES128 */
+/** @brief select CIPHER AES128 */
 #define OSI_MACSEC_CIPHER_AES128	0U
-/* @brief select CIPHER AES256 */
+/** @brief select CIPHER AES256 */
 #define OSI_MACSEC_CIPHER_AES256	1U
 /** @} */
 
@@ -189,10 +189,10 @@
  * @brief Indicates different operations on MACSEC SA
  */
 #ifdef MACSEC_KEY_PROGRAM
-/* @brief Command to create SA */
+/** @brief Command to create SA */
 #define OSI_CREATE_SA           1U
 #endif /* MACSEC_KEY_PROGRAM */
-/* @brief Command to enable SA */
+/** @brief Command to enable SA */
 #define OSI_ENABLE_SA           2U
 
 /**
