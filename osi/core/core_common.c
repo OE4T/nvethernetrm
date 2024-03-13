@@ -1779,12 +1779,12 @@ static void prepare_l3_addr_registers(const struct osi_l3_l4_filter *const l3_l4
 				      nveu32_t *l3_addr1_reg)
 {
 #ifndef OSI_STRIPPED_LIB
-	if (l3_l4->data.is_ipv6 == OSI_TRUE) {
+	if (l3_l4->data.is_ipv6 == OSI_L3L4_ENABLE) {
 		const nveu16_t *addr;
 		/* For IPv6, either source address or destination
 		 * address only one of them can be enabled
 		 */
-		if (l3_l4->data.src.addr_match == OSI_TRUE) {
+		if (l3_l4->data.src.addr_match == OSI_L3L4_ENABLE) {
 			/* select src address only */
 			addr = l3_l4->data.src.ip6_addr;
 		} else {
@@ -1891,7 +1891,7 @@ void prepare_l3l4_registers(const struct osi_core_priv_data *const osi_core,
 			    nveu32_t *ctr_reg)
 {
 	/* prepare regiser data if filter to be enabled */
-	if (l3_l4->filter_enb_dis == OSI_TRUE) {
+	if (l3_l4->filter_enb_dis == OSI_L3L4_ENABLE) {
 		/* prepare l3 filter ip address register data */
 		prepare_l3_addr_registers(l3_l4,
 #ifndef OSI_STRIPPED_LIB

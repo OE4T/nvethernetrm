@@ -835,7 +835,7 @@ static nve32_t l3l4_find_match(const struct core_local *const l_core,
 	*free_filter_no = UINT_MAX;
 
 	for (i = start_idx; i <= max_filter_no; i++) {
-		if (l_core->cfg.l3_l4[i].filter_enb_dis == OSI_FALSE) {
+		if (l_core->cfg.l3_l4[i].filter_enb_dis == OSI_L3L4_DISABLE) {
 			/* filter not enabled, save free index */
 			if (found_free_index == 0U) {
 				*free_filter_no = i;
@@ -866,7 +866,7 @@ static nve32_t l3l4_find_match(const struct core_local *const l_core,
  * Algorithm:
  * - Validate all the l3_l4 structure parameter.
  * - Verify routing dma channel id value.
- * - Vefify each enable/disable parameters is <= OSI_TRUE.
+ * - Vefify each enable/disable parameters is <= OSI_L3L4_ENABLE.
  * - Return -1 if parameter validation fails.
  * - Return 0 on success.
  *
@@ -910,24 +910,24 @@ static nve32_t configure_l3l4_filter_valid_params(const struct osi_core_priv_dat
 	     l3_l4->data.dst.port_match_inv |
 	     l3_l4->data.dst.addr_match_inv
 #endif /* !OSI_STRIPPED_LIB */
-	     ) > ((nveu32_t)OSI_TRUE)) {
+	     ) > ((nveu32_t)OSI_L3L4_ENABLE)) {
 		OSI_CORE_ERR((osi_core->osd), (OSI_LOG_ARG_OUTOFBOUND),
-			("L3L4: one of the enb param > OSI_TRUE: "), 0);
+			("L3L4: one of the enb param > OSI_L3L4_ENABLE: "), 0);
 		goto exit_func;
 	}
 
 #ifndef OSI_STRIPPED_LIB
 	/* validate port/addr enb bits */
-	if (l3_l4->filter_enb_dis == OSI_TRUE) {
+	if (l3_l4->filter_enb_dis == OSI_L3L4_ENABLE) {
 		if ((l3_l4->data.src.port_match | l3_l4->data.src.addr_match |
 		     l3_l4->data.dst.port_match | l3_l4->data.dst.addr_match)
-			== OSI_FALSE) {
+			== OSI_L3L4_DISABLE) {
 			OSI_CORE_ERR((osi_core->osd), (OSI_LOG_ARG_OUTOFBOUND),
 				("L3L4: None of the enb bits are not set: "), 0);
 			goto exit_func;
 		}
 		if ((l3_l4->data.is_ipv6 & l3_l4->data.src.addr_match &
-			l3_l4->data.dst.addr_match) != OSI_FALSE) {
+			l3_l4->data.dst.addr_match) != OSI_L3L4_DISABLE) {
 			OSI_CORE_ERR((osi_core->osd), (OSI_LOG_ARG_OUTOFBOUND),
 				("L3L4: Both ip6 addr match bits are set\n"), 0);
 			goto exit_func;
@@ -979,7 +979,7 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 	}
 
 	cfg_l3_l4 = &(l_core->cfg.l3_l4[filter_no]);
-	if (l3_l4->filter_enb_dis == OSI_TRUE) {
+	if (l3_l4->filter_enb_dis == OSI_L3L4_ENABLE) {
 		/* Store the filter.
 		 * osi_memcpy is an internal function and it cannot fail, hence
 		 * ignoring return value.
@@ -1054,14 +1054,14 @@ static void l3l4_add_wildcard_filter(struct osi_core_priv_data *const osi_core,
 		 */
 		l3l4_filter = &(l_core->cfg.l3_l4[0]);
 		osi_memset(l3l4_filter, 0, sizeof(struct osi_l3_l4_filter));
-		l3l4_filter->filter_enb_dis = OSI_TRUE;
-		l3l4_filter->data.is_udp = OSI_TRUE;
-		l3l4_filter->data.src.addr_match = OSI_TRUE;
-		l3l4_filter->data.src.addr_match_inv = OSI_TRUE;
-		l3l4_filter->data.src.port_match = OSI_TRUE;
-		l3l4_filter->data.dst.addr_match = OSI_TRUE;
-		l3l4_filter->data.dst.addr_match_inv = OSI_TRUE;
-		l3l4_filter->data.dst.port_match = OSI_TRUE;
+		l3l4_filter->filter_enb_dis = OSI_L3L4_ENABLE;
+		l3l4_filter->data.is_udp = OSI_L3L4_ENABLE;
+		l3l4_filter->data.src.addr_match = OSI_L3L4_ENABLE;
+		l3l4_filter->data.src.addr_match_inv = OSI_L3L4_ENABLE;
+		l3l4_filter->data.src.port_match = OSI_L3L4_ENABLE;
+		l3l4_filter->data.dst.addr_match = OSI_L3L4_ENABLE;
+		l3l4_filter->data.dst.addr_match_inv = OSI_L3L4_ENABLE;
+		l3l4_filter->data.dst.port_match = OSI_L3L4_ENABLE;
 
 		/* configure wildcard at last filter index */
 		err = configure_l3l4_filter_helper(osi_core, 0, l3l4_filter);
@@ -1128,7 +1128,7 @@ static nve32_t configure_l3l4_filter(struct osi_core_priv_data *const osi_core,
 	err = l3l4_find_match(l_core, l3_l4, &filter_no, &free_filter_no,
 				  max_filter_no[osi_core->mac]);
 
-	if (l3_l4->filter_enb_dis == OSI_TRUE) {
+	if (l3_l4->filter_enb_dis == OSI_L3L4_ENABLE) {
 		if (err == 0) {
 			/* duplicate filter request */
 			OSI_CORE_ERR((osi_core->osd), (OSI_LOG_ARG_HW_FAIL),
@@ -2219,7 +2219,7 @@ static void cfg_l3_l4_filter(struct core_local *l_core)
 	nveu32_t i = 0U;
 
 	for (i = 0U; i < OSI_MGBE_MAX_L3_L4_FILTER; i++) {
-		if (l_core->cfg.l3_l4[i].filter_enb_dis == OSI_FALSE) {
+		if (l_core->cfg.l3_l4[i].filter_enb_dis == OSI_L3L4_DISABLE) {
 			/* filter not enabled */
 			continue;
 		}

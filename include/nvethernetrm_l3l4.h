@@ -26,10 +26,16 @@
 #include <nvethernet_type.h>
 
 /** helper macro for enable */
-#define OSI_TRUE  (((nveu32_t)1U) << 0)
+#define OSI_L3L4_ENABLE  (1U)
 
 /** helper macro to disable */
-#define OSI_FALSE ((~(OSI_TRUE)) & 0x1U)
+#define OSI_L3L4_DISABLE (0U)
+
+/** helper macro for enable */
+#define OSI_TRUE  (OSI_L3L4_ENABLE)
+
+/** helper macro to disable */
+#define OSI_FALSE (OSI_L3L4_DISABLE)
 
 /**
  * @brief L3/L4 filter function dependent parameter
@@ -37,9 +43,9 @@
 struct osi_l3_l4_filter {
 	struct {
 #ifndef OSI_STRIPPED_LIB
-		/** udp (OSI_TRUE) or tcp (OSI_FALSE) */
+		/** udp (OSI_L3L4_ENABLE) or tcp (OSI_L3L4_DISABLE) */
 		nveu32_t is_udp;
-		/** ipv6 (OSI_TRUE) or ipv4 (OSI_FALSE) */
+		/** ipv6 (OSI_L3L4_ENABLE) or ipv4 (OSI_L3L4_DISABLE) */
 		nveu32_t is_ipv6;
 #endif /* !OSI_STRIPPED_LIB */
 		struct {
@@ -51,13 +57,14 @@ struct osi_l3_l4_filter {
 			nveu16_t ip6_addr[8];
 			/** Port number */
 			nveu16_t port_no;
-			/** addr match enable (OSI_TRUE) or disable (OSI_FALSE) */
+			/** addr match enable (OSI_L3L4_ENABLE) or disable (OSI_L3L4_DISABLE) */
 			nveu32_t addr_match;
-			/** perfect(OSI_FALSE) or inverse(OSI_TRUE) match for address */
+			/** perfect(OSI_L3L4_DISABLE) or inverse(OSI_L3L4_ENABLE)
+			 * match for address */
 			nveu32_t addr_match_inv;
-			/** port match enable (OSI_TRUE) or disable (OSI_FALSE) */
+			/** port match enable (OSI_L3L4_ENABLE) or disable (OSI_L3L4_DISABLE) */
 			nveu32_t port_match;
-			/** perfect(OSI_FALSE) or inverse(OSI_TRUE) match for port */
+			/** perfect(OSI_L3L4_DISABLE) or inverse(OSI_L3L4_ENABLE) match for port */
 			nveu32_t port_match_inv;
 #endif /* !OSI_STRIPPED_LIB */
 		} dst;
@@ -70,26 +77,27 @@ struct osi_l3_l4_filter {
 			nveu16_t ip6_addr[8];
 			/** Port number */
 			nveu16_t port_no;
-			/** addr match enable (OSI_TRUE) or disable (OSI_FALSE) */
+			/** addr match enable (OSI_L3L4_ENABLE) or disable (OSI_L3L4_DISABLE) */
 			nveu32_t addr_match;
-			/** perfect(OSI_FALSE) or inverse(OSI_TRUE) match for address */
+			/** perfect(OSI_L3L4_DISABLE) or inverse(OSI_L3L4_ENABLE)
+			 * match for address */
 			nveu32_t addr_match_inv;
-			/** port match enable (OSI_TRUE) or disable (OSI_FALSE) */
+			/** port match enable (OSI_L3L4_ENABLE) or disable (OSI_L3L4_DISABLE) */
 			nveu32_t port_match;
-			/** perfect(OSI_FALSE) or inverse(OSI_TRUE) match for port */
+			/** perfect(OSI_L3L4_DISABLE) or inverse(OSI_L3L4_ENABLE) match for port */
 			nveu32_t port_match_inv;
 		} src;
 #endif /* !OSI_STRIPPED_LIB */
 	} data;
 #ifndef OSI_STRIPPED_LIB
-	/** Represents whether DMA routing enabled (OSI_TRUE) or not (OSI_FALSE) */
+	/** Represents whether DMA routing enabled (OSI_L3L4_ENABLE) or not (OSI_L3L4_DISABLE) */
 	nveu32_t dma_routing_enable;
 #endif /* !OSI_STRIPPED_LIB */
 	/** DMA channel number if routing enabled
 	 * valid values are from 0 to NVETHERNETRM_PIF$OSI_EQOS_MAX_NUM_CHANS for EQOS
 	 * and 0 to NVETHERNETRM_PIF$OSI_MGBE_MAX_NUM_CHANS for MGBE */
 	nveu32_t dma_chan;
-	/** filter enable (OSI_TRUE) or disable (OSI_FALSE) */
+	/** filter enable (OSI_L3L4_ENABLE) or disable (OSI_L3L4_DISABLE) */
 	nveu32_t filter_enb_dis;
 };
 
