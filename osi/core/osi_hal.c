@@ -635,6 +635,7 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 #endif
 
 	l_core->lane_status = OSI_ENABLE;
+	l_core->lane_powered_up = OSI_DISABLE;
 	l_core->hw_init_successful = OSI_ENABLE;
 
 fail:

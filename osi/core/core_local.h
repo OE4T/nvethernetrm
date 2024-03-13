@@ -440,6 +440,8 @@ struct core_local {
 	nveu32_t state;
 	/** XPCS Lane bringup/Block lock status */
 	nveu32_t lane_status;
+	/** XPCS power up status */
+	nveu32_t lane_powered_up;
 	/** Exact MAC used across SOCs 0:Legacy EQOS, 1:Orin EQOS, 2:Orin MGBE */
 	nveu32_t l_mac_ver;
 #if defined(L3L4_WILDCARD_FILTER)
