@@ -22,6 +22,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#ifdef OSI_CL_FTRACE
+#include <sys/slog.h>
+#endif /* OSI_CL_FTRACE */
+
 #include "dma_local.h"
 #include "hw_desc.h"
 #ifdef OSI_DEBUG
@@ -122,6 +126,9 @@ struct osi_dma_priv_data *osi_get_dma(void)
 	struct osi_dma_priv_data *osi_dma = OSI_NULL;
 	nveu32_t i;
 
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	for (i = 0U; i < MAX_DMA_INSTANCES; i++) {
 		if (g_dma[i].init_done == OSI_ENABLE) {
 			continue;
@@ -138,6 +145,9 @@ struct osi_dma_priv_data *osi_get_dma(void)
 
 	osi_dma = &g_dma[i].osi_dma;
 fail:
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return osi_dma;
 }
 
@@ -373,6 +383,9 @@ nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma)
 #endif
 	nve32_t ret = 0;
 
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	ret = validate_dma_ops_params(osi_dma);
 	if (ret < 0) {
 		goto fail;
@@ -397,6 +410,9 @@ nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma)
 	l_dma->init_done = OSI_ENABLE;
 
 fail:
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return ret;
 }
 
@@ -638,6 +654,9 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma)
 	nve32_t ret = 0;
 	nveu32_t i;
 
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	if (dma_validate_args(osi_dma, l_dma) < 0) {
 		ret = -1;
 		goto fail;
@@ -684,6 +703,9 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma)
 
 	set_default_ptp_config(osi_dma);
 fail:
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return ret;
 }
 
@@ -719,6 +741,9 @@ nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma)
 	nve32_t ret = 0;
 	nveu32_t i;
 
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	if (dma_validate_args(osi_dma, l_dma) < 0) {
 		ret = -1;
 		goto fail;
@@ -743,23 +768,40 @@ nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma)
 	}
 
 fail:
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return ret;
 }
 
+#ifdef OSI_CL_FTRACE
+nveu32_t osi_get_global_dma_status_cnt = 0;
+#endif /* OSI_CL_FTRACE */
 nveu32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma)
 {
 	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
 	nveu32_t ret = 0U;
 
+#ifdef OSI_CL_FTRACE
+	if ((osi_get_global_dma_status_cnt % 1000) == 0)
+		slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	if (dma_validate_args(osi_dma, l_dma) < 0) {
 		goto fail;
 	}
 
 	ret = osi_dma_readl((nveu8_t *)osi_dma->base + HW_GLOBAL_DMA_STATUS);
 fail:
+#ifdef OSI_CL_FTRACE
+	if ((osi_get_global_dma_status_cnt++ % 1000) == 0)
+		slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return ret;
 }
 
+#ifdef OSI_CL_FTRACE
+nveu32_t osi_handle_dma_intr_cnt = 0;
+#endif /* OSI_CL_FTRACE */
 nve32_t osi_handle_dma_intr(struct osi_dma_priv_data *osi_dma,
 			    nveu32_t chan,
 			    nveu32_t tx_rx,
@@ -768,6 +810,10 @@ nve32_t osi_handle_dma_intr(struct osi_dma_priv_data *osi_dma,
 	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
 	nve32_t ret = 0;
 
+#ifdef OSI_CL_FTRACE
+	if ((osi_handle_dma_intr_cnt % 1000) == 0)
+		slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	if (dma_validate_args(osi_dma, l_dma) < 0) {
 		ret = -1;
 		goto fail;
@@ -790,14 +836,26 @@ nve32_t osi_handle_dma_intr(struct osi_dma_priv_data *osi_dma,
 		OSI_BIT(tx_rx));
 
 fail:
+#ifdef OSI_CL_FTRACE
+	if ((osi_handle_dma_intr_cnt++ % 1000) == 0)
+		slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return ret;
 }
 
+#ifdef OSI_CL_FTRACE
+nveu32_t osi_get_refill_rx_desc_cnt_cnt = 0;
+#endif /* OSI_CL_FTRACE */
 nveu32_t osi_get_refill_rx_desc_cnt(const struct osi_dma_priv_data *const osi_dma,
 				    nveu32_t chan)
 {
 	const struct osi_rx_ring *const rx_ring = osi_dma->rx_ring[chan];
 	nveu32_t ret = 0U;
+
+#ifdef OSI_CL_FTRACE
+	if ((osi_get_refill_rx_desc_cnt_cnt % 1000) == 0)
+		slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 
 	if ((rx_ring == OSI_NULL) ||
 	    (rx_ring->cur_rx_idx >= osi_dma->rx_ring_sz) ||
@@ -808,6 +866,10 @@ nveu32_t osi_get_refill_rx_desc_cnt(const struct osi_dma_priv_data *const osi_dm
 	ret = (rx_ring->cur_rx_idx - rx_ring->refill_idx) &
 		(osi_dma->rx_ring_sz - 1U);
 fail:
+#ifdef OSI_CL_FTRACE
+	if ((osi_get_refill_rx_desc_cnt_cnt++ % 1000) == 0)
+		slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return ret;
 }
 
@@ -899,6 +961,9 @@ static inline void rx_dma_handle_ioc(const struct osi_dma_priv_data *const osi_d
 	}
 }
 
+#ifdef OSI_CL_FTRACE
+nveu32_t osi_rx_dma_desc_init_cnt = 0;
+#endif /* OSI_CL_FTRACE */
 nve32_t osi_rx_dma_desc_init(struct osi_dma_priv_data *osi_dma,
 			     struct osi_rx_ring *rx_ring, nveu32_t chan)
 {
@@ -907,6 +972,11 @@ nve32_t osi_rx_dma_desc_init(struct osi_dma_priv_data *osi_dma,
 	struct osi_rx_desc *rx_desc = OSI_NULL;
 	nveu64_t tailptr = 0;
 	nve32_t ret = 0;
+
+#ifdef OSI_CL_FTRACE
+	if ((osi_rx_dma_desc_init_cnt % 300) == 0)
+		slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 
 	if (rx_dma_desc_dma_validate_args(osi_dma, l_dma, rx_ring, chan) < 0) {
 		/* Return on arguments validation failure */
@@ -963,6 +1033,10 @@ nve32_t osi_rx_dma_desc_init(struct osi_dma_priv_data *osi_dma,
 	update_rx_tail_ptr(osi_dma, chan, tailptr);
 
 fail:
+#ifdef OSI_CL_FTRACE
+	if ((osi_rx_dma_desc_init_cnt++ % 300) == 0)
+		slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return ret;
 }
 
@@ -972,6 +1046,9 @@ nve32_t osi_set_rx_buf_len(struct osi_dma_priv_data *osi_dma)
 	nveu32_t rx_buf_len;
 	nve32_t ret = 0;
 
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	if (dma_validate_args(osi_dma, l_dma) < 0) {
 		ret = -1;
 		goto fail;
@@ -997,6 +1074,9 @@ nve32_t osi_set_rx_buf_len(struct osi_dma_priv_data *osi_dma)
 			       ~(AXI_BUS_WIDTH - 1U));
 
 fail:
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return ret;
 }
 
@@ -1054,11 +1134,19 @@ static void dma_get_systime_from_mac(void *addr, nveu32_t mac, nveu32_t *sec, nv
 	*nsec = (nveu32_t)(remain & UINT_MAX);
 }
 
+#ifdef OSI_CL_FTRACE
+nveu32_t osi_dma_get_systime_from_mac_cnt = 0;
+#endif /* OSI_CL_FTRACE */
 nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
 				     nveu32_t *sec, nveu32_t *nsec)
 {
 	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
 	nve32_t ret = 0;
+
+#ifdef OSI_CL_FTRACE
+	if ((osi_dma_get_systime_from_mac_cnt % 1000) == 0)
+		slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 
 	if (dma_validate_args(osi_dma, l_dma) < 0) {
 		ret = -1;
@@ -1068,13 +1156,25 @@ nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
 	dma_get_systime_from_mac(osi_dma->base, osi_dma->mac, sec, nsec);
 
 fail:
+#ifdef OSI_CL_FTRACE
+	if ((osi_dma_get_systime_from_mac_cnt++ % 1000) == 0)
+		slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return ret;
 }
 
+#ifdef OSI_CL_FTRACE
+nveu32_t osi_hw_transmit_cnt = 0;
+#endif /* OSI_CL_FTRACE */
 nve32_t osi_hw_transmit(struct osi_dma_priv_data *osi_dma, nveu32_t chan)
 {
 	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
 	nve32_t ret = 0;
+
+#ifdef OSI_CL_FTRACE
+	if ((osi_hw_transmit_cnt % 1000) == 0)
+		slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 
 	if (osi_unlikely(dma_validate_args(osi_dma, l_dma) < 0)) {
 		ret = -1;
@@ -1095,6 +1195,10 @@ nve32_t osi_hw_transmit(struct osi_dma_priv_data *osi_dma, nveu32_t chan)
 
 	ret = hw_transmit(osi_dma, osi_dma->tx_ring[chan], chan);
 fail:
+#ifdef OSI_CL_FTRACE
+	if ((osi_hw_transmit_cnt++ % 1000) == 0)
+		slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return ret;
 }
 
@@ -1104,6 +1208,9 @@ nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma)
 	struct dma_local *l_dma = (struct dma_local *)osi_dma;
 	struct osi_dma_ioctl_data *data;
 
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	if (osi_unlikely(dma_validate_args(osi_dma, l_dma) < 0)) {
 		return -1;
 	}
@@ -1126,6 +1233,9 @@ nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma)
 		return -1;
 	}
 
+#ifdef OSI_CL_FTRACE
+	slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return 0;
 }
 #endif /* OSI_DEBUG */

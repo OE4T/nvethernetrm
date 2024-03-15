@@ -20,7 +20,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
+#ifdef OSI_CL_FTRACE
+#include <sys/slog.h>
+#endif /* OSI_CL_FTRACE */
 #include "dma_local.h"
 #include <osi_dma_txrx.h>
 #include "hw_desc.h"
@@ -189,6 +191,9 @@ static inline void check_for_more_data_avail(struct osi_rx_ring *rx_ring, nve32_
 }
 #endif /* !OSI_STRIPPED_LIB */
 
+#ifdef OSI_CL_FTRACE
+nveu32_t osi_process_rx_completions_cnt = 0;
+#endif /* OSI_CL_FTRACE */
 nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 				   nveu32_t chan, nve32_t budget,
 				   nveu32_t *more_data_avail)
@@ -204,6 +209,11 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 	nve32_t received_resv = 0;
 #endif /* !OSI_STRIPPED_LIB */
 	nve32_t ret = 0;
+
+#ifdef OSI_CL_FTRACE
+	if ((osi_process_rx_completions_cnt % 1000) == 0)
+		slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 
 	ret = validate_rx_completions_arg(osi_dma, chan, more_data_avail, &rx_ring);
 	if (osi_unlikely(ret < 0)) {
@@ -303,6 +313,10 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 #endif /*!OSI_STRIPPED_LIB */
 
 fail:
+#ifdef OSI_CL_FTRACE
+	if ((osi_process_rx_completions_cnt++ % 1000) == 0)
+		slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return received;
 }
 
@@ -566,6 +580,9 @@ static inline void dump_tx_done_desc(struct osi_dma_priv_data *osi_dma,
 }
 #endif
 
+#ifdef OSI_CL_FTRACE
+nveu32_t osi_process_tx_completions_cnt = 0;
+#endif /* OSI_CL_FTRACE */
 nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 				   nveu32_t chan, nve32_t budget)
 {
@@ -576,6 +593,11 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 	nveu32_t entry = 0U;
 	nve32_t processed = 0;
 	nve32_t ret;
+
+#ifdef OSI_CL_FTRACE
+	if ((osi_process_tx_completions_cnt % 1000) == 0)
+		slogf(0, 2, "%s : Function Entry\n", __func__);
+#endif /* OSI_CL_FTRACE */
 
 	ret = validate_tx_completions_arg(osi_dma, chan, &tx_ring);
 	if (osi_unlikely(ret < 0)) {
@@ -649,6 +671,10 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 	}
 
 fail:
+#ifdef OSI_CL_FTRACE
+	if ((osi_process_tx_completions_cnt++ % 1000) == 0)
+		slogf(0, 2, "%s : Function Exit\n", __func__);
+#endif /* OSI_CL_FTRACE */
 	return processed;
 }
 

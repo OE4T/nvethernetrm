@@ -35,6 +35,9 @@ NV_COMPONENT_SOURCES           := \
 	$(NV_SOURCE)/nvethernetrm/osi/dma/eqos_desc.c \
 	$(NV_SOURCE)/nvethernetrm/osi/dma/mgbe_desc.c 
 
+# Enable below for function trace logs
+# NV_COMPONENT_CFLAGS            += -DOSI_CL_FTRACE
+
 NV_COMPONENT_INCLUDES          := \
 	$(NV_SOURCE)/nvethernetrm/include 
 
