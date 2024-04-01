@@ -1504,13 +1504,21 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 		/* T23X-MGBE_HSIv2-5: Enabling and Initialization of Transaction Timeout  */
 		value = (0x198U << MGBE_TMR_SHIFT) & MGBE_TMR_MASK;
 		value |= ((nveu32_t)0x0U << MGBE_CTMR_SHIFT) & MGBE_CTMR_MASK;
-		value |= ((nveu32_t)0x2U << MGBE_LTMRMD_SHIFT) & MGBE_LTMRMD_MASK;
-		/** Based on software experiments and the hardware team's sign-off in
-		 * bug 3584387 comment 36, using a 256ms interval for NTMRMD(0x5).
+		/** Set NTMRMD and LTMRMD to 16ms(0x3) as per hardware team's
+		 * guidelines specified bug 3584387 and 4502985.
 		 */
-		value |= ((nveu32_t)0x5U << MGBE_NTMRMD_SHIFT) & MGBE_NTMRMD_MASK;
+		value |= ((nveu32_t)0x3U << MGBE_LTMRMD_SHIFT) & MGBE_LTMRMD_MASK;
+		value |= ((nveu32_t)0x3U << MGBE_NTMRMD_SHIFT) & MGBE_NTMRMD_MASK;
 		osi_writela(osi_core, value,
 			    (nveu8_t *)osi_core->base + MGBE_DWCXG_CORE_MAC_FSM_ACT_TIMER);
+
+		/** Deactivate below TX/RX FSMs as per the HW guidelines specified
+		 * in bug 4502985 during the link down state:
+		 * SNPS_SCS_REG1[0] for RPERXLPI, RXLPI-GMII, RARP
+		 * SNPS_SCS_REG1[16] for TRC
+		 */
+		value = (MGBE_SNPS_SCS_REG1_TRCFSM | MGBE_SNPS_SCS_REG1_RPERXLPIFSM);
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_SNPS_SCS_REG1);
 
 		/* T23X-MGBE_HSIv2-3: Enabling and Initialization of Watchdog Timer */
 		/* T23X-MGBE_HSIv2-4: Enabling of Consistency Monitor for XGMAC FSM State */
@@ -2129,6 +2137,11 @@ static void mgbe_handle_link_change_and_fpe_intrs(struct osi_core_priv_data *osi
 	nveu32_t mac_ier = 0;
 	nveu8_t *base = (nveu8_t *)osi_core->base;
 	nveu32_t value = 0U;
+#ifdef HSI_SUPPORT
+	const nveu32_t fsm[2] = {(MGBE_SNPS_SCS_REG1_TRCFSM | MGBE_SNPS_SCS_REG1_RPERXLPIFSM),
+				 OSI_NONE };
+	nveu32_t link_ok = 0;
+#endif /* HSI_SUPPORT */
 
 	/* Check for Link status change interrupt */
 	if ((mac_isr & MGBE_MAC_ISR_LSI) == OSI_ENABLE) {
@@ -2146,9 +2159,17 @@ static void mgbe_handle_link_change_and_fpe_intrs(struct osi_core_priv_data *osi
 			osi_core->osd_ops.restart_lane_bringup(osi_core->osd, OSI_DISABLE);
 		} else if ((mac_isr & MGBE_MAC_ISR_LS_MASK) == MGBE_MAC_ISR_LS_LINK_OK) {
 			osi_core->osd_ops.restart_lane_bringup(osi_core->osd, OSI_ENABLE);
+#ifdef HSI_SUPPORT
+			link_ok = 1;
+#endif /* HSI_SUPPORT */
 		} else {
 			/* Do Nothing */
 		}
+
+#ifdef HSI_SUPPORT
+		osi_writela(osi_core, fsm[link_ok],
+			    (nveu8_t *)osi_core->base + MGBE_SNPS_SCS_REG1);
+#endif /* HSI_SUPPORT */
 	}
 
 	mac_ier = osi_readla(osi_core, base + MGBE_MAC_IER);
