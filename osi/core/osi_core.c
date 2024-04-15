@@ -112,6 +112,11 @@ static nve32_t validate_init_core_ops_args(struct osi_core_priv_data *const osi_
 		goto fail;
 	}
 
+	if (osi_core->osd_ops.ops_log == OSI_NULL) {
+		ret = -1;
+		goto fail;
+	}
+
 	if (osi_core->use_virtualization > OSI_ENABLE) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "CORE: wrong use_virtualization\n", 0ULL);

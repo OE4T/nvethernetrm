@@ -259,9 +259,10 @@ static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
 	};
 	nve32_t ret = -1;
 
-	if ((osi_core->osd_ops.ops_log == OSI_NULL) ||
-	    (osi_core->osd_ops.udelay == OSI_NULL) ||
+	if ((osi_core->osd_ops.udelay == OSI_NULL) ||
 	    (osi_core->osd_ops.msleep == OSI_NULL) ||
+	    (osi_core->osd_ops.restart_lane_bringup == OSI_NULL) ||
+	    (osi_core->osd_ops.padctrl_mii_rx_pins == OSI_NULL) ||
 #ifdef OSI_DEBUG
 	    (osi_core->osd_ops.printf == OSI_NULL) ||
 #endif /* OSI_DEBUG */
