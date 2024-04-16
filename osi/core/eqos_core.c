@@ -3774,89 +3774,6 @@ static void eqos_get_hw_features(struct osi_core_priv_data *const osi_core,
 			EQOS_MAC_HFR3_ASP_MASK);
 }
 
-#ifndef OSI_STRIPPED_LIB
-/**
- * @brief eqos_padctl_rx_pins Enable/Disable RGMII Rx pins
- *
- * @param[in] osi_core: OSI Core private data structure.
- * @param[in] enable: Enable/Disable EQOS RGMII padctrl Rx pins
- *
- * @pre
- *    - MAC needs to be out of reset and proper clock configured.
- *
- * @retval 0 on success
- * @retval -1 on failure.
- */
-static nve32_t eqos_padctl_rx_pins(struct osi_core_priv_data *const osi_core,
-				       nveu32_t enable)
-{
-	nve32_t ret = 0;
-	nveu32_t value;
-	void *pad_addr = osi_core->padctrl.padctrl_base;
-
-	if (pad_addr == OSI_NULL) {
-		ret = -1;
-		goto error;
-	}
-	if (enable == OSI_ENABLE) {
-		value = osi_readla(osi_core, (nveu8_t *)pad_addr +
-				  osi_core->padctrl.offset_rx_ctl);
-		value |= EQOS_PADCTL_EQOS_E_INPUT;
-		osi_writela(osi_core, value, (nveu8_t *)pad_addr +
-			   osi_core->padctrl.offset_rx_ctl);
-		value = osi_readla(osi_core, (nveu8_t *)pad_addr +
-				  osi_core->padctrl.offset_rd0);
-		value |= EQOS_PADCTL_EQOS_E_INPUT;
-		osi_writela(osi_core, value, (nveu8_t *)pad_addr +
-			   osi_core->padctrl.offset_rd0);
-		value = osi_readla(osi_core, (nveu8_t *)pad_addr +
-				  osi_core->padctrl.offset_rd1);
-		value |= EQOS_PADCTL_EQOS_E_INPUT;
-		osi_writela(osi_core, value, (nveu8_t *)pad_addr +
-			   osi_core->padctrl.offset_rd1);
-		value = osi_readla(osi_core, (nveu8_t *)pad_addr +
-				  osi_core->padctrl.offset_rd2);
-		value |= EQOS_PADCTL_EQOS_E_INPUT;
-		osi_writela(osi_core, value, (nveu8_t *)pad_addr +
-			   osi_core->padctrl.offset_rd2);
-		value = osi_readla(osi_core, (nveu8_t *)pad_addr +
-				  osi_core->padctrl.offset_rd3);
-		value |= EQOS_PADCTL_EQOS_E_INPUT;
-		osi_writela(osi_core, value, (nveu8_t *)pad_addr +
-			   osi_core->padctrl.offset_rd3);
-	} else {
-		value = osi_readla(osi_core, (nveu8_t *)pad_addr +
-				  osi_core->padctrl.offset_rx_ctl);
-		value &= ~EQOS_PADCTL_EQOS_E_INPUT;
-		osi_writela(osi_core, value, (nveu8_t *)pad_addr +
-			   osi_core->padctrl.offset_rx_ctl);
-		value = osi_readla(osi_core, (nveu8_t *)pad_addr +
-				  osi_core->padctrl.offset_rd0);
-		value &= ~EQOS_PADCTL_EQOS_E_INPUT;
-		osi_writela(osi_core, value, (nveu8_t *)pad_addr +
-			   osi_core->padctrl.offset_rd0);
-		value = osi_readla(osi_core, (nveu8_t *)pad_addr +
-				  osi_core->padctrl.offset_rd1);
-		value &= ~EQOS_PADCTL_EQOS_E_INPUT;
-		osi_writela(osi_core, value, (nveu8_t *)pad_addr +
-			   osi_core->padctrl.offset_rd1);
-		value = osi_readla(osi_core, (nveu8_t *)pad_addr +
-				  osi_core->padctrl.offset_rd2);
-		value &= ~EQOS_PADCTL_EQOS_E_INPUT;
-		osi_writela(osi_core, value, (nveu8_t *)pad_addr +
-			   osi_core->padctrl.offset_rd2);
-		value = osi_readla(osi_core, (nveu8_t *)pad_addr +
-				  osi_core->padctrl.offset_rd3);
-		value &= ~EQOS_PADCTL_EQOS_E_INPUT;
-		osi_writela(osi_core, value, (nveu8_t *)pad_addr +
-			   osi_core->padctrl.offset_rd3);
-	}
-
-error:
-	return ret;
-}
-#endif /* !OSI_STRIPPED_LIB */
-
 /**
  * @brief poll_for_mac_tx_rx_idle - check mac tx/rx idle or not
  *
@@ -3939,16 +3856,7 @@ static nve32_t eqos_pre_pad_calibrate(struct osi_core_priv_data *const osi_core)
 		goto error;
 	}
 
-	if (osi_core->osd_ops.padctrl_mii_rx_pins != OSI_NULL) {
-		ret = osi_core->osd_ops.padctrl_mii_rx_pins(osi_core->osd,
-							   OSI_DISABLE);
-	}
-#ifndef OSI_STRIPPED_LIB
-	else {
-		ret = eqos_padctl_rx_pins(osi_core, OSI_DISABLE);
-	}
-#endif /* !OSI_STRIPPED_LIB */
-
+	ret = osi_core->osd_ops.padctrl_mii_rx_pins(osi_core->osd,  OSI_DISABLE);
 	if (ret < 0) {
 		goto error;
 	}
@@ -3957,15 +3865,7 @@ static nve32_t eqos_pre_pad_calibrate(struct osi_core_priv_data *const osi_core)
 error:
 	/* roll back on fail */
 	hw_start_mac(osi_core);
-	if (osi_core->osd_ops.padctrl_mii_rx_pins != OSI_NULL) {
-		(void)osi_core->osd_ops.padctrl_mii_rx_pins(osi_core->osd,
-							   OSI_ENABLE);
-	}
-#ifndef OSI_STRIPPED_LIB
-	else {
-		(void)eqos_padctl_rx_pins(osi_core, OSI_ENABLE);
-	}
-#endif /* !OSI_STRIPPED_LIB */
+	(void)osi_core->osd_ops.padctrl_mii_rx_pins(osi_core->osd, OSI_ENABLE);
 
 	/* Enable MAC RGSMIIIE - RGMII/SMII interrupts */
 	/* Read MAC IMR Register */
@@ -4003,15 +3903,8 @@ static nve32_t eqos_post_pad_calibrate(
 	nveu32_t mac_pcs = 0;
 	nveu32_t mac_isr = 0;
 
-	if (osi_core->osd_ops.padctrl_mii_rx_pins != OSI_NULL) {
-		ret = osi_core->osd_ops.padctrl_mii_rx_pins(osi_core->osd,
-							   OSI_ENABLE);
-	}
-#ifndef OSI_STRIPPED_LIB
-	else {
-		ret = eqos_padctl_rx_pins(osi_core, OSI_ENABLE);
-	}
-#endif /* !OSI_STRIPPED_LIB */
+	ret = osi_core->osd_ops.padctrl_mii_rx_pins(osi_core->osd,  OSI_ENABLE);
+
 	/* handle only those MAC interrupts which are enabled */
 	mac_imr = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 			     EQOS_MAC_IMR);
