@@ -153,34 +153,39 @@ static void mgbe_get_rx_csum(const struct osi_rx_desc *const rx_desc,
 	nveu32_t ellt = rx_desc->rdes3 & RDES3_ELLT;
 	nveu32_t pkt_type;
 
-	/* Always include either checksum none/unnecessary
-	 * depending on status fields in desc.
-	 * Hence no need to explicitly add OSI_PKT_CX_CSUM flag.
-	 */
-	if ((ellt != RDES3_ELLT_IPHE) && (ellt != RDES3_ELLT_CSUM_ERR)) {
-		rx_pkt_cx->rxcsum |= OSI_CHECKSUM_UNNECESSARY;
-	}
-
-	rx_pkt_cx->rxcsum |= OSI_CHECKSUM_IPv4;
-	if (ellt == RDES3_ELLT_IPHE) {
-		rx_pkt_cx->rxcsum |= OSI_CHECKSUM_IPv4_BAD;
-	}
-
-	pkt_type = rx_desc->rdes3 & MGBE_RDES3_PT_MASK;
-	if (pkt_type == MGBE_RDES3_PT_IPV4_TCP) {
-		rx_pkt_cx->rxcsum |= OSI_CHECKSUM_TCPv4;
-	} else if (pkt_type == MGBE_RDES3_PT_IPV4_UDP) {
-		rx_pkt_cx->rxcsum |= OSI_CHECKSUM_UDPv4;
-	} else if (pkt_type == MGBE_RDES3_PT_IPV6_TCP) {
-		rx_pkt_cx->rxcsum |= OSI_CHECKSUM_TCPv6;
-	} else if (pkt_type == MGBE_RDES3_PT_IPV6_UDP) {
-		rx_pkt_cx->rxcsum |= OSI_CHECKSUM_UDPv6;
+	if ((rx_desc->rdes3 & RDES3_ES_MGBE) != 0U) {
+		if (ellt == RDES3_ELLT_CSUM_ERR) {
+			rx_pkt_cx->rxcsum |= OSI_CHECKSUM_TCP_UDP_BAD;
+		} else if (ellt == RDES3_ELLT_IPHE) {
+			rx_pkt_cx->rxcsum |= OSI_CHECKSUM_IPv4_BAD;
+		} else {
+			/* Do nothing */
+		}
 	} else {
-		/* Do nothing */
-	}
-
-	if (ellt == RDES3_ELLT_CSUM_ERR) {
-		rx_pkt_cx->rxcsum |= OSI_CHECKSUM_TCP_UDP_BAD;
+		pkt_type = rx_desc->rdes3 & MGBE_RDES3_PT_MASK;
+		if (pkt_type != 0U) {
+			/* ES is zero and PT is non-zero means
+			 * HW validated CSUM, hence set UNNECESSARY flag for
+			 * Linux OSD.
+			 * Remaining flags are for QNX OSD.
+			 */
+			rx_pkt_cx->rxcsum |= OSI_CHECKSUM_UNNECESSARY;
+			if (pkt_type == MGBE_RDES3_PT_IPV4_TCP) {
+				rx_pkt_cx->rxcsum |= OSI_CHECKSUM_TCPv4;
+				rx_pkt_cx->rxcsum |= OSI_CHECKSUM_IPv4;
+			} else if (pkt_type == MGBE_RDES3_PT_IPV4_UDP) {
+				rx_pkt_cx->rxcsum |= OSI_CHECKSUM_UDPv4;
+				rx_pkt_cx->rxcsum |= OSI_CHECKSUM_IPv4;
+			} else if (pkt_type == MGBE_RDES3_PT_IPV6_TCP) {
+				rx_pkt_cx->rxcsum |= OSI_CHECKSUM_TCPv6;
+				rx_pkt_cx->rxcsum |= OSI_CHECKSUM_IPv4;
+			} else if (pkt_type == MGBE_RDES3_PT_IPV6_UDP) {
+				rx_pkt_cx->rxcsum |= OSI_CHECKSUM_UDPv6;
+				rx_pkt_cx->rxcsum |= OSI_CHECKSUM_IPv4;
+			} else {
+				rx_pkt_cx->rxcsum |= OSI_CHECKSUM_IPv4;
+			}
+		}
 	}
 }
 
