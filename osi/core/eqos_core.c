@@ -1053,11 +1053,8 @@ static void eqos_configure_dma(struct osi_core_priv_data *const osi_core)
 	value |= EQOS_DMA_SBUS_WR_OSR_LMT;
 
 	osi_writela(osi_core, value, (nveu8_t *)base + EQOS_DMA_SBUS);
-
-	value = osi_readla(osi_core, (nveu8_t *)base + EQOS_DMA_BMR);
-	value |= EQOS_DMA_BMR_DPSW;
-	osi_writela(osi_core, value, (nveu8_t *)base + EQOS_DMA_BMR);
 }
+
 /** \endcond */
 
 /**

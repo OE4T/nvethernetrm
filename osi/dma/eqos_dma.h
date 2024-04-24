@@ -56,6 +56,10 @@
 #define EQOS_DMA_CHX_TDLH(x)			((0x0080U * (x)) + 0x1110U)
 #define EQOS_DMA_CHX_TDLA(x)			((0x0080U * (x)) + 0x1114U)
 #define EQOS_DMA_CHX_TDRL(x)			((0x0080U * (x)) + 0x112CU)
+#define EQOS_DMA_CHX_CARD(x)			((0x0080U * (x)) + 0x114CU)
+#define EQOS_DMA_DEBUG_STATUS_0			0x100CU
+#define EQOS_DMA_DEBUG_STATUS_1			0x1010U
+#define EQOS_DMA_DEBUG_STATUS_2			0x1014U
 /** @} */
 
 /**
@@ -85,6 +89,16 @@
 #define EQOS_DMA_CHX_RX_WDT_RWTU_MASK		0x30000U
 #define EQOS_DMA_CHX_RX_WDT_RWTU_512_CYCLE	0x10000U
 #define EQOS_DMA_CHX_RX_WDT_RWTU		512U
+#define EQOS_DMA_DEBUG_STATUS_0_RPS0_SHIFT	8U
+#define EQOS_DMA_DEBUG_STATUS_0_RPS1_SHIFT	16U
+#define EQOS_DMA_DEBUG_STATUS_0_RPS2_SHIFT	24U
+#define EQOS_DMA_DEBUG_STATUS_1_RPS3_SHIFT	0U
+#define EQOS_DMA_DEBUG_STATUS_1_RPS4_SHIFT	8U
+#define EQOS_DMA_DEBUG_STATUS_1_RPS5_SHIFT	16U
+#define EQOS_DMA_DEBUG_STATUS_1_RPS6_SHIFT	24U
+#define EQOS_DMA_DEBUG_STATUS_2_RPS7_SHIFT	0U
+#define EQOS_DMA_DEBUG_STATUS_RPSX_MASK		7U
+#define EQOS_DMA_DEBUG_STATUS_RPSX_RUN_CRD	5U
 
 /* Below macros are used for periodic reg validation for functional safety.
  * HW register mask - to mask out reserved and self-clearing bits
