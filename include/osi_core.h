@@ -1206,8 +1206,6 @@ struct osd_core_ops {
 	void (*udelay)(nveu64_t usec);
 	/** usleep range callback */
 	void (*usleep_range)(nveu64_t umin, nveu64_t umax);
-	/** msleep callback */
-	void (*msleep)(nveu32_t msec);
 	/** ivcsend callback*/
 	nve32_t (*ivc_send)(void *priv, struct ivc_msg_common *ivc,
 			    nveu32_t len);
