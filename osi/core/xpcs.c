@@ -697,7 +697,7 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 		ctrl = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_KR_CTRL);
 		ctrl &= ~(XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_MASK);
 
-		if (osi_core->uphy_gbe_mode == OSI_DISABLE) {
+		if (osi_core->uphy_gbe_mode == OSI_GBE_MODE_5G) {
 			ctrl |= XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_5G;
 		}
 	}

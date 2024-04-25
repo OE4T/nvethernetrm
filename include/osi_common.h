@@ -248,6 +248,15 @@
 /** @brief flag indicating MGBE MAC on T26X */
 #define OSI_MAC_HW_MGBE_T26X	2U
 
+/** MAC version type for EQOS version previous to 5.30 */
+#define MAC_CORE_VER_TYPE_EQOS		0U
+/** MAC version type for EQOS version 5.30 */
+#define MAC_CORE_VER_TYPE_EQOS_5_30	1U
+/** MAC version type for MGBE IP */
+#define MAC_CORE_VER_TYPE_MGBE		2U
+/** MAC version type for T26x EQOS version 5.40 */
+#define MAC_CORE_VER_TYPE_EQOS_5_40	3U
+
 #define OSI_NULL                ((void *)0)
 /** Enable Flag */
 #define OSI_ENABLE		1U
@@ -272,6 +281,7 @@
 #define OSI_EQOS_MAC_5_00       0x50U
 /** @brief EQOS MAC version Orin */
 #define OSI_EQOS_MAC_5_30       0x53U
+#define OSI_EQOS_MAC_5_40       0x54U
 /** @brief MGBE MAC version Orin */
 #define OSI_MGBE_MAC_3_10	0x31U
 #define OSI_MGBE_MAC_3_20	0x32U

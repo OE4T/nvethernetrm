@@ -37,13 +37,6 @@
 #define RETRY_DELAY	1U
 /** @} */
 
-/** MAC version type for EQOS version previous to 5.30 */
-#define MAC_CORE_VER_TYPE_EQOS		0U
-/** MAC version type for EQOS version 5.30 */
-#define MAC_CORE_VER_TYPE_EQOS_5_30	1U
-/** MAC version type for MGBE IP */
-#define MAC_CORE_VER_TYPE_MGBE		2U
-
 /**
  * @addtogroup MGBE PBL settings.
  *
@@ -304,6 +297,11 @@ static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac,
 	case OSI_EQOS_MAC_5_30:
 		*num_max_chans = OSI_EQOS_MAX_NUM_CHANS;
 		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS_5_30;
+		ret = 1;
+		break;
+	case OSI_EQOS_MAC_5_40:
+		*num_max_chans = OSI_EQOS_MAX_NUM_CHANS;
+		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS_5_40;
 		ret = 1;
 		break;
 	case OSI_MGBE_MAC_3_10:

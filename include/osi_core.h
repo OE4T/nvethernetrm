@@ -285,9 +285,18 @@ typedef my_lint_64		nvel64_t;
  * @brief Ethernet PHY Interface Modes
  */
 #define OSI_XFI_MODE_10G	0U
-#define OSI_XFI_MODE_5G	1U
+#define OSI_XFI_MODE_5G		1U
 #define OSI_USXGMII_MODE_10G	2U
 #define OSI_USXGMII_MODE_5G	3U
+#define OSI_XAUI_MODE_25G	4U
+/**
+ * @brief Ethernet UPHY GBE Modes
+ */
+#define OSI_GBE_MODE_5G		0U
+#define OSI_GBE_MODE_10G	1U
+#define OSI_UPHY_GBE_MODE_25G	2U
+#define OSI_GBE_MODE_1G		3U
+#define OSI_GBE_MODE_2_5G	4U
 
 /**
  * @addtogroup IOCTL OPS MACROS
@@ -1771,7 +1780,7 @@ struct osi_core_priv_data {
 	struct osi_hw_features *hw_feature;
 	/** MC packets Multiple DMA channel selection flags */
 	nveu32_t mc_dmasel;
-	/** UPHY GBE mode (1 for 10G, 0 for 5G) */
+	/** UPHY GBE mode (2 for 25F, 1 for 10G, 0 for 5G) */
 	nveu32_t uphy_gbe_mode;
 	/** number of PDMA's */
 	nveu32_t num_of_pdma;
@@ -1786,7 +1795,8 @@ struct osi_core_priv_data {
 	/** number of VM IRQ's
 	 * Fixed value filled by NvEthernet unit as 4*/
 	nveu32_t num_vm_irqs;
-	/** PHY interface mode (0/1 for XFI 10/5G, 2/3 for USXGMII 10/5) */
+	/** PHY interface mode (0/1 for XFI 10/5G, 2/3 for USXGMII 10/5)
+	 * (4 for XFI 25G) (5 for USXGMII 25G */
 	nveu32_t phy_iface_mode;
 	/** MGBE MAC instance ID's
 	 * valid values are from 0 to 4 
