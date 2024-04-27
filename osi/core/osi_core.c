@@ -73,6 +73,9 @@ struct osi_core_priv_data *osi_get_core(void)
 		goto fail;
 	}
 
+#ifdef OSI_RM_FTRACE
+	ethernet_server_entry_log();
+#endif
 	g_core[i].magic_num = (nveu64_t)&g_core[i].osi_core;
 
 	g_core[i].tx_ts_head.prev = &g_core[i].tx_ts_head;
@@ -81,6 +84,9 @@ struct osi_core_priv_data *osi_get_core(void)
 
 	osi_core = &g_core[i].osi_core;
 	osi_memset(osi_core, 0, sizeof(struct osi_core_priv_data));
+#ifdef OSI_RM_FTRACE
+	ethernet_server_exit_log();
+#endif
 fail:
 	return osi_core;
 }
@@ -202,8 +208,14 @@ nve32_t osi_write_phy_reg(struct osi_core_priv_data *const osi_core,
 		goto fail;
 	}
 
+#ifdef OSI_RM_FTRACE
+	ethernet_server_entry_log();
+#endif
 	ret = l_core->if_ops_p->if_write_phy_reg(osi_core, phyaddr, phyreg,
 						 phydata);
+#ifdef OSI_RM_FTRACE
+	ethernet_server_exit_log();
+#endif
 fail:
 	return ret;
 }
@@ -218,7 +230,13 @@ nve32_t osi_read_phy_reg(struct osi_core_priv_data *const osi_core,
 		goto fail;
 	}
 
+#ifdef OSI_RM_FTRACE
+	ethernet_server_entry_log();
+#endif
 	ret = l_core->if_ops_p->if_read_phy_reg(osi_core, phyaddr, phyreg);
+#ifdef OSI_RM_FTRACE
+	ethernet_server_exit_log();
+#endif
 fail:
 	return ret;
 }
@@ -232,7 +250,13 @@ nve32_t osi_hw_core_init(struct osi_core_priv_data *const osi_core)
 		goto fail;
 	}
 
+#ifdef OSI_RM_FTRACE
+	ethernet_server_entry_log();
+#endif
 	ret = l_core->if_ops_p->if_core_init(osi_core);
+#ifdef OSI_RM_FTRACE
+	ethernet_server_exit_log();
+#endif
 fail:
 	return ret;
 }
@@ -242,15 +266,24 @@ nve32_t osi_hw_core_deinit(struct osi_core_priv_data *const osi_core)
 	nve32_t ret = -1;
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 
+#ifdef OSI_RM_FTRACE
+	ethernet_server_entry_log();
+#endif
 	if (validate_if_args(osi_core, l_core) < 0) {
 		goto fail;
 	}
 
 	ret = l_core->if_ops_p->if_core_deinit(osi_core);
 fail:
+#ifdef OSI_RM_FTRACE
+	ethernet_server_exit_log();
+#endif
 	return ret;
 }
 
+#ifdef OSI_RM_FTRACE
+nve32_t osi_handle_ioctl_count = 0;
+#endif
 nve32_t osi_handle_ioctl(struct osi_core_priv_data *osi_core,
 			 struct osi_ioctl *data)
 {
@@ -267,7 +300,17 @@ nve32_t osi_handle_ioctl(struct osi_core_priv_data *osi_core,
 		goto fail;
 	}
 
+#ifdef OSI_RM_FTRACE
+	if ((osi_handle_ioctl_count % 1000 == 0)) {
+		ethernet_server_entry_log();
+	}
+#endif
 	ret = l_core->if_ops_p->if_handle_ioctl(osi_core, data);
 fail:
+#ifdef OSI_RM_FTRACE
+	if ((osi_handle_ioctl_count++ % 1000 == 0)) {
+		ethernet_server_exit_log();
+	}
+#endif
 	return ret;
 }

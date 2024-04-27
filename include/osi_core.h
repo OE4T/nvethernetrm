@@ -28,6 +28,42 @@
 #include <osi_common.h>
 #include "mmc.h"
 
+#ifdef OSI_RM_FTRACE
+#ifdef __QNX__
+#include <sys/slog.h>
+#define ethernet_server_entry_log() do { \
+			slogf(0, 2, "%s : Function Entry\n", __func__); \
+} while (0)
+#define ethernet_server_exit_log() do { \
+			slogf(0, 2, "%s : Function Exit\n", __func__); \
+} while (0)
+#define ethernet_server_cmd_log(string) do { \
+			slogf(0, 2, "%s: command is %s \n", __func__, string); \
+} while (0)
+
+#else
+
+#include <common-c.h>
+#define ethernet_server_entry_log() do { \
+			RtosCWrapStringLog(__func__); \
+			RtosCWrapStringLog(": Function Entry"); \
+			RtosCWrapStringLog("\n"); \
+        } while (0)
+
+#define ethernet_server_exit_log() do { \
+			RtosCWrapStringLog(__func__); \
+			RtosCWrapStringLog(": Function Exit"); \
+			RtosCWrapStringLog("\n"); \
+        } while (0)
+
+#define ethernet_server_cmd_log(string) do { \
+			RtosCWrapStringLog(__func__); \
+			RtosCWrapStringLog(": command is " string ""); \
+			RtosCWrapStringLog("\n"); \
+        } while (0)
+#endif //__QNX__
+#endif //OSI_RM_FTRACE
+
 struct ivc_msg_common;
 /**
  * @addtogroup typedef related info

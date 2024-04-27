@@ -5739,8 +5739,14 @@ nve32_t osi_init_macsec_ops(struct osi_core_priv_data *const osi_core)
 	}
 
 	if (osi_core->use_virtualization == OSI_ENABLE) {
+#ifdef OSI_RM_FTRACE
+		ethernet_server_entry_log();
+#endif
 		l_core->macsec_ops = &virt_macsec_ops;
 		ivc_init_macsec_ops(l_core->macsec_ops);
+#ifdef OSI_RM_FTRACE
+		ethernet_server_exit_log();
+#endif
 	} else {
 		if (osi_core->macsec_base == OSI_NULL) {
 			ret = -1;
@@ -5787,7 +5793,13 @@ nve32_t osi_macsec_init(struct osi_core_priv_data *const osi_core,
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->init != OSI_NULL) &&
 	    (macsec_vf_mac != OSI_NULL)) {
+#ifdef OSI_RM_FTRACE
+		ethernet_server_entry_log();
+#endif
 		ret = l_core->macsec_ops->init(osi_core, mtu, macsec_vf_mac);
+#ifdef OSI_RM_FTRACE
+		ethernet_server_exit_log();
+#endif
 	}
 
 	return ret;
@@ -5823,7 +5835,13 @@ nve32_t osi_macsec_deinit(struct osi_core_priv_data *const osi_core)
 
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->deinit != OSI_NULL)) {
+#ifdef OSI_RM_FTRACE
+		ethernet_server_entry_log();
+#endif
 		ret = l_core->macsec_ops->deinit(osi_core);
+#ifdef OSI_RM_FTRACE
+		ethernet_server_exit_log();
+#endif
 	}
 	return ret;
 }
@@ -5854,7 +5872,13 @@ void osi_macsec_isr(struct osi_core_priv_data *const osi_core)
 
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->handle_irq != OSI_NULL)) {
+#ifdef OSI_RM_FTRACE
+		ethernet_server_entry_log();
+#endif
 		l_core->macsec_ops->handle_irq(osi_core);
+#ifdef OSI_RM_FTRACE
+		ethernet_server_exit_log();
+#endif
 	}
 }
 
@@ -5891,7 +5915,13 @@ nve32_t osi_macsec_config_lut(struct osi_core_priv_data *const osi_core,
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->lut_config != OSI_NULL) &&
 	    (lut_config != OSI_NULL)) {
+#ifdef OSI_RM_FTRACE
+		ethernet_server_entry_log();
+#endif
 		ret = l_core->macsec_ops->lut_config(osi_core, lut_config);
+#ifdef OSI_RM_FTRACE
+		ethernet_server_exit_log();
+#endif
 	}
 
 	return ret;
@@ -5933,8 +5963,14 @@ nve32_t osi_macsec_get_sc_lut_key_index(struct osi_core_priv_data *const osi_cor
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->get_sc_lut_key_index != OSI_NULL) &&
 	    (sci != OSI_NULL) && (key_index != OSI_NULL) && (ctlr <= OSI_CTLR_SEL_MAX)) {
+#ifdef OSI_RM_FTRACE
+		ethernet_server_entry_log();
+#endif
 		ret = l_core->macsec_ops->get_sc_lut_key_index(osi_core, sci, key_index,
 								  ctlr);
+#ifdef OSI_RM_FTRACE
+		ethernet_server_exit_log();
+#endif
 	}
 
 	return ret;
@@ -6013,7 +6049,13 @@ nve32_t osi_macsec_cipher_config(struct osi_core_priv_data *const osi_core,
 
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->cipher_config != OSI_NULL)) {
+#ifdef OSI_RM_FTRACE
+		ethernet_server_entry_log();
+#endif
 		ret = l_core->macsec_ops->cipher_config(osi_core, cipher);
+#ifdef OSI_RM_FTRACE
+		ethernet_server_exit_log();
+#endif
 	}
 
 	return ret;
@@ -6102,8 +6144,14 @@ nve32_t osi_macsec_config(struct osi_core_priv_data *const osi_core,
 
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->config != OSI_NULL) && (sc != OSI_NULL)) {
+#ifdef OSI_RM_FTRACE
+		ethernet_server_entry_log();
+#endif
 		ret = l_core->macsec_ops->config(osi_core, sc,
 						    enable, ctlr, kt_idx);
+#ifdef OSI_RM_FTRACE
+		ethernet_server_exit_log();
+#endif
 	}
 exit:
 	return ret;
@@ -6139,8 +6187,14 @@ nve32_t osi_macsec_read_mmc(struct osi_core_priv_data *const osi_core)
 
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->read_mmc != OSI_NULL)) {
+#ifdef OSI_RM_FTRACE
+		ethernet_server_entry_log();
+#endif
 		l_core->macsec_ops->read_mmc(osi_core);
 		ret = 0;
+#ifdef OSI_RM_FTRACE
+		ethernet_server_exit_log();
+#endif
 	}
 	return ret;
 }

@@ -2741,7 +2741,13 @@ exit:
 	return ret;
 }
 
-
+#ifdef OSI_RM_FTRACE
+nve32_t OSI_CMD_CONF_M2M_TS_count = 0;
+nve32_t OSI_CMD_CAP_TSC_PTP_count = 0;
+nve32_t OSI_CMD_GET_TX_TS_count = 0;
+nve32_t OSI_CMD_FREE_TS_count = 0;
+nve32_t OSI_CMD_ADJ_FREQ_count = 0;
+#endif
 /**
  * @brief osi_hal_handle_ioctl - HW function API to handle runtime command
  *
@@ -2999,37 +3005,61 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #endif /* !OSI_STRIPPED_LIB */
 
 	case OSI_CMD_GET_AVB:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_GET_AVB");
+#endif
 		ret = ops_p->get_avb_algorithm(osi_core, &data->avb);
 		break;
 
 	case OSI_CMD_SET_AVB:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_SET_AVB");
+#endif
 		ret = handle_set_avb_ioctl(osi_core, data);
 		break;
 
 	case OSI_CMD_COMMON_ISR:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_COMMON_ISR");
+#endif
 		ops_p->handle_common_intr(osi_core);
 		ret = 0;
 		break;
 
 	case OSI_CMD_PAD_CALIBRATION:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_PAD_CALIBRATION");
+#endif
 		ret = ops_p->pad_calibrate(osi_core);
 		break;
 
 	case OSI_CMD_READ_MMC:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_READ_MMC");
+#endif
 		ops_p->read_mmc(osi_core);
 		ret = 0;
 		break;
 
 	case OSI_CMD_SET_SPEED:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_SET_SPEED");
+#endif
 		ret = hw_set_speed(osi_core, data->arg6_32);
 		break;
 
 	case OSI_CMD_L2_FILTER:
 	case OSI_CMD_L3L4_FILTER:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_L2_FILTER/OSI_CMD_L3L4_FILTER");
+#endif
 		ret = handle_config_filters(osi_core, data);
 		break;
 
 	case OSI_CMD_RXCSUM_OFFLOAD:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_RXCSUM_OFFLOAD");
+#endif
 		ret = hw_config_rxcsum_offload(osi_core, data->arg1_u32);
 		if (ret == 0) {
 			l_core->cfg.rxcsum = data->arg1_u32;
@@ -3039,14 +3069,25 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_ADJ_FREQ:
+#ifdef OSI_RM_FTRACE
+		if ((OSI_CMD_ADJ_FREQ_count++ % 1000) == 0) {
+			ethernet_server_cmd_log("OSI_CMD_ADJ_FREQ");
+		}
+#endif
 		ret = handle_adjust_freq_ioctl(osi_core, data);
 		break;
 
 	case OSI_CMD_ADJ_TIME:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_ADJ_TIME");
+#endif
 		ret = handle_adjust_time_ioctl(osi_core, data);
 		break;
 
 	case OSI_CMD_GET_HW_FEAT:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_GET_HW_FEAT");
+#endif
 		/* get hw features */
 		l_core->ops_p->get_hw_features(osi_core, &l_core->hw_features);
 		osi_memcpy(&data->hw_feat, &l_core->hw_features, sizeof(struct osi_hw_features));
@@ -3056,6 +3097,9 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_SET_SYSTOHW_TIME:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_SET_SYSTOHW_TIME");
+#endif
 		ret = handle_set_systohw_time_ioctl(osi_core, data);
 		break;
 
@@ -3077,12 +3121,18 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 
 #endif /* !OSI_STRIPPED_LIB */
 	case OSI_CMD_CONFIG_FRP:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_CONFIG_FRP");
+#endif
 		ret = configure_frp(osi_core, &data->frp_cmd);
 		l_core->cfg.flags |= DYNAMIC_CFG_FRP;
 		break;
 
 	case OSI_CMD_CONFIG_EST:
 	case OSI_CMD_CONFIG_FPE:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_CONFIG_EST/OSI_CMD_CONFIG_FPE");
+#endif
 		ret = handle_config_est_fpe_ioctl(osi_core, data);
 		break;
 
@@ -3113,16 +3163,29 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #endif /*  MACSEC_SUPPORT */
 #endif /* !OSI_STRIPPED_LIB */
 	case OSI_CMD_GET_TX_TS:
+#ifdef OSI_RM_FTRACE
+		if ((OSI_CMD_GET_TX_TS_count++ % 10000) == 0) {
+			ethernet_server_cmd_log("OSI_CMD_GET_TX_TS");
+		}
+#endif
 		ret = get_tx_ts(osi_core, &data->tx_ts);
 		break;
 
 	case OSI_CMD_FREE_TS:
+#ifdef OSI_RM_FTRACE
+		if ((OSI_CMD_FREE_TS_count++ % 10000) == 0) {
+			ethernet_server_cmd_log("OSI_CMD_FREE_TS");
+		}
+#endif
 		free_tx_ts(osi_core, data->arg1_u32);
 		ret = 0;
 		break;
 
 	case OSI_CMD_MAC_MTU:
 #ifdef MACSEC_SUPPORT
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_MAC_MTU");
+#endif
 		ret = l_core->macsec_ops->update_mtu(osi_core, data->arg1_u32);
 #endif /*  MACSEC_SUPPORT */
 		break;
@@ -3138,10 +3201,20 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 #endif /* OSI_DEBUG */
 	case OSI_CMD_CAP_TSC_PTP:
+#ifdef OSI_RM_FTRACE
+		if ((OSI_CMD_CAP_TSC_PTP_count++ % 10000) == 0) {
+			ethernet_server_cmd_log("OSI_CMD_CAP_TSC_PTP");
+		}
+#endif
 		ret = hw_ptp_tsc_capture(osi_core, &data->ptp_tsc);
 		break;
 
 	case OSI_CMD_CONF_M2M_TS:
+#ifdef OSI_RM_FTRACE
+		if ((OSI_CMD_CONF_M2M_TS_count++ % 10000) == 0) {
+			ethernet_server_cmd_log("OSI_CMD_CONF_M2M_TS");
+		}
+#endif
 		if (data->arg1_u32 <= OSI_ENABLE) {
 			l_core->m2m_tsync = data->arg1_u32;
 			ret = 0;
@@ -3149,6 +3222,9 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 #ifdef HSI_SUPPORT
 	case OSI_CMD_HSI_CONFIGURE:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_HSI_CONFIGURE");
+#endif
 		ret = ops_p->core_hsi_configure(osi_core, data->arg1_u32);
 		break;
 #ifdef NV_VLTEST_BUILD
@@ -3171,10 +3247,16 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 #endif
 	case OSI_CMD_SUSPEND:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_SUSPEND");
+#endif
 		l_core->state = OSI_SUSPENDED;
 		ret = osi_hal_hw_core_deinit(osi_core);
 		break;
 	case OSI_CMD_RESUME:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_RESUME");
+#endif
 		ret = osi_hal_hw_core_init(osi_core);
 		if (ret < 0) {
 			break;
