@@ -227,7 +227,16 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 		ret = -1;
 		goto fail;
 	}
-
+#ifdef MACSEC_SUPPORT
+	if ((osi_core->macsec_initialized == OSI_ENABLE) &&
+	    ((speed == OSI_SPEED_10) || (speed == OSI_SPEED_100)) &&
+	    ((osi_core->mac_ver == OSI_EQOS_MAC_5_40) || (osi_core->mac_ver == OSI_MGBE_MAC_4_20))) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "unsupported speed when T264 MACSec is enabled\n", (nveul64_t)speed);
+		ret = -1;
+		goto fail;
+	}
+#endif  /* MACSEC_SUPPORT */
 	value = osi_readla(osi_core, ((nveu8_t *)base + mac_mcr[osi_core->mac]));
 	switch (speed) {
 #ifndef OSI_STRIPPED_LIB
@@ -302,6 +311,8 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 			}
 		}
 	}
+
+	osi_core->speed = speed;
 fail:
 	return ret;
 }
@@ -1435,7 +1446,7 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 		goto error;
 	}
 
-	if (osi_core->mac != OSI_MAC_HW_EQOS) {
+	if (osi_core->mac_ver != OSI_EQOS_MAC_5_30) {
 #ifdef MACSEC_SUPPORT
 		osi_lock_irq_enabled(&osi_core->macsec_fpe_lock);
 		/* MACSEC and FPE cannot coexist on MGBE of T234 refer bug 3484034
@@ -1479,7 +1490,7 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 	}
 done:
 
-	if (osi_core->mac != OSI_MAC_HW_EQOS) {
+	if (osi_core->mac_ver != OSI_EQOS_MAC_5_30) {
 #ifdef MACSEC_SUPPORT
 		osi_unlock_irq_enabled(&osi_core->macsec_fpe_lock);
 #endif /*  MACSEC_SUPPORT */

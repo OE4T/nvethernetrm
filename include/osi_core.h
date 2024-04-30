@@ -1823,6 +1823,8 @@ struct osi_core_priv_data {
 	nveu32_t pre_sil;
 	/** rCHlist bookkeeping **/
 	struct rchlist_index rch_index[RCHLIST_SIZE];
+	/** Parameter indicates the current operating speed */
+	nve32_t speed;
 };
 
 /**

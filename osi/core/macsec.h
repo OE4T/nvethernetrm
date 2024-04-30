@@ -445,6 +445,8 @@
 #define MTU_LENGTH_MASK		0xFFFFU
 #define SOT_LENGTH_MASK		0xFFU
 #define EQOS_MACSEC_SOT_DELAY	0x4EU
+#define T264_EQOS_MACSEC_TX_SOT_DELAY	0x61U
+#define T264_EQOS_MACSEC_RX_SOT_DELAY	0x5FU
 
 /**
  * @addtogroup MACSEC-LUT TX/RX LUT bit fields in LUT_DATA registers

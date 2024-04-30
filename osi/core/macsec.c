@@ -24,6 +24,7 @@
 #include <osi_macsec.h>
 #include "macsec.h"
 #include "common.h"
+#include "eqos_core.h"
 #include "core_local.h"
 
 #if 0 /* Qnx */
@@ -892,10 +893,10 @@ static nve32_t macsec_enable(struct osi_core_priv_data *const osi_core,
 
 	/* MACSEC and FPE cannot coexist on MGBE of T234 refer bug 3484034
 	 * Both EQOS and MGBE of T264 cannot have macsec and fpe enabled simultaneously */
-	if ((osi_core->mac != OSI_MAC_HW_EQOS) &&
+	if ((osi_core->mac_ver != OSI_EQOS_MAC_5_30) &&
 	    (enable == OSI_ENABLE) && (osi_core->is_fpe_enabled == OSI_ENABLE)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "MACSE and FPE cannot coexist on MGBE\n", 0ULL);
+			     "MACSE and FPE cannot coexist\n", 0ULL);
 		ret = -1;
 		goto exit;
 	}
@@ -4959,8 +4960,10 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 				 nveu8_t *const macsec_vf_mac)
 {
 	nveu32_t val = 0;
+	nveu32_t value = 0;
 	const struct core_local *l_core = (void *)osi_core;
 	nveu8_t *addr = (nveu8_t *)osi_core->macsec_base;
+	void *mac_addr = osi_core->base;
 	nve32_t ret = 0;
 	nveu32_t macsec = osi_core->macsec;
 	const nveu32_t common_imr_reg[MAX_MACSEC_IP_TYPES] = {
@@ -4971,6 +4974,15 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 		MACSEC_RX_IMR,
 		MACSEC_RX_IMR_T26X
 	};
+
+	// For T264 MACSec MAC speed of 10 amd 100 are not supported
+	if((osi_core->macsec == OSI_MACSEC_T26X) &&
+	   ((osi_core->speed == OSI_SPEED_10) || (osi_core->speed == OSI_SPEED_100))) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "cannot enable T264 MACSec in present MAC speed\n", (nveul64_t)osi_core->speed);
+		ret = -1;
+		goto exit;
+	}
 
 	/* Update MAC value as per macsec requirement */
 	l_core->ops_p->macsec_config_mac(osi_core, OSI_ENABLE);
@@ -4986,7 +4998,7 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 	/* set TX/RX SOT, as SOT value different for eqos.
 	 * default value matches for MGBE
 	 */
-	if (osi_core->mac == OSI_MAC_HW_EQOS) {
+	if (osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
 		val = osi_readla(osi_core, addr + MACSEC_TX_SOT_DELAY);
 		MACSEC_LOG("Read MACSEC_TX_SOT_DELAY: 0x%x\n", val);
 		val &= ~(SOT_LENGTH_MASK);
@@ -5000,6 +5012,23 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 		val |= (EQOS_MACSEC_SOT_DELAY & SOT_LENGTH_MASK);
 		MACSEC_LOG("Write MACSEC_RX_SOT_DELAY: 0x%x\n", val);
 		osi_writela(osi_core, val, addr + MACSEC_RX_SOT_DELAY);
+	} else if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+		val = osi_readla(osi_core, addr + MACSEC_TX_SOT_DELAY);
+		MACSEC_LOG("Read MACSEC_TX_SOT_DELAY: 0x%x\n", val);
+		val &= ~(SOT_LENGTH_MASK);
+		val |= (T264_EQOS_MACSEC_TX_SOT_DELAY & SOT_LENGTH_MASK);
+		MACSEC_LOG("Write MACSEC_TX_SOT_DELAY: 0x%x\n", val);
+		osi_writela(osi_core, val, addr + MACSEC_TX_SOT_DELAY);
+
+		val = osi_readla(osi_core, addr + MACSEC_RX_SOT_DELAY);
+		MACSEC_LOG("Read MACSEC_RX_SOT_DELAY: 0x%x\n", val);
+		val &= ~(SOT_LENGTH_MASK);
+		val |= (T264_EQOS_MACSEC_RX_SOT_DELAY & SOT_LENGTH_MASK);
+		MACSEC_LOG("Write MACSEC_RX_SOT_DELAY: 0x%x\n", val);
+		osi_writela(osi_core, val, addr + MACSEC_RX_SOT_DELAY);
+
+	} else {
+		/** Do nothing */
 	}
 
 	/* Set essential MACsec control configuration */
@@ -5017,6 +5046,13 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 	MACSEC_LOG("Read MACSEC_CONTROL1: 0x%x\n", val);
 	val |= (MACSEC_RX_MTU_CHECK_EN | MACSEC_TX_LUT_PRIO_BYP |
 		MACSEC_TX_MTU_CHECK_EN);
+
+	if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+		value = osi_readla(osi_core, (nveu8_t *)mac_addr + EQOS_MAC_MCR);
+		/* Disable MAC Transmit as per suggestion in bug 4456073 */
+		value &= ~EQOS_MCR_TE;
+		osi_writela(osi_core, value, (nveu8_t *)mac_addr + EQOS_MAC_MCR);
+	}
 	MACSEC_LOG("Write MACSEC_CONTROL1: 0x%x\n", val);
 	osi_writela(osi_core, val, addr + MACSEC_CONTROL1);
 
@@ -5085,6 +5121,12 @@ upd_byp_sci_lut:
 		goto exit;
 	}
 exit:
+	if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+		value = osi_readla(osi_core, (nveu8_t *)mac_addr + EQOS_MAC_MCR);
+		/* Enable MAC Transmit as per suggestion in bug 4456073 */
+		value |= EQOS_MCR_TE;
+		osi_writela(osi_core, value, (nveu8_t *)mac_addr + EQOS_MAC_MCR);
+	}
 	return ret;
 }
 
@@ -5624,8 +5666,10 @@ static nve32_t add_upd_sc(struct osi_core_priv_data *const osi_core,
 	lut_config.sc_param_out.pn_window = sc->pn_window;
 	lut_config.sc_param_out.tci = OSI_TCI_DEFAULT;
 	lut_config.sc_param_out.vlan_in_clear = sc->vlan_in_clear;
-	lut_config.sc_param_out.conf_offset = sc->conf_offset;
-	lut_config.sc_param_out.encrypt = sc->encrypt;
+	if (osi_core->macsec == OSI_MACSEC_T26X) {
+		lut_config.sc_param_out.conf_offset = sc->conf_offset;
+		lut_config.sc_param_out.encrypt = sc->encrypt;
+	}
 	ret = macsec_lut_config(osi_core, &lut_config);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
@@ -5797,9 +5841,10 @@ static nve32_t add_new_sc(struct osi_core_priv_data *const osi_core,
 	new_sc->pn_window = sc->pn_window;
 	new_sc->flags = sc->flags;
 	new_sc->vlan_in_clear = sc->vlan_in_clear;
-	new_sc->conf_offset = sc->conf_offset;
-	new_sc->encrypt = sc->encrypt;
-
+	if (osi_core->macsec == OSI_MACSEC_T26X) {
+		new_sc->conf_offset = sc->conf_offset;
+		new_sc->encrypt = sc->encrypt;
+	}
 	new_sc->sc_idx_start = avail_sc_idx;
 	if (is_sc_valid == OSI_MACSEC_SC_VALID) {
 		new_sc->an_valid |= OSI_BIT((((nveu32_t)sc->curr_an) & 0xFU));
@@ -5921,8 +5966,10 @@ static nve32_t macsec_configure(struct osi_core_priv_data *const osi_core,
 			tmp_sc_p->pn_window = sc->pn_window;
 			tmp_sc_p->flags = sc->flags;
 			tmp_sc_p->vlan_in_clear = sc->vlan_in_clear;
-			tmp_sc_p->encrypt = sc->encrypt;
-			tmp_sc_p->conf_offset = sc->conf_offset;
+			if (osi_core->macsec == OSI_MACSEC_T26X) {
+				tmp_sc_p->encrypt = sc->encrypt;
+				tmp_sc_p->conf_offset = sc->conf_offset;
+			}
 
 			tmp_sc_p->an_valid |= OSI_BIT(sc->curr_an & 0x1FU);
 
