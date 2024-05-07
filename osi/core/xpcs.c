@@ -760,11 +760,9 @@ step10:
 	}
 
 	if (xpcs_check_pcs_lock_status(osi_core) < 0) {
-		if (l_core->lane_status == OSI_ENABLE) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				     "Failed to get PCS block lock\n", 0ULL);
-			l_core->lane_status = OSI_DISABLE;
-		}
+		l_core->lane_status = OSI_DISABLE;
 		ret = -1;
 		goto fail;
 	} else {
@@ -1058,7 +1056,7 @@ nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 	} else {
 		/* Select XLGPCS in wrapper register */
 		if ((osi_core->mac == OSI_MAC_HW_MGBE_T26X) &&
-		    (osi_core->uphy_gbe_mode == OSI_UPHY_GBE_MODE_25G)) {
+		    (osi_core->uphy_gbe_mode == OSI_GBE_MODE_25G)) {
 			value = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
 					   T26X_XPCS_WRAP_CONFIG_0);
 			value |= OSI_BIT(0);

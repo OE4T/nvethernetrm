@@ -111,7 +111,9 @@ static inline void process_rx_desc(struct osi_dma_priv_data *osi_dma,
 				   struct osi_rx_pkt_cx *rx_pkt_cx,
 				   nveu32_t chan, const nveu32_t rx_ring_mask)
 {
-	const nveu32_t es_bits_mask[2U] = { RDES3_ES_BITS, RDES3_ES_MGBE };
+	const nveu32_t es_bits_mask[OSI_MAX_MAC_IP_TYPES] = {
+			RDES3_ES_BITS, RDES3_ES_MGBE, RDES3_ES_MGBE
+		};
 	struct osi_rx_desc *context_desc = OSI_NULL;
 	struct osi_rx_swcx *ptp_rx_swcx = OSI_NULL;
 	nveu32_t ip_type = osi_dma->mac;

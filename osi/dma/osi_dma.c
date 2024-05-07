@@ -411,13 +411,6 @@ static nve32_t validate_dma_ops_params(struct osi_dma_priv_data *osi_dma)
 		goto fail;
 	}
 
-	if (osi_dma->mac > OSI_MAC_HW_MGBE) {
-		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-			    "DMA: Invalid MAC HW type\n", 0ULL);
-		ret = -1;
-		goto fail;
-	}
-
 	ret = validate_ring_sz(osi_dma);
 fail:
 	return ret;

@@ -254,7 +254,7 @@
 #define MAC_CORE_VER_TYPE_EQOS_5_30	1U
 /** MAC version type for MGBE IP */
 #define MAC_CORE_VER_TYPE_MGBE		2U
-/** MAC version type for T26x EQOS version 5.40 */
+/** MAC version type for EQOS version 5.40 */
 #define MAC_CORE_VER_TYPE_EQOS_5_40	3U
 
 #define OSI_NULL                ((void *)0)

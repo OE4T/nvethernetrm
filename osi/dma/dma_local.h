@@ -29,16 +29,6 @@
 #include "mgbe_dma.h"
 
 /**
- * @brief Maximum number of supported MAC IP types (EQOS and MGBE)
- */
-#define MAX_MAC_IP_TYPES       2U
-/** MAC version type for EQOS version previous to 5.30 */
-#define MAC_CORE_VER_TYPE_EQOS		0U
-/** MAC version type for EQOS version 5.30 */
-#define MAC_CORE_VER_TYPE_EQOS_5_30	1U
-/** MAC version type for MGBE IP */
-#define MAC_CORE_VER_TYPE_MGBE		2U
-/**
  * @brief validate_dma_mac_ver_update_chans - Validates mac version and update chan
  *
  * @param[in] mac: MAC HW type.
@@ -78,6 +68,7 @@ static inline nve32_t validate_dma_mac_ver_update_chans(nveu32_t mac,
 		break;
 #endif /* !OSI_STRIPPED_LIB */
 	case OSI_EQOS_MAC_5_30:
+	case OSI_EQOS_MAC_5_40:
 		*num_max_chans = OSI_EQOS_MAX_NUM_CHANS;
 		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS_5_30;
 		ret = 1;

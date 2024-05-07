@@ -218,10 +218,10 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 				MGBE_MAC_TMCR
 			};
 
-	if (((osi_core->mac == OSI_MAC_HW_EQOS) && (speed > OSI_SPEED_1000)) ||
+	if (((osi_core->mac == OSI_MAC_HW_EQOS) && (speed > OSI_SPEED_2500)) ||
 	    (((osi_core->mac == OSI_MAC_HW_MGBE) ||
 	    (osi_core->mac == OSI_MAC_HW_MGBE_T26X)) &&
-	    ((speed < OSI_SPEED_2500) || (speed > OSI_SPEED_25000)))) {
+	    ((speed < OSI_SPEED_2500) && (speed > OSI_SPEED_25000)))) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "unsupported speed\n", (nveul64_t)speed);
 		ret = -1;
@@ -240,7 +240,12 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 		value |= EQOS_MCR_FES;
 		break;
 	case OSI_SPEED_2500:
-		value |= MGBE_MAC_TMCR_SS_2_5G;
+		if (osi_core->mac == OSI_MAC_HW_EQOS) {
+			value &= ~EQOS_MCR_PS;
+			value |= EQOS_MCR_FES;
+		} else {
+			value |= MGBE_MAC_TMCR_SS_2_5G;
+		}
 		break;
 #endif /* !OSI_STRIPPED_LIB */
 	case OSI_SPEED_1000:
@@ -290,12 +295,11 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 			/* Enable Link Status interrupt only after lane bring up success */
 			value |= MGBE_IMR_RGSMIIIE;
 			osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
-		} else if (osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
-			//TDB: eqos sgmii pcs changes
-//			ret = eqos_xpcs_init(osi_core);
-//			if (ret < 0) {
-//				goto fail;
-//			}
+		} else if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+			ret = eqos_xpcs_init(osi_core);
+			if (ret < 0) {
+				goto fail;
+			}
 		}
 	}
 fail:

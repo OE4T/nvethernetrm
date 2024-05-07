@@ -44,8 +44,6 @@ typedef char			my_int8_t;
 typedef unsigned char		my_uint8_t;
 /** intermediate type for unsigned long long */
 typedef unsigned long long 	my_ulint_64;
-/** intermediate type for long */
-typedef unsigned long		my_uint64_t;
 
 /* Actual type used in code */
 /** typedef equivalent to unsigned int */
@@ -60,8 +58,8 @@ typedef my_int8_t		nve8_t;
 typedef my_uint8_t		nveu8_t;
 /** typedef equivalent to unsigned long  long */
 typedef my_ulint_64		nveul64_t;
-/** typedef equivalent to long long */
-typedef my_uint64_t		nveu64_t;
+/** typedef equivalent to unsigned long long */
+typedef my_ulint_64		nveu64_t;
 /** @} */
 
 #endif /* INCLUDED_NVETHERNET_TYPE_H */

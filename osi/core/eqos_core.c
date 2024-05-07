@@ -163,6 +163,10 @@ static nve32_t eqos_pad_calibrate(struct osi_core_priv_data *const osi_core)
 	nve32_t cond = COND_NOT_MET, ret = 0;
 	nveu32_t value;
 
+	if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+		return 0;
+	}
+
 	(void)__sync_val_compare_and_swap(&osi_core->padctrl.is_pad_cal_in_progress,
 				    OSI_DISABLE, OSI_ENABLE);
 	ret = eqos_pre_pad_calibrate(osi_core);
@@ -1180,14 +1184,16 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 			goto fail;
 		}
 	}
-	/* PAD calibration */
-	ret = eqos_pad_calibrate(osi_core);
-	if (ret < 0) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "eqos pad calibration failed\n", 0ULL);
-		goto fail;
-	}
 
+	if (osi_core->mac_ver != OSI_EQOS_MAC_5_40) {
+		/* PAD calibration */
+		ret = eqos_pad_calibrate(osi_core);
+		if (ret < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "eqos pad calibration failed\n", 0ULL);
+			goto fail;
+		}
+	}
 	/* reset mmc counters */
 	osi_writela(osi_core, EQOS_MMC_CNTRL_CNTRST,
 		    (nveu8_t *)osi_core->base + EQOS_MMC_CNTRL);

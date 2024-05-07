@@ -125,9 +125,11 @@ void core_reg_dump(struct osi_core_priv_data *osi_core)
 		max_addr = 0x12E4;
 		break;
 	case OSI_EQOS_MAC_5_30:
+	case OSI_EQOS_MAC_5_40:
 		max_addr = 0x14EC;
 		break;
 	case OSI_MGBE_MAC_3_10:
+	case OSI_MGBE_MAC_4_20:
 		max_addr = 0x35FC;
 		break;
 	default:

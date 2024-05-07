@@ -288,13 +288,12 @@ typedef my_lint_64		nvel64_t;
 #define OSI_XFI_MODE_5G		1U
 #define OSI_USXGMII_MODE_10G	2U
 #define OSI_USXGMII_MODE_5G	3U
-#define OSI_XAUI_MODE_25G	4U
 /**
  * @brief Ethernet UPHY GBE Modes
  */
 #define OSI_GBE_MODE_5G		0U
 #define OSI_GBE_MODE_10G	1U
-#define OSI_UPHY_GBE_MODE_25G	2U
+#define OSI_GBE_MODE_25G	2U
 #define OSI_GBE_MODE_1G		3U
 #define OSI_GBE_MODE_2_5G	4U
 
@@ -1702,6 +1701,12 @@ struct osi_core_priv_data {
 	 * NVETHERNETRM_PIF$OSI_EQOS_MAC_5_30
 	 * and NVETHERNETRM_PIF$OSI_MGBE_MAC_3_10*/
 	nveu32_t mac_ver;
+	/** MAC version
+	 * valid values are NVETHERNETRM_PIF$MAC_CORE_VER_TYPE_EQOS,
+	 * NVETHERNETRM_PIF$MAC_CORE_VER_TYPE_EQOS_5_30,
+	 * NVETHERNETRM_PIF$MAC_CORE_VER_TYPE_MGBE,
+	 * and NVETHERNETRM_PIF$MAC_CORE_VER_TYPE_EQOS_5_40*/
+	nveu32_t mac_ver_type;
 	/** HW supported feature list */
 	struct osi_hw_features *hw_feat;
 	/** MTU size

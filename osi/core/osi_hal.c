@@ -469,7 +469,7 @@ static nve32_t osi_ptp_configuration(struct osi_core_priv_data *const osi_core,
 		 * so addend = (2^32 * 1000)/(ptp_ref_clk_rate in MHZ * SSINC);
 		 */
 		ssinc = OSI_PTP_SSINC_4;
-		if (osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
+		if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
 			ssinc = OSI_PTP_SSINC_6;
 		}
 
@@ -611,8 +611,6 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 	/* By default enable rxcsum - since passing enable explicitely this API will never fail */
 	(void)hw_config_rxcsum_offload(osi_core, OSI_ENABLE);
 
-	/* Set default PTP settings */
-	osi_core->ptp_config.ptp_rx_queue = 3U;
 	osi_core->ptp_config.ptp_ref_clk_rate = ptp_ref_clk_rate[l_core->l_mac_ver];
 	osi_core->ptp_config.ptp_filter = OSI_MAC_TCR_TSENA | OSI_MAC_TCR_TSCFUPDT |
 					  OSI_MAC_TCR_TSCTRLSSR | OSI_MAC_TCR_TSVER2ENA |
