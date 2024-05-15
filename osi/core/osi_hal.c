@@ -3199,11 +3199,15 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_MAC_MTU:
+		ret = 0;
 #ifdef MACSEC_SUPPORT
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_MAC_MTU");
 #endif
-		ret = l_core->macsec_ops->update_mtu(osi_core, data->arg1_u32);
+		if ((l_core->macsec_ops != OSI_NULL) &&
+		    (l_core->macsec_ops->update_mtu != OSI_NULL)) {
+			ret = l_core->macsec_ops->update_mtu(osi_core, data->arg1_u32);
+		}
 #endif /*  MACSEC_SUPPORT */
 		break;
 
