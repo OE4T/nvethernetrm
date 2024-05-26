@@ -99,6 +99,67 @@ fail:
 }
 
 /**
+ * @brief eqos_xpcs_poll_for_an_complete - Polling for AN complete.
+ *
+ * Algorithm: This routine poll for AN completion status from
+ *		EQOS XPCS IP.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ * @param[out] an_status: AN status from XPCS
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+static inline nve32_t eqos_xpcs_poll_for_an_complete(
+				struct osi_core_priv_data *osi_core,
+				nveu32_t *an_status)
+{
+	void *xpcs_base = osi_core->xpcs_base;
+	nveu32_t status = 0;
+	nveu32_t retry = 1000;
+	nveu32_t count;
+	nve32_t cond = 1;
+	nve32_t ret = 0;
+
+	/* Poll for AN complete */
+	cond = 1;
+	count = 0;
+	while (cond == 1) {
+		if (count > retry) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "EQOS XPCS AN completion timed out\n", 0ULL);
+			ret = -1;
+			goto fail;
+		}
+
+		count++;
+		status = xpcs_read(xpcs_base, XPCS_VR_MII_AN_INTR_STS);
+		if ((status & XPCS_VR_MII_AN_INTR_STS_CL37_ANCMPLT_INTR) == 0U) {
+			/* autoneg not completed - poll */
+			osi_core->osd_ops.udelay(1000U);
+		} else {
+			/* Clear interrupt */
+			status &= ~XPCS_VR_MII_AN_INTR_STS_CL37_ANCMPLT_INTR;
+			ret = xpcs_write_safety(osi_core, XPCS_VR_MII_AN_INTR_STS, status);
+			if (ret != 0) {
+				goto fail;
+			}
+			cond = 0;
+		}
+	}
+
+	if ((status & EQOS_XPCS_VR_MII_AN_INTR_STS_LINK_UP) == 0U) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "EQOS XPCS AN completed but link is down\n", 0ULL);
+		ret = -1;
+		goto fail;
+	}
+	*an_status = status;
+fail:
+	return ret;
+}
+
+/**
  * @brief xpcs_set_speed - Set speed at XPCS
  *
  * Algorithm: This routine program XPCS speed based on AN status.
@@ -197,6 +258,49 @@ static nve32_t xpcs_poll_flt_rx_link(struct osi_core_priv_data *osi_core)
 fail:
 	return ret;
 }
+
+/**
+ * @brief eqos_xpcs_set_speed - Set speed at XPCS
+ *
+ * Algorithm: This routine program XPCS speed based on AN status.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ * @param[in] status: Autonegotation Status.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
+static inline nve32_t eqos_xpcs_set_speed(struct osi_core_priv_data *osi_core,
+				  nveu32_t status)
+{
+	nveu32_t speed = status & EQOS_XPCS_VR_MII_AN_STS_SPEED_MASK;
+	nveu32_t ctrl = 0;
+	void *xpcs_base = osi_core->xpcs_base;
+	nve32_t ret = 0;
+
+	ctrl = xpcs_read(xpcs_base, XPCS_SR_MII_CTRL);
+	switch (speed) {
+	case XPCS_USXG_AN_STS_SPEED_10:
+		/* 10Mbps */
+		ctrl &= ~(XPCS_SR_MII_CTRL_SS6 | XPCS_SR_MII_CTRL_SS13);
+		break;
+	case XPCS_USXG_AN_STS_SPEED_100:
+		/* 100Mbps */
+		ctrl |= XPCS_SR_MII_CTRL_SS13;
+		ctrl &= ~XPCS_SR_MII_CTRL_SS6;
+		break;
+	case XPCS_USXG_AN_STS_SPEED_1000:
+	default:
+		/* 1000Mbps */
+		ctrl |= XPCS_SR_MII_CTRL_SS6;
+		ctrl &= ~XPCS_SR_MII_CTRL_SS13;
+		break;
+	}
+
+	ret = xpcs_write_safety(osi_core, XPCS_SR_MII_CTRL, ctrl);
+	return ret;
+}
+
 
 /**
  * @brief xpcs_start - Start XPCS
@@ -370,12 +474,12 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 	nveu32_t count;
 	nve32_t ret = 0;
 	const nveu32_t uphy_status_reg[OSI_MAX_MAC_IP_TYPES] = {
-		0,
+		EQOS_XPCS_WRAP_UPHY_STATUS,
 		XPCS_WRAP_UPHY_STATUS,
 		T26X_XPCS_WRAP_UPHY_STATUS
 	};
 	const nveu32_t uphy_init_ctrl_reg[OSI_MAX_MAC_IP_TYPES] = {
-		0,
+		EQOS_XPCS_WRAP_UPHY_HW_INIT_CTRL,
 		XPCS_WRAP_UPHY_HW_INIT_CTRL,
 		T26X_XPCS_WRAP_UPHY_HW_INIT_CTRL
 	};
@@ -442,7 +546,7 @@ static nve32_t xpcs_check_pcs_lock_status(struct osi_core_priv_data *osi_core)
 	nveu32_t count;
 	nve32_t ret = 0;
 	const nveu32_t uphy_irq_sts_reg[OSI_MAX_MAC_IP_TYPES] = {
-				0,
+				EQOS_XPCS_WRAP_UPHY_INTERRUPT_STATUS,
 				XPCS_WRAP_INTERRUPT_STATUS,
 				T26X_XPCS_WRAP_INTERRUPT_STATUS
 			};
@@ -507,7 +611,7 @@ static nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
 		goto fail;
 	}
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+	if (osi_core->mac != OSI_MAC_HW_MGBE) {
 		if (xpcs_uphy_lane_bring_up(osi_core,
 					    XPCS_WRAP_UPHY_HW_INIT_CTRL_RX_EN) < 0) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
@@ -668,6 +772,124 @@ step10:
 			      ("PCS block lock SUCCESS\n"), (0ULL));
 		l_core->lane_status = OSI_ENABLE;
 	}
+fail:
+	return ret;
+}
+
+/**
+ * @brief eqos_xpcs_init - EQOS XPCS initialization
+ *
+ * Algorithm: This routine initialize XPCS in SGMII mode.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+nve32_t eqos_xpcs_init(struct osi_core_priv_data *osi_core)
+{
+	void *xpcs_base = osi_core->xpcs_base;
+	nveu32_t an_status = 0;
+	nveu32_t retry = 1000;
+	nveu32_t count;
+	nveu32_t ctrl = 0;
+	nve32_t cond = 1;
+	nve32_t ret = 0;
+
+	if (osi_core->xpcs_base == OSI_NULL) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "XPCS base is NULL", 0ULL);
+		ret = -1;
+		goto fail;
+	}
+
+	if (osi_core->pre_sil == 0x1U) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "Pre-silicon, skipping lane bring up", 0ULL);
+	} else {
+		if (xpcs_lane_bring_up(osi_core) < 0) {
+			ret = -1;
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "XPCS bring up failed", 0ULL);
+			goto fail;
+		}
+	}
+
+	/* Init XPCS controller based on
+	 * DWC XPCS programming guideline 7.1
+	 */
+
+	/* 1. NA, Switch on power supply */
+	/* 2. NA, Wait as per PHY requirements */
+	/* 3. NA, De-assert reset */
+	/* 4. NA, Configure multi-protocol */
+	/* 5. Read SR_MII_CTRL register and wait for 15 bit read as 0 */
+	cond = 1;
+	count = 0;
+	while (cond == 1) {
+		if (count > retry) {
+			ret = -1;
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "XPCS timeout!!", 0ULL);
+			goto fail;
+		}
+
+		count++;
+		ctrl = xpcs_read(xpcs_base, XPCS_SR_MII_CTRL);
+		if ((ctrl & XPCS_SR_MII_CTRL_RST) == 0U) {
+			cond = 0;
+		} else {
+			osi_core->osd_ops.udelay(100U);
+		}
+	}
+
+	ctrl = xpcs_read(xpcs_base, XPCS_VS_MII_MMD_VR_MII_AN_CTRL_0);
+	ctrl |= (XPCS_VS_MII_MMD_VR_MII_AN_CTRL_AN_INTR_EN |
+		 XPCS_VS_MII_MMD_VR_MII_AN_CTRL_PCS_MODE);
+	ret = xpcs_write_safety(osi_core, XPCS_VS_MII_MMD_VR_MII_AN_CTRL_0, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+
+	ctrl = xpcs_read(xpcs_base, XPCS_SR_MII_CTRL);
+	ctrl |= XPCS_SR_MII_CTRL_RESTART_AN;
+	xpcs_write_safety(osi_core, XPCS_SR_MII_CTRL, ctrl);
+	osi_core->osd_ops.udelay(1000*100U);
+
+	ret = eqos_xpcs_poll_for_an_complete(osi_core, &an_status);
+	if (ret < 0) {
+		goto fail;
+	}
+	OSI_CORE_INFO(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "EQOS XPCS AN Status", an_status);
+	ret = eqos_xpcs_set_speed(osi_core, an_status);
+	if (ret != 0) {
+		goto fail;
+	}
+
+	/* 7. NA */
+	/* 8. NA */
+	/* 9. Wait for LINK_STS of SR_MII_STS Register bit to become 1 */
+	cond = 1;
+	count = 0;
+	while (cond == 1) {
+		if (count > retry) {
+			ret = -1;
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "XPCS LINK_STS timeout!!", 0ULL);
+			goto fail;
+		}
+
+		count++;
+		ctrl = xpcs_read(xpcs_base, XPCS_SR_MII_STS_0);
+		if ((ctrl & XPCS_SR_MII_STS_0_LINK_STS) ==
+		    XPCS_SR_MII_STS_0_LINK_STS) {
+			cond = 0;
+		} else {
+			osi_core->osd_ops.udelay(100U);
+		}
+	}
+
 fail:
 	return ret;
 }

@@ -27,6 +27,7 @@
 #include "core_local.h"
 #include "core_common.h"
 #include "macsec.h"
+#include "xpcs.h"
 
 /*
  * Forward declarations of local functions.
@@ -3474,6 +3475,14 @@ static void eqos_configure_eee(struct osi_core_priv_data *const osi_core,
 	nveu32_t lpi_entry_timer = 0;
 	nveu32_t lpi_1US_tic_counter = OSI_LPI_1US_TIC_COUNTER_DEFAULT;
 	nveu8_t *addr =  (nveu8_t *)osi_core->base;
+
+	if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+		if (xpcs_eee(osi_core, tx_lpi_enabled) != 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+					 "eqos xpcs_eee call failed\n", 0ULL);
+			return;
+		}
+	}
 
 	if (tx_lpi_enabled != OSI_DISABLE) {
 		/* Configure the following timers.
