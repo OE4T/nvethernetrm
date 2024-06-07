@@ -26,6 +26,7 @@
 #include "eqos_core.h"
 #include "xpcs.h"
 #include "macsec.h"
+#include "osi_macsec.h"
 
 nve32_t poll_check(struct osi_core_priv_data *const osi_core, nveu8_t *addr,
 				 nveu32_t bit_check, nveu32_t *value)
@@ -172,6 +173,7 @@ fail:
 	return ret;
 }
 
+#if 0
 static nve32_t xpcs_init_start(struct osi_core_priv_data *const osi_core)
 {
 	nve32_t  ret = 0;
@@ -203,6 +205,7 @@ static nve32_t xpcs_init_start(struct osi_core_priv_data *const osi_core)
 fail:
 	return ret;
 }
+#endif
 
 nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t speed)
 {
@@ -261,8 +264,39 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 
 	if (ret != -1) {
 		osi_writela(osi_core, value, ((nveu8_t *)osi_core->base + mac_mcr[osi_core->mac]));
-		/* Validate PCS initialization */
-		ret = xpcs_init_start(osi_core);
+		if (osi_core->mac != OSI_MAC_HW_EQOS) {
+			if (speed == OSI_SPEED_25000) {
+				ret = xlgpcs_init(osi_core);
+				if (ret < 0) {
+					goto fail;
+				}
+
+				ret = xlgpcs_start(osi_core);
+				if (ret < 0) {
+					goto fail;
+				}
+			} else {
+				ret = xpcs_init(osi_core);
+				if (ret < 0) {
+					goto fail;
+				}
+
+				ret = xpcs_start(osi_core);
+				if (ret < 0) {
+					goto fail;
+				}
+			}
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
+			/* Enable Link Status interrupt only after lane bring up success */
+			value |= MGBE_IMR_RGSMIIIE;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
+		} else if (osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+			//TDB: eqos sgmii pcs changes
+//			ret = eqos_xpcs_init(osi_core);
+//			if (ret < 0) {
+//				goto fail;
+//			}
+		}
 	}
 fail:
 	return ret;
@@ -496,7 +530,7 @@ void hw_config_tscr(struct osi_core_priv_data *const osi_core, OSI_UNUSED const 
 	const nveu32_t mac_pps[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_MAC_PPS_CTL,
 		MGBE_MAC_PPS_CTL,
-		MGBE_MAC_TCR
+		MGBE_MAC_PPS_CTL
 	};
 
 	(void)ptp_filter; // unused
@@ -655,11 +689,6 @@ nve32_t hw_config_mac_pkt_filter_reg(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = 0;
 
 	value = osi_readla(osi_core, ((nveu8_t *)osi_core->base + MAC_PKT_FILTER_REG));
-
-	/*Retain all other values */
-	value &= (MAC_PFR_DAIF | MAC_PFR_DBF  | MAC_PFR_SAIF |
-		  MAC_PFR_SAF  | MAC_PFR_PCF  | MAC_PFR_VTFE |
-		  MAC_PFR_IPFE | MAC_PFR_DNTU | MAC_PFR_RA);
 
 	if ((filter->oper_mode & OSI_OPER_EN_PERFECT) != OSI_DISABLE) {
 		value |= MAC_PFR_HPF;
@@ -1324,7 +1353,7 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
 		    MAC_RQC1R[osi_core->mac & 0x1U]);
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 				MGBE_MAC_RQC4R);
 		val &= ~MGBE_MAC_RQC4R_PMCBCQ;
@@ -1402,10 +1431,11 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 		goto error;
 	}
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 #ifdef MACSEC_SUPPORT
 		osi_lock_irq_enabled(&osi_core->macsec_fpe_lock);
-		/* MACSEC and FPE cannot coexist on MGBE refer bug 3484034 */
+		/* MACSEC and FPE cannot coexist on MGBE of T234 refer bug 3484034
+		 * Both EQOS and MGBE of T264 cannot have macsec and fpe enabled simultaneously */
 		if (osi_core->is_macsec_enabled == OSI_ENABLE) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 				     "FPE and MACSEC cannot co-exist\n", 0ULL);
@@ -1431,7 +1461,7 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
 			    MAC_FPE_CTS[osi_core->mac & 0x1U]);
 
-		if (osi_core->mac == OSI_MAC_HW_MGBE) {
+		if (osi_core->mac != OSI_MAC_HW_EQOS) {
 #ifdef MACSEC_SUPPORT
 			osi_core->is_fpe_enabled = OSI_DISABLE;
 #endif /*  MACSEC_SUPPORT */
@@ -1445,7 +1475,7 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 	}
 done:
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 #ifdef MACSEC_SUPPORT
 		osi_unlock_irq_enabled(&osi_core->macsec_fpe_lock);
 #endif /*  MACSEC_SUPPORT */
@@ -1701,7 +1731,7 @@ void hw_tsn_init(struct osi_core_priv_data *osi_core)
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
 			MAC_RQC1R[osi_core->mac & 0x1U]);
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 				 MGBE_MAC_RQC4R);
 		val &= ~MGBE_MAC_RQC4R_PMCBCQ;
@@ -1741,6 +1771,12 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 				nveu32_t error_code)
 {
 	nve32_t ret = 0;
+	const nveu32_t rx_isr_set[MAX_MACSEC_IP_TYPES] = {
+				MACSEC_RX_ISR_SET,
+				MACSEC_RX_ISR_SET_T26X};
+	const nveu32_t common_isr_set[MAX_MACSEC_IP_TYPES] = {
+				MACSEC_COMMON_ISR_SET,
+				MACSEC_COMMON_ISR_SET_T26X};
 
 	switch (error_code) {
 	case OSI_INBOUND_BUS_CRC_ERR:
@@ -1756,7 +1792,7 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 	case OSI_MACSEC_RX_CRC_ERR:
 		osi_writela(osi_core, MACSEC_RX_MAC_CRC_ERROR,
 			    (nveu8_t *)osi_core->macsec_base +
-			    MACSEC_RX_ISR_SET);
+			    rx_isr_set[osi_core->macsec]);
 		break;
 	case OSI_MACSEC_TX_CRC_ERR:
 		osi_writela(osi_core, MACSEC_TX_MAC_CRC_ERROR,
@@ -1766,12 +1802,12 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 	case OSI_MACSEC_RX_ICV_ERR:
 		osi_writela(osi_core, MACSEC_RX_ICV_ERROR,
 			    (nveu8_t *)osi_core->macsec_base +
-			    MACSEC_RX_ISR_SET);
+			    rx_isr_set[osi_core->macsec]);
 		break;
 	case OSI_MACSEC_REG_VIOL_ERR:
 		osi_writela(osi_core, MACSEC_SECURE_REG_VIOL,
 			    (nveu8_t *)osi_core->macsec_base +
-			    MACSEC_COMMON_ISR_SET);
+			    common_isr_set[osi_core->macsec]);
 		break;
 	case OSI_PHY_WRITE_VERIFY_ERR:
 		osi_core->hsi.err_code[PHY_WRITE_VERIFY_FAIL_IDX] = OSI_PHY_WRITE_VERIFY_ERR;
@@ -1971,7 +2007,10 @@ static void prepare_l3l4_ctr_reg(const struct osi_core_priv_data *const osi_core
 	/* Enable L4 filters for SOURCE Port No matching */
 	value |= (l3_l4->data.src.port_match << MAC_L3L4_CTR_L4SPM_SHIFT) |
 		 (l3_l4->data.src.port_match_inv << MAC_L3L4_CTR_L4SPIM_SHIFT);
-
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		/* Enable combined L3 and L4 filters */
+		value |= l3_l4->data.is_l3l4_match_en << MAC_L3L4_CTR_L5TEN_SHIFT;
+	}
 	/* set udp / tcp port matching bit (for l4) */
 	value |= l3_l4->data.is_udp << MAC_L3L4_CTR_L4PEN_SHIFT;
 

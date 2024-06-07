@@ -522,7 +522,7 @@ static nve32_t osi_get_mac_version(struct osi_core_priv_data *const osi_core, nv
 	*mac_ver = osi_readla(osi_core, ((nveu8_t *)osi_core->base + (nve32_t)MAC_VERSION)) &
 			      MAC_VERSION_SNVER_MASK;
 
-	if (validate_mac_ver_update_chans(*mac_ver, &l_core->num_max_chans,
+	if (validate_mac_ver_update_chans(osi_core->mac, *mac_ver, &l_core->num_max_chans,
 					  &l_core->l_mac_ver) == 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "Invalid MAC version\n", (nveu64_t)*mac_ver)
@@ -885,15 +885,11 @@ static nve32_t l3l4_find_match(const struct core_local *const l_core,
 static nve32_t configure_l3l4_filter_valid_params(const struct osi_core_priv_data *const osi_core,
 						  const struct osi_l3_l4_filter *const l3_l4)
 {
-	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
-		OSI_EQOS_MAX_NUM_CHANS,
-		OSI_MGBE_MAX_NUM_CHANS,
-		OSI_MGBE_MAX_NUM_CHANS
-	};
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nve32_t ret = -1;
 
 	/* validate dma channel */
-	if (l3_l4->dma_chan > max_dma_chan[osi_core->mac]) {
+	if (l3_l4->dma_chan > l_core->num_max_chans) {
 		OSI_CORE_ERR((osi_core->osd), (OSI_LOG_ARG_OUTOFBOUND),
 			("L3L4: Wrong DMA channel: "), (l3_l4->dma_chan));
 		goto exit_func;
@@ -973,6 +969,7 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 {
 	struct osi_l3_l4_filter *cfg_l3_l4;
 	struct core_local *const l_core = (struct core_local *)(void *)osi_core;
+	const nveu32_t filter_mask[OSI_MAX_MAC_IP_TYPES] = { 0x1F, 0x1F, 0x3F };
 	nve32_t ret;
 
 	ret = l_core->ops_p->config_l3l4_filters(osi_core, filter_no, l3_l4);
@@ -994,7 +991,8 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 
 #if !defined(L3L4_WILDCARD_FILTER)
 		/* update filter mask bit */
-		osi_core->l3l4_filter_bitmask |= ((nveu32_t)1U << (filter_no & 0x1FU));
+		osi_core->l3l4_filter_bitmask |= ((nveu64_t)1U <<
+				(filter_no & filter_mask[osi_core->mac]));
 #endif /* !L3L4_WILDCARD_FILTER */
 	} else {
 		/* Clear the filter data.
@@ -1007,7 +1005,8 @@ static nve32_t configure_l3l4_filter_helper(struct osi_core_priv_data *const osi
 
 #if !defined(L3L4_WILDCARD_FILTER)
 		/* update filter mask bit */
-		osi_core->l3l4_filter_bitmask &= ~((nveu32_t)1U << (filter_no & 0x1FU));
+		osi_core->l3l4_filter_bitmask &= ~((nveu64_t)1U <<
+				(filter_no & filter_mask[osi_core->mac]));
 #endif /* !L3L4_WILDCARD_FILTER */
 	}
 
@@ -1120,7 +1119,7 @@ static nve32_t configure_l3l4_filter(struct osi_core_priv_data *const osi_core,
 	const nveu32_t max_filter_no[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_MAX_L3_L4_FILTER - 1U,
 		OSI_MGBE_MAX_L3_L4_FILTER - 1U,
-		OSI_MGBE_MAX_L3_L4_FILTER - 1U,
+		OSI_MGBE_MAX_L3_L4_FILTER_T264 - 1U,
 	};
 	nve32_t ret = -1;
 
@@ -1748,11 +1747,20 @@ static inline void free_tx_ts(struct osi_core_priv_data *osi_core,
 	nveu32_t count = 0U;
 
 	while ((temp != head) && (count < MAX_TX_TS_CNT)) {
-		if (((temp->pkt_id >> CHAN_START_POSITION) & chan) == chan) {
-			temp->next->prev = temp->prev;
-			temp->prev->next = temp->next;
-			/* reset in_use for temp node from the link */
-			temp->in_use = OSI_DISABLE;
+		if (osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
+			if (((temp->pkt_id >> CHAN_START_POSITION) & chan) == chan) {
+				temp->next->prev = temp->prev;
+				temp->prev->next = temp->next;
+				/* reset in_use for temp node from the link */
+				temp->in_use = OSI_DISABLE;
+			}
+		} else {
+			if (temp->vdma_id == chan) {
+				temp->next->prev = temp->prev;
+				temp->prev->next = temp->next;
+				/* reset in_use for temp node from the link */
+				temp->in_use = OSI_DISABLE;
+			}
 		}
 		count++;
 		temp = temp->next;
@@ -1842,6 +1850,7 @@ static inline nve32_t get_tx_ts(struct osi_core_priv_data *osi_core,
 			temp = temp->next;
 			continue;
 		} else if ((temp->pkt_id == ts->pkt_id) &&
+			   (temp->vdma_id == ts->vdma_id) &&
 			   (temp->in_use != OSI_NONE)) {
 			ts->sec = temp->sec;
 			ts->nsec = temp->nsec;
@@ -2222,8 +2231,13 @@ fail:
 static void cfg_l3_l4_filter(struct core_local *l_core)
 {
 	nveu32_t i = 0U;
+	const nveu32_t max_filter_no[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAX_L3_L4_FILTER,
+		OSI_MGBE_MAX_L3_L4_FILTER,
+		OSI_MGBE_MAX_L3_L4_FILTER_T264,
+	};
 
-	for (i = 0U; i < OSI_MGBE_MAX_L3_L4_FILTER; i++) {
+	for (i = 0U; i < max_filter_no[l_core->osi_core.mac]; i++) {
 		if (l_core->cfg.l3_l4[i].filter_enb_dis == OSI_L3L4_DISABLE) {
 			/* filter not enabled */
 			continue;

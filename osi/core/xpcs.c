@@ -264,6 +264,91 @@ fail:
 }
 
 /**
+ * @brief xlgpcs_start - Start XLGPCS
+ *
+ * Algorithm: This routine enables AN and set speed based on AN status
+ *
+ * @param[in] osi_core: OSI core data structure.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+nve32_t xlgpcs_start(struct osi_core_priv_data *osi_core)
+{
+	void *xpcs_base = osi_core->xpcs_base;
+	nveu32_t retry = RETRY_COUNT;
+	nveu32_t count = 0;
+	nveu32_t ctrl = 0;
+	nve32_t ret = 0;
+	nve32_t cond = COND_NOT_MET;
+
+	if (xpcs_base == OSI_NULL) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "XLGPCS base is NULL", 0ULL);
+		ret = -1;
+		goto fail;
+	}
+	/* * XLGPCS programming guideline IAS section 7.1.3.2.2.2
+	 */
+	/* 4 Poll SR_PCS_CTRL1 reg RST bit */
+	ctrl = xpcs_read(xpcs_base, XLGPCS_SR_PCS_CTRL1);
+	ctrl |= XLGPCS_SR_PCS_CTRL1_RST;
+	xpcs_write(xpcs_base, XLGPCS_SR_PCS_CTRL1, ctrl);
+
+	count = 0;
+	while (cond == 1) {
+		if (count > retry) {
+			ret = -1;
+			goto fail;
+		}
+		count++;
+		ctrl = xpcs_read(xpcs_base, XLGPCS_SR_PCS_CTRL1);
+		if ((ctrl & XLGPCS_SR_PCS_CTRL1_RST) == 0U) {
+			cond = 0;
+		} else {
+			/* Maximum wait delay as per HW team is 10msec.
+			 * So add a loop for 1000 iterations with 1usec delay,
+			 * so that if check get satisfies before 1msec will come
+			 * out of loop and it can save some boot time
+			 */
+			osi_core->osd_ops.udelay(10U);
+		}
+	}
+	/* 5 Program SR_AN_CTRL reg AN_EN bit to disable auto-neg */
+	ctrl = xpcs_read(xpcs_base, XLGPCS_SR_AN_CTRL);
+	ctrl &= ~XLGPCS_SR_AN_CTRL_AN_EN;
+	ret = xpcs_write_safety(osi_core, XLGPCS_SR_AN_CTRL, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+
+	/* 6 Wait for SR_PCS_STS1 reg RLU bit to set */
+	cond = COND_NOT_MET;
+	count = 0;
+	while (cond == COND_NOT_MET) {
+		if (count > retry) {
+			ret = -1;
+			break;
+		}
+		count++;
+		ctrl = xpcs_read(xpcs_base, XLGPCS_SR_PCS_STS1);
+		if ((ctrl & XLGPCS_SR_PCS_STS1_RLU) ==
+		    XLGPCS_SR_PCS_STS1_RLU) {
+			cond = COND_MET;
+		} else {
+			/* Maximum wait delay as per HW team is 10msec.
+			 * So add a loop for 1000 iterations with 1usec delay,
+			 * so that if check get satisfies before 1msec will come
+			 * out of loop and it can save some boot time
+			 */
+			osi_core->osd_ops.udelay(10U);
+		}
+	}
+fail:
+	return ret;
+}
+
+/**
  * @brief xpcs_uphy_lane_bring_up - Bring up UPHY Tx/Rx lanes
  *
  * Algorithm: This routine bring up the UPHY Tx/Rx lanes
@@ -697,7 +782,7 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 		ctrl = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_KR_CTRL);
 		ctrl &= ~(XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_MASK);
 
-		if (osi_core->uphy_gbe_mode == OSI_DISABLE) {
+		if (osi_core->uphy_gbe_mode == OSI_GBE_MODE_5G) {
 			ctrl |= XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_5G;
 		}
 	}
@@ -713,6 +798,129 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 	/* 5. Vendor specific software reset */
 	ret = vendor_specifc_sw_rst_usxgmii_an_en(osi_core);
 
+fail:
+	return ret;
+}
+
+
+/**
+ * @brief xlgpcs_init - XLGPCS initialization
+ *
+ * Algorithm: This routine initialize XLGPCS in USXMII mode.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
+{
+	void *xpcs_base = osi_core->xpcs_base;
+	nveu32_t retry = 1000;
+	nveu32_t count;
+	nveu32_t ctrl = 0;
+	nve32_t cond = COND_NOT_MET;
+	nve32_t ret = 0;
+	nveu32_t value = 0;
+
+	if (osi_core->xpcs_base == OSI_NULL) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "XLGPCS base is NULL", 0ULL);
+		ret = -1;
+		goto fail;
+	}
+
+	if (osi_core->pre_sil == 0x1U) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "Pre-silicon, skipping lane bring up", 0ULL);
+	} else {
+		/* Select XLGPCS in wrapper register */
+		if ((osi_core->mac == OSI_MAC_HW_MGBE_T26X) &&
+		    (osi_core->uphy_gbe_mode == OSI_UPHY_GBE_MODE_25G)) {
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
+					   T26X_XPCS_WRAP_CONFIG_0);
+			value |= OSI_BIT(0);
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_CONFIG_0);
+		}
+
+		if (xpcs_lane_bring_up(osi_core) < 0) {
+			ret = -1;
+			goto fail;
+		}
+	}
+	/* Switching to USXGMII Mode to 25G based on
+	 * XLGPCS programming guideline IAS section 7.1.3.2.2.1
+	 */
+	/* 1.Program SR_PCS_CTRL1 reg SS_5_2 bits */
+	ctrl = xpcs_read(xpcs_base, XLGPCS_SR_PCS_CTRL1);
+	ctrl &= ~XLGPCS_SR_PCS_CTRL1_SS5_2_MASK;
+	ctrl |= XLGPCS_SR_PCS_CTRL1_SS5_2;
+	ret = xpcs_write_safety(osi_core, XLGPCS_SR_PCS_CTRL1, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+	/* 2.Program SR_PCS_CTRL2 reg PCS_TYPE_SEL bits */
+	ctrl = xpcs_read(xpcs_base, XLGPCS_SR_PCS_CTRL2);
+	ctrl &= ~XLGPCS_SR_PCS_CTRL2_PCS_TYPE_SEL_MASK;
+	ctrl |= XLGPCS_SR_PCS_CTRL2_PCS_TYPE_SEL;
+	ret = xpcs_write_safety(osi_core, XLGPCS_SR_PCS_CTRL2, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+	/* 3.Program SR_PMA_CTRL2 reg PMA_TYPE bits */
+	ctrl = xpcs_read(xpcs_base, XLGPCS_SR_PMA_CTRL2);
+	ctrl &= ~XLGPCS_SR_PMA_CTRL2_PMA_TYPE_MASK;
+	ctrl |= XLGPCS_SR_PMA_CTRL2_PMA_TYPE;
+	ret = xpcs_write_safety(osi_core, XLGPCS_SR_PMA_CTRL2, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+	/* 4.NA [Program VR_PCS_MMD Digital Control3 reg EN_50G bit
+	 * to disable 50G] 25G mode selected for T264 */
+	/* 5.Program VR_PCS_MMD Digital Control3 reg CNS_EN bit to 1 to
+	 * enable 25G as per manual */
+	ctrl = xpcs_read(xpcs_base, XLGPCS_VR_PCS_DIG_CTRL3);
+	ctrl |= XLGPCS_VR_PCS_DIG_CTRL3_CNS_EN;
+	ret = xpcs_write_safety(osi_core, XLGPCS_VR_PCS_DIG_CTRL3, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+
+	/* 6.NA. Enable RS FEC */
+	/* 7. Enable BASE-R FEC */
+	ctrl = xpcs_read(xpcs_base, XLGPCS_SR_PMA_KR_FEC_CTRL);
+	ctrl |= XLGPCS_SR_PMA_KR_FEC_CTRL_FEC_EN;
+	ret = xpcs_write_safety(osi_core, XLGPCS_SR_PMA_KR_FEC_CTRL, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+
+	/* 8.NA, Configure PHY to 25G rate */
+	/* 9.Program VR_PCS_DIG_CTRL1 reg VR_RST bit */
+	ctrl = xpcs_read(xpcs_base, XLGPCS_VR_PCS_DIG_CTRL1);
+	ctrl |= XLGPCS_VR_PCS_DIG_CTRL1_VR_RST;
+	xpcs_write(xpcs_base, XLGPCS_VR_PCS_DIG_CTRL1, ctrl);
+	/* 10.Wait for VR_PCS_DIG_CTRL1 reg VR_RST bit to self clear */
+	count = 0;
+	while (cond == COND_NOT_MET) {
+		if (count > retry) {
+			ret = -1;
+			goto fail;
+		}
+		count++;
+		ctrl = xpcs_read(xpcs_base, XLGPCS_VR_PCS_DIG_CTRL1);
+		if ((ctrl & XLGPCS_VR_PCS_DIG_CTRL1_VR_RST) == 0U) {
+			cond = 0;
+		} else {
+			/* Maximum wait delay as per HW team is 10msec.
+			 * So add a loop for 1000 iterations with 1usec delay,
+			 * so that if check get satisfies before 1msec will come
+			 * out of loop and it can save some boot time
+			 */
+			osi_core->osd_ops.udelay(10U);
+		}
+	}
 fail:
 	return ret;
 }
@@ -781,4 +989,93 @@ nve32_t xpcs_eee(struct osi_core_priv_data *osi_core, nveu32_t en_dis)
 fail:
 	return ret;
 }
+
+/**
+ * @brief xlgpcs_eee - XLGPCS enable/disable EEE
+ *
+ * Algorithm: This routine update register related to EEE
+ * for XLGPCS.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ * @param[in] en_dis: enable - 1 or disable - 0
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+nve32_t xlgpcs_eee(struct osi_core_priv_data *osi_core, nveu32_t en_dis)
+{
+	void *xpcs_base = osi_core->xpcs_base;
+	nveu32_t val = 0x0U;
+	nve32_t ret = 0;
+	nveu32_t retry = 1000U;
+	nveu32_t count = 0;
+	nve32_t cond = COND_NOT_MET;
+
+	if ((en_dis != OSI_ENABLE) && (en_dis != OSI_DISABLE)) {
+		ret = -1;
+		goto fail;
+	}
+
+	if (xpcs_base == OSI_NULL) {
+		ret = -1;
+		goto fail;
+	}
+
+	if (en_dis == OSI_DISABLE) {
+		val = xpcs_read(xpcs_base, XLGPCS_VR_PCS_EEE_MCTRL);
+		val &= ~XPCS_VR_XS_PCS_EEE_MCTRL0_LTX_EN;
+		val &= ~XPCS_VR_XS_PCS_EEE_MCTRL0_LRX_EN;
+		ret = xpcs_write_safety(osi_core, XLGPCS_VR_PCS_EEE_MCTRL, val);
+		/* To disable EEE on TX side, the software must wait for
+		 * TX LPI to enter TX_ACTIVE state by reading
+		 * VR_PCS_DIG_STS Register
+		 */
+		while (cond == COND_NOT_MET) {
+			if (count > retry) {
+				ret = -1;
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					"EEE active state timeout!", 0ULL);
+				goto fail;
+			}
+			count++;
+			val = xpcs_read(xpcs_base, XLGPCS_VR_PCS_DIG_STS);
+			if ((val & XLGPCS_VR_PCS_DIG_STSLTXRX_STATE) == 0U) {
+				cond = 0;
+			} else {
+				osi_core->osd_ops.udelay(100U);
+			}
+		}
+	} else {
+
+		/* 1. Check if DWC_xlgpcs supports the EEE feature
+		 * by reading the SR_PCS_EEE_ABL reg. For 25G always enabled
+		 * by default
+		 */
+
+		/* 2. Program various timers used in the EEE mode depending on
+		 * the clk_eee_i clock frequency. default timers are same as
+		 * IEEE std clk_eee_i() is 108MHz. MULT_FACT_100NS = 9
+		 * because 9.2ns*10 = 92 which is between 80 and 120 this
+		 * leads to default setting match.
+		 */
+
+		/* 3. NA. [If FEC is enabled in the KR mode] */
+		/* 4. NA. [Enable fast_sim mode] */
+		/* 5. NA [If RS FEC is enabled, program AM interval and RS FEC]
+		 */
+		/* 6. NA [Fast wake is not enabled default] */
+		/* 7. Enable the EEE feature on Tx and Rx path */
+		val = xpcs_read(xpcs_base, XLGPCS_VR_PCS_EEE_MCTRL);
+		val |= (XPCS_VR_XS_PCS_EEE_MCTRL0_LTX_EN |
+			XPCS_VR_XS_PCS_EEE_MCTRL0_LRX_EN);
+		ret = xpcs_write_safety(osi_core, XLGPCS_VR_PCS_EEE_MCTRL, val);
+		if (ret != 0) {
+			goto fail;
+		}
+		/* 8. NA [If PMA service interface is XLAUI or CAUI] */
+	}
+fail:
+	return ret;
+}
+
 #endif /* !OSI_STRIPPED_LIB */

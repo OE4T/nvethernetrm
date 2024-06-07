@@ -47,6 +47,9 @@ struct osi_l3_l4_filter {
 		nveu32_t is_udp;
 		/** ipv6 (OSI_L3L4_ENABLE) or ipv4 (OSI_L3L4_DISABLE) */
 		nveu32_t is_ipv6;
+		/** match combined L3, L4 filters (OSI_TRUE) or ignore L3,L4
+		 * combined filter match (OSI_FALSE) */
+		nveu32_t is_l3l4_match_en;
 #endif /* !OSI_STRIPPED_LIB */
 		struct {
 			/** ipv4 address

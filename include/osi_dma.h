@@ -59,6 +59,7 @@
 #define OSI_ONE_MEGA_HZ		1000000U
 /** @brief MAX ULLONG value */
 #define OSI_ULLONG_MAX		(~0ULL)
+#define OSI_MSEC_PER_SEC	1000U
 
 /* Compiler hints for branch prediction */
 #define osi_likely(x)			__builtin_expect(!!(x), 1)
@@ -140,6 +141,9 @@
 /** IP CSUM packet */
 #define OSI_PKT_CX_IP_CSUM		OSI_BIT(12)
 /** @} */
+
+/** VDMA ID in TDESC0 **/
+#define OSI_PTP_VDMA_SHIFT		10U
 
 #ifndef OSI_STRIPPED_LIB
 /**
@@ -265,6 +269,7 @@
 #define OSI_DMA_IOCTL_CMD_STRUCTS_DUMP	2U
 #define OSI_DMA_IOCTL_CMD_DEBUG_INTR_CONFIG	3U
 #endif /* OSI_DEBUG */
+#define OSI_DMA_IOCTL_CMD_RX_RIIT_CONFIG	4U
 /** @} */
 
 /**
@@ -317,6 +322,16 @@ struct osi_pkt_err_stats {
 	nveu64_t frp_incomplete;
 };
 #endif /* !OSI_STRIPPED_LIB */
+
+/**
+ * @brief RX RIIT value for speed
+ */
+struct osi_rx_riit {
+	/** speed */
+	nveu32_t speed;
+	/** riit value */
+	nveu32_t riit;
+};
 
 /**
  * @brief Receive Descriptor
@@ -452,6 +467,8 @@ struct osi_tx_swcx {
 	 * Max value is NVETHERNETCL_PIF$UINT_MAX
 	 */
 	nveu32_t pktid;
+	/** VDMA id of packet for which TX packet sent for timestamp needed */
+	nveu32_t vdmaid;
 	/** dma channel number for osd use.
 	 *  Max value is NVETHERNETCL_PIF$OSI_EQOS_MAX_NUM_CHANS or
 	 *  NVETHERNETCL_PIF$OSI_MGBE_MAX_NUM_CHANS
@@ -539,6 +556,8 @@ struct osi_txdone_pkt_cx {
 	 *  Max value is NVETHERNETCL_PIF$UINT_MAX
 	 */
 	nveu32_t pktid;
+	/** Passing vdma id to map TX time to packet */
+	nveu32_t vdmaid;
 };
 
 /**
@@ -606,12 +625,12 @@ struct osi_tx_ring {
  * @brief osi_xtra_dma_stat_counters -  OSI DMA extra stats counters
  */
 struct osi_xtra_dma_stat_counters {
-	/** Per Q TX packet count */
-	nveu64_t q_tx_pkt_n[OSI_MGBE_MAX_NUM_QUEUES];
-	/** Per Q RX packet count */
-	nveu64_t q_rx_pkt_n[OSI_MGBE_MAX_NUM_QUEUES];
-	/** Per Q TX complete call count */
-	nveu64_t tx_clean_n[OSI_MGBE_MAX_NUM_QUEUES];
+	/** Per chan TX packet count */
+	nveu64_t chan_tx_pkt_n[OSI_MGBE_MAX_NUM_CHANS];
+	/** Per chan RX packet count */
+	nveu64_t chan_rx_pkt_n[OSI_MGBE_MAX_NUM_CHANS];
+	/** Per chan TX complete call count */
+	nveu64_t tx_clean_n[OSI_MGBE_MAX_NUM_CHANS];
 	/** Total number of tx packets count */
 	nveu64_t tx_pkt_n;
 	/** Total number of rx packet count */
@@ -657,7 +676,7 @@ struct osd_dma_ops {
 #endif /* OSI_DEBUG */
 };
 
-#ifdef OSI_DEBUG
+//#ifdef OSI_DEBUG
 /**
  * @brief The OSI DMA IOCTL data structure.
  */
@@ -667,7 +686,7 @@ struct osi_dma_ioctl_data {
 	/** IOCTL command argument */
 	nveu32_t arg_u32;
 };
-#endif /* OSI_DEBUG */
+//#endif /* OSI_DEBUG */
 
 /**
  * @brief The OSI DMA private data structure.
@@ -721,6 +740,12 @@ struct osi_dma_priv_data {
 	 *  NVETHERNETCL_PIF$OSI_DISABLE
 	 */
 	nveu32_t use_riwt;
+	/** Receive Interrupt Idle Timer in nsec */
+	struct osi_rx_riit rx_riit[OSI_MGBE_MAX_NUM_RIIT];
+	/** num of rx riit configs for different speeds */
+	nveu32_t num_of_riit;
+	/** Flag which decides riit is enabled(1) or disabled(0) */
+	nveu32_t use_riit;
 	/** Max no of pkts to be received before triggering Rx interrupt.
 	 * Max value is NVETHERNETCL_PIF$UINT_MAX
 	 */
@@ -772,9 +797,9 @@ struct osi_dma_priv_data {
 	 * NVETHENETCL_PIF$OSI_PTP_SYNC_TWOSTEP - two step mode
 	 */
 	nveu32_t ptp_flag;
-#ifdef OSI_DEBUG
 	/** OSI DMA IOCTL data */
 	struct osi_dma_ioctl_data ioctl_data;
+#ifdef OSI_DEBUG
 	/** Flag to enable/disable descriptor dump */
 	nveu32_t enable_desc_dump;
 #endif /* OSI_DEBUG */
@@ -1444,7 +1469,7 @@ nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma);
 nve32_t osi_handle_dma_intr(struct osi_dma_priv_data *osi_dma,
 			    nveu32_t chan, nveu32_t tx_rx, nveu32_t en_dis);
 
-#ifdef OSI_DEBUG
+//#ifdef OSI_DEBUG
 /**
  * @brief
  * Description: OSI DMA IOCTL
@@ -1468,7 +1493,7 @@ nve32_t osi_handle_dma_intr(struct osi_dma_priv_data *osi_dma,
  * @retval -1 on failure - invalid ioctl command within osi data structure
  */
 nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma);
-#endif /* OSI_DEBUG */
+//#endif /* OSI_DEBUG */
 #ifndef OSI_STRIPPED_LIB
 /**
  * @brief

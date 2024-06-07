@@ -37,13 +37,6 @@
 #define RETRY_DELAY	1U
 /** @} */
 
-/** MAC version type for EQOS version previous to 5.30 */
-#define MAC_CORE_VER_TYPE_EQOS		0U
-/** MAC version type for EQOS version 5.30 */
-#define MAC_CORE_VER_TYPE_EQOS_5_30	1U
-/** MAC version type for MGBE IP */
-#define MAC_CORE_VER_TYPE_MGBE		2U
-
 /**
  * @addtogroup MGBE PBL settings.
  *
@@ -54,12 +47,23 @@
 #define MGBE_TXQ_SIZE		131072U
 /* Rx Queue size is 192KB */
 #define MGBE_RXQ_SIZE		196608U
-/* MAX PBL value */
-#define MGBE_DMA_CHX_MAX_PBL		256U
-#define MGBE_DMA_CHX_MAX_PBL_VAL	0x200000U
+/* uFPGA config Tx Queue size is 64KB */
+#define MGBE_TXQ_SIZE_UFPGA	65536U
+
+/* PBL values */
+#define MGBE_DMA_CHX_MAX_PBL	32U
+#define MGBE_DMA_CHX_PBL_16	16U
+#define MGBE_DMA_CHX_PBL_8	8U
+#define MGBE_DMA_CHX_PBL_4	4U
+#define MGBE_DMA_CHX_PBL_1	1U
 /* AXI Data width */
-#define MGBE_AXI_DATAWIDTH		128U
+#define MGBE_AXI_DATAWIDTH	128U
 /** @} */
+
+/**
+ * @brief MTL Q size depth helper macro
+ */
+#define Q_SZ_DEPTH(x)		(((x) * 1024U) / (MGBE_AXI_DATAWIDTH / 8U))
 
 /**
  * @brief osi_readl_poll_timeout - Periodically poll an address until
@@ -254,6 +258,7 @@ static inline void osi_writela(OSI_UNUSED void *priv, nveu32_t val, void *addr)
 /**
  * @brief validate_mac_ver_update_chans - Validates mac version and update chan
  *
+ * @param[in] mac: MAC HW type.
  * @param[in] mac_ver: MAC version read.
  * @param[out] num_max_chans: Maximum channel number.
  * @param[out] l_mac_ver: local mac version.
@@ -269,10 +274,16 @@ static inline void osi_writela(OSI_UNUSED void *priv, nveu32_t val, void *addr)
  * @retval 0 - for not Valid MAC
  * @retval 1 - for Valid MAC
  */
-static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac_ver,
+static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac,
+						    nveu32_t mac_ver,
 						    nveu32_t *num_max_chans,
 						    nveu32_t *l_mac_ver)
 {
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 	nve32_t ret;
 
 	switch (mac_ver) {
@@ -288,14 +299,20 @@ static inline nve32_t validate_mac_ver_update_chans(nveu32_t mac_ver,
 		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS_5_30;
 		ret = 1;
 		break;
+	case OSI_EQOS_MAC_5_40:
+		*num_max_chans = OSI_EQOS_MAX_NUM_CHANS;
+		*l_mac_ver = MAC_CORE_VER_TYPE_EQOS_5_40;
+		ret = 1;
+		break;
 	case OSI_MGBE_MAC_3_10:
 	//TBD: T264 uFPGA reports mac version 3.2
 	case OSI_MGBE_MAC_3_20:
+	case OSI_MGBE_MAC_4_20:
 #ifndef OSI_STRIPPED_LIB
 	case OSI_MGBE_MAC_4_00:
 #endif /* !OSI_STRIPPED_LIB */
 		//TBD: T264 number of dma channels?
-		*num_max_chans = OSI_MGBE_MAX_NUM_CHANS;
+		*num_max_chans = max_dma_chan[mac];
 		*l_mac_ver = MAC_CORE_VER_TYPE_MGBE;
 		ret = 1;
 		break;
@@ -375,4 +392,46 @@ static inline nve32_t osi_memcmp(const void *dest, const void *src, nve32_t n)
 fail:
 	return ret;
 }
+
+/**
+ * @brief osi_valid_pbl_value - returns the allowed pbl value.
+ * @note
+ * Algorithm:
+ *  - Check the pbl range and return allowed pbl value
+ *
+ * @param[in] pbl: Calculated PBL value
+ *
+ * @note Input parameter should be only nveu32_t type
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ *
+ * @retval allowed pbl value
+ */
+static inline nveu32_t osi_valid_pbl_value(nveu32_t pbl_value)
+{
+	nveu32_t allowed_pbl;
+	nveu32_t pbl;
+
+	/* 8xPBL mode is set */
+	pbl = pbl_value / 8U;
+
+	if (pbl >= MGBE_DMA_CHX_MAX_PBL) {
+		allowed_pbl = MGBE_DMA_CHX_MAX_PBL;
+	} else if (pbl >= MGBE_DMA_CHX_PBL_16) {
+		allowed_pbl = MGBE_DMA_CHX_PBL_16;
+	} else if (pbl >= MGBE_DMA_CHX_PBL_8) {
+		allowed_pbl = MGBE_DMA_CHX_PBL_8;
+	} else if (pbl >= MGBE_DMA_CHX_PBL_4) {
+		allowed_pbl = MGBE_DMA_CHX_PBL_4;
+	} else {
+		allowed_pbl = MGBE_DMA_CHX_PBL_1;
+	}
+
+	return allowed_pbl;
+}
+
 #endif

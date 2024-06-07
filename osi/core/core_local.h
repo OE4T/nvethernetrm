@@ -229,6 +229,12 @@ struct core_ops {
 				    struct osi_core_frp_data *const data);
 	/** Called to update FRP NVE and  */
 	void (*update_frp_nve)(struct osi_core_priv_data *const osi_core, const nveu32_t nve);
+	/** Called to get RCHList index */
+	nve32_t (*get_rchlist_index)(struct osi_core_priv_data *const osi_core,
+				     nveu8_t const *mac_addr);
+	/** Called to free RCHLIST index */
+	void (*free_rchlist_index)(struct osi_core_priv_data *const osi_core,
+				   const nve32_t rch_indx);
 #ifdef HSI_SUPPORT
 	/** Interface function called to initialize HSI */
 	nve32_t (*core_hsi_configure)(struct osi_core_priv_data *const osi_core,
@@ -316,7 +322,7 @@ struct core_l2 {
 struct dynamic_cfg {
 	nveu32_t flags;
 	/** L3_L4 filters */
-	struct osi_l3_l4_filter l3_l4[OSI_MGBE_MAX_L3_L4_FILTER];
+	struct osi_l3_l4_filter l3_l4[OSI_MGBE_MAX_L3_L4_FILTER_T264];
 	/** flow control */
 	nveu32_t flow_ctrl;
 	/** AVB */

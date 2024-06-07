@@ -217,6 +217,7 @@ typedef my_lint_64		nvel64_t;
 #define EQOS_MAX_MAC_5_3_ADDRESS_FILTER	32U
 #define EQOS_MAX_L3_L4_FILTER		8U
 #define OSI_MGBE_MAX_MAC_ADDRESS_FILTER	32U
+#define OSI_MGBE_MAX_MAC_ADDRESS_FILTER_T26X	48U
 #define OSI_DA_MATCH			0U
 #ifndef OSI_STRIPPED_LIB
 #define OSI_INV_MATCH			1U
@@ -284,9 +285,18 @@ typedef my_lint_64		nvel64_t;
  * @brief Ethernet PHY Interface Modes
  */
 #define OSI_XFI_MODE_10G	0U
-#define OSI_XFI_MODE_5G	1U
+#define OSI_XFI_MODE_5G		1U
 #define OSI_USXGMII_MODE_10G	2U
 #define OSI_USXGMII_MODE_5G	3U
+#define OSI_XAUI_MODE_25G	4U
+/**
+ * @brief Ethernet UPHY GBE Modes
+ */
+#define OSI_GBE_MODE_5G		0U
+#define OSI_GBE_MODE_10G	1U
+#define OSI_UPHY_GBE_MODE_25G	2U
+#define OSI_GBE_MODE_1G		3U
+#define OSI_GBE_MODE_2_5G	4U
 
 /**
  * @addtogroup IOCTL OPS MACROS
@@ -502,7 +512,8 @@ typedef my_lint_64		nvel64_t;
 
 #define VLAN_NUM_VID		4096U
 #define OSI_DELAY_1000US	1000U
-
+#define OSI_DELAY_1US		1U
+#define RCHLIST_SIZE		48U
 /**
  * @addtogroup PTP PTP related information
  *
@@ -740,7 +751,18 @@ struct osi_filter {
 	/** src_dest: SA(1) or DA(0) */
 	nveu32_t src_dest;
 	/**  indicates one hot encoded DMA receive channels to program */
-	nveu32_t dma_chansel;
+	nveu64_t dma_chansel;
+	/** Indicates packet duplication enable(1) disable (0) */
+	nveu32_t pkt_dup;
+};
+
+/**
+ * @brief OSI core structure for RCHlist
+ */
+struct rchlist_index {
+	nveu8_t mac_address[OSI_ETH_ALEN];
+	nveu32_t in_use;
+	nveu64_t dch;
 };
 
 #ifndef OSI_STRIPPED_LIB
@@ -1300,6 +1322,17 @@ struct osi_macsec_sc_info {
 	/** flag indicating the prosition of vlan tag
 	 * valid values are either 0(vlan not in clear) or 1(vlan in clear) */
 	nveu8_t vlan_in_clear;
+        /** Indicates 1 bit for encription configuration
+        0: Indicates disabled
+        1: Indicates enabled
+        */
+        nveu8_t encrypt;
+        /** Indicates 2 bit for confidentiality offset configuration
+        0: Indicates offset as 0
+        1: Indicates offset as 30
+        2: Indicates offset as 50
+        */
+        nveu8_t conf_offset;
 };
 
 /**
@@ -1408,8 +1441,12 @@ struct osi_core_frp_data {
 	/** Entry OK Index - Next Instruction
 	 * valid values are from 0 to 0xFF */
 	nveu8_t ok_index;
+	/** Entry dcht */
+	nveu8_t dcht;
 	/** Entry DMA Channel selection (1-bit for each channel) */
-	nveu32_t dma_chsel;
+	nveu64_t dma_chsel;
+	/** Entry RChlist index */
+	nve32_t rchlist_indx;
 };
 
 /**
@@ -1435,6 +1472,8 @@ struct osi_core_tx_ts {
 	/** Packet ID for corresponding timestamp
 	 * valid values are from 1 to 0x3FF*/
 	nveu32_t pkt_id;
+	/** vdma ID for corresponding timestamp */
+	nveu32_t vdma_id;
 	/** Time in seconds*/
 	nveu32_t sec;
 	/** Time in nano seconds */
@@ -1656,6 +1695,8 @@ struct osi_core_priv_data {
 	 * valid values are NVETHERNETRM_PIF$OSI_MAC_HW_EQOS and
 	 * NVETHERNETRM_PIF$OSI_MAC_HW_MGBE*/
 	nveu32_t mac;
+	/** MACSEC HW type based on DT compatible */
+	nveu32_t macsec;
 	/** MAC version
 	 * valid values are NVETHERNETRM_PIF$OSI_EQOS_MAC_5_00,
 	 * NVETHERNETRM_PIF$OSI_EQOS_MAC_5_30
@@ -1731,7 +1772,7 @@ struct osi_core_priv_data {
 #if !defined(L3L4_WILDCARD_FILTER)
 	/** L3L4 filter bit bask, set index corresponding bit for
 	 * filter if filter enabled */
-	nveu32_t l3l4_filter_bitmask;
+	nveu64_t l3l4_filter_bitmask;
 #endif /* !L3L4_WILDCARD_FILTER */
 	/** Flag which decides virtualization is enabled(1) or disabled(0) */
 	nveu32_t use_virtualization;
@@ -1739,7 +1780,7 @@ struct osi_core_priv_data {
 	struct osi_hw_features *hw_feature;
 	/** MC packets Multiple DMA channel selection flags */
 	nveu32_t mc_dmasel;
-	/** UPHY GBE mode (1 for 10G, 0 for 5G) */
+	/** UPHY GBE mode (2 for 25F, 1 for 10G, 0 for 5G) */
 	nveu32_t uphy_gbe_mode;
 	/** number of PDMA's */
 	nveu32_t num_of_pdma;
@@ -1754,7 +1795,8 @@ struct osi_core_priv_data {
 	/** number of VM IRQ's
 	 * Fixed value filled by NvEthernet unit as 4*/
 	nveu32_t num_vm_irqs;
-	/** PHY interface mode (0/1 for XFI 10/5G, 2/3 for USXGMII 10/5) */
+	/** PHY interface mode (0/1 for XFI 10/5G, 2/3 for USXGMII 10/5)
+	 * (4 for XFI 25G) (5 for USXGMII 25G */
 	nveu32_t phy_iface_mode;
 	/** MGBE MAC instance ID's
 	 * valid values are from 0 to 4 
@@ -1774,6 +1816,8 @@ struct osi_core_priv_data {
 #endif
 	/** pre-silicon flag */
 	nveu32_t pre_sil;
+	/** rCHlist bookkeeping **/
+	struct rchlist_index rch_index[RCHLIST_SIZE];
 };
 
 /**

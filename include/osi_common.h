@@ -51,6 +51,8 @@
 #define OSI_LOCKED		0x1U
 /** @brief Number of Nano seconds per second */
 #define OSI_NSEC_PER_SEC	1000000000ULL
+#define OSI_MGBE_MAX_RX_RIIT_NSEC	17500U
+#define OSI_MGBE_MIN_RX_RIIT_NSEC	535U
 #ifndef OSI_STRIPPED_LIB
 #define OSI_MAX_RX_COALESCE_USEC	1020U
 #define OSI_EQOS_MIN_RX_COALESCE_USEC	5U
@@ -208,11 +210,14 @@
 #define OSI_EQOS_MAX_NUM_QUEUES		8U
 /** @brief Maximum number of L3L4 filters supported */
 #define OSI_MGBE_MAX_L3_L4_FILTER	8U
+/** @brief Maximum number of L3L4 filters supported for T264 */
+#define OSI_MGBE_MAX_L3_L4_FILTER_T264	48U
 /**
  * @brief Maximum number of channels in MGBE
  */
-//TBD: T264, NET04 supports only 10 VDMA
-#define OSI_MGBE_MAX_NUM_CHANS		10U
+//TBD: T264, NET05 supports only 20 VDMA, change to 48 later
+#define OSI_MGBE_MAX_NUM_CHANS		20U
+#define OSI_MGBE_T23X_MAX_NUM_CHANS	10U
 /**
  * @brief Maximum number of PDMA channels in MGBE
  */
@@ -220,6 +225,8 @@
 /** @brief Maximum number of queues in MGBE */
 #define OSI_MGBE_MAX_NUM_QUEUES		10U
 #define OSI_EQOS_XP_MAX_CHANS		4U
+/* max riit DT configs for supported speeds */
+#define OSI_MGBE_MAX_NUM_RIIT		4U
 
 /**
  * @brief Maximum number of Secure Channels supported
@@ -241,6 +248,15 @@
 /** @brief flag indicating MGBE MAC on T26X */
 #define OSI_MAC_HW_MGBE_T26X	2U
 
+/** MAC version type for EQOS version previous to 5.30 */
+#define MAC_CORE_VER_TYPE_EQOS		0U
+/** MAC version type for EQOS version 5.30 */
+#define MAC_CORE_VER_TYPE_EQOS_5_30	1U
+/** MAC version type for MGBE IP */
+#define MAC_CORE_VER_TYPE_MGBE		2U
+/** MAC version type for T26x EQOS version 5.40 */
+#define MAC_CORE_VER_TYPE_EQOS_5_40	3U
+
 #define OSI_NULL                ((void *)0)
 /** Enable Flag */
 #define OSI_ENABLE		1U
@@ -252,6 +268,7 @@
 #define OSI_H_ENABLE		(~OSI_H_DISABLE)
 
 #define OSI_BIT(nr)             ((nveu32_t)1 << (((nveu32_t)nr) & 0x1FU))
+#define OSI_BIT_64(nr)          ((nveu64_t)1 << (nr))
 
 #ifndef OSI_STRIPPED_LIB
 #define OSI_MGBE_MAC_3_00	0x30U
@@ -264,10 +281,11 @@
 #define OSI_EQOS_MAC_5_00       0x50U
 /** @brief EQOS MAC version Orin */
 #define OSI_EQOS_MAC_5_30       0x53U
+#define OSI_EQOS_MAC_5_40       0x54U
 /** @brief MGBE MAC version Orin */
 #define OSI_MGBE_MAC_3_10	0x31U
-//TBD: T264 NET04 version, update it later
 #define OSI_MGBE_MAC_3_20	0x32U
+#define OSI_MGBE_MAC_4_20	0x42U
 
 /**
  * @brief Maximum number of VM IRQs

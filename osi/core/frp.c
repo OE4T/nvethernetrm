@@ -200,7 +200,7 @@ static nve32_t validate_frp_args(struct osi_core_priv_data *const osi_core,
 				 OSI_UNUSED nveu8_t pos,
 				 nveu32_t *req_entries)
 {
-	nveu32_t dma_sel_val[OSI_MAX_MAC_IP_TYPES] = {0xFFU, 0x3FFU, 0x3FFU};
+	nveu64_t dma_sel_val[OSI_MAX_MAC_IP_TYPES] = {0xFFU, 0x3FFU, 0xFFFFFFFFFFFFU};
 	nve32_t ret = 0;
 	(void)pos;
 
@@ -253,7 +253,9 @@ done:
  * @param[in] offset: Actual match data offset position.
  * @param[in] filter_mode: Filter mode from FRP command.
  * @param[in] next_frp_id: FRP ID to link this ID.
- * @param[in] dma_sel: Indicate the DMA Channel Number (1-bit for each).
+ * @param[in] dcht: DMA Channel Selection Type.
+ * @param[in] rchlist_indx: Receive Channel list index.
+ *
  *
  * @retval 0 on success.
  * @retval -1 on failure.
@@ -266,7 +268,9 @@ static nve32_t frp_entry_add(struct osi_core_priv_data *const osi_core,
 			     nveu8_t offset,
 			     nveu8_t filter_mode,
 			     nve32_t next_frp_id,
-			     nveu32_t dma_sel)
+			     nveu32_t dma_sel,
+			     nveu8_t dcht,
+			     nve32_t rchlist_indx)
 {
 	struct osi_core_frp_entry *entry = OSI_NULL;
 	struct osi_core_frp_data *data = OSI_NULL;
@@ -340,6 +344,9 @@ static nve32_t frp_entry_add(struct osi_core_priv_data *const osi_core,
 		/* Fill DCH */
 		data->dma_chsel = dma_sel;
 
+		/* Fill dcht & rchlist_indx */
+		data->rchlist_indx = rchlist_indx;
+		data->dcht = dcht;
 		/* Check for the remain data and update FRP flags */
 		if (md_pos < length) {
 			/* Reset AF, RF and set NIC, OKI */
@@ -456,13 +463,15 @@ frp_hw_write_error:
  * @param[in] osi_core: OSI core private data structure.
  * @param[in] cmd: OSI FRP command structure.
  * @param[in] pos: Pointer to the FRP entry position.
+ * @param[in] rchlist_indx: Index to the rchlist.
  *
  * @retval 0 on success.
  * @retval -1 on failure.
  */
 static nve32_t frp_add_proto(struct osi_core_priv_data *const osi_core,
 			     struct osi_core_frp_cmd *const cmd,
-			     nveu8_t *pos)
+			     nveu8_t *pos,
+			     nve32_t rchlist_indx)
 {
 	nve32_t ret, proto_oki;
 	nveu8_t proto_entry = OSI_DISABLE;
@@ -538,7 +547,8 @@ static nve32_t frp_add_proto(struct osi_core_priv_data *const osi_core,
 		ret = frp_entry_add(osi_core, cmd->frp_id, *pos,
 				    proto_match, proto_lendth,
 				    proto_offset, OSI_FRP_MODE_LINK,
-				    proto_oki, cmd->dma_sel);
+				    proto_oki, cmd->dma_sel, cmd->dcht,
+				    rchlist_indx);
 		if (ret < 0) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				"Fail add FRP protocol entry\n",
@@ -627,6 +637,7 @@ static nve32_t frp_delete(struct osi_core_priv_data *const osi_core,
 	nveu8_t i = 0U, pos = 0U, count = 0U;
 	nve32_t frp_id = cmd->frp_id;
 	nveu32_t frp_cnt = osi_core->frp_cnt;
+	struct osi_core_frp_entry *entry = OSI_NULL;
 
 	/* Check for FRP entries  */
 	if (frp_cnt == 0U) {
@@ -645,6 +656,11 @@ static nve32_t frp_delete(struct osi_core_priv_data *const osi_core,
 		ret = -1;
 		goto done;
 	}
+
+	/* Free the RCHLIST index */
+	entry = &osi_core->frp_table[frp_id];
+	ops_p->free_rchlist_index(osi_core,
+				 entry->data.rchlist_indx);
 
 	/* Update the frp_table entry */
 	osi_memset(&osi_core->frp_table[pos], 0U,
@@ -692,6 +708,8 @@ static nve32_t frp_update(struct osi_core_priv_data *const osi_core,
 	nveu8_t pos = 0U, count = 0U, req = 0U;
 	nveu16_t req_16bit = 0U;
 	nve32_t frp_id = cmd->frp_id;
+	struct osi_core_frp_entry *entry = OSI_NULL;
+	nve32_t rchlist_indx = 0;
 
 	/* Validate given frp_id */
 	if (frp_entry_find(osi_core, frp_id, &pos, &count) < 0) {
@@ -701,6 +719,9 @@ static nve32_t frp_update(struct osi_core_priv_data *const osi_core,
 		ret = -1;
 		goto done;
 	}
+
+	entry = &osi_core->frp_table[frp_id];
+	rchlist_indx = entry->data.rchlist_indx;
 
 	/* Parse match type and update command offset */
 	frp_parse_mtype(cmd);
@@ -732,8 +753,8 @@ static nve32_t frp_update(struct osi_core_priv_data *const osi_core,
 		goto done;
 	}
 
-	/* Process and update FRP Command Protocal Entry */
-	ret = frp_add_proto(osi_core, cmd, &pos);
+	/* Process and update FRP Command Protocol Entry */
+	ret = frp_add_proto(osi_core, cmd, &pos, rchlist_indx);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			"Fail to parse match type\n",
@@ -745,7 +766,8 @@ static nve32_t frp_update(struct osi_core_priv_data *const osi_core,
 	ret = frp_entry_add(osi_core, frp_id, pos,
 			    cmd->match, cmd->match_length,
 			    cmd->offset, cmd->filter_mode,
-			    cmd->next_frp_id, cmd->dma_sel);
+			    cmd->next_frp_id, cmd->dma_sel,
+			    cmd->dcht, rchlist_indx);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			"Fail to update FRP entry\n",
@@ -784,6 +806,7 @@ static nve32_t frp_add(struct osi_core_priv_data *const osi_core,
 	nve32_t ret;
 	nveu8_t pos = 0U, count = 0U;
 	nve32_t frp_id = cmd->frp_id;
+	nve32_t rchlist_indx = 0;
 
 	/* Check for MAX FRP entries */
 	if (osi_core->frp_cnt >= OSI_FRP_MAX_ENTRY) {
@@ -807,8 +830,20 @@ static nve32_t frp_add(struct osi_core_priv_data *const osi_core,
 	/* Parse match type and update command offset */
 	frp_parse_mtype(cmd);
 
+	if (cmd->dcht == OSI_ENABLE) {
+		/* Find rchlist Free index */
+		rchlist_indx = ops_p->get_rchlist_index(osi_core, OSI_NULL);
+		if (rchlist_indx < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				"Fail to get rchlist index\n",
+				OSI_NONE);
+			goto done;
+		}
+		osi_core->rch_index[rchlist_indx/*ret*/].in_use = OSI_ENABLE;
+	}
+
 	/* Process and add FRP Command Protocal Entry */
-	ret = frp_add_proto(osi_core, cmd, (nveu8_t *)&osi_core->frp_cnt);
+	ret = frp_add_proto(osi_core, cmd, (nveu8_t *)&osi_core->frp_cnt, rchlist_indx);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			"Fail to parse match type\n",
@@ -820,7 +855,8 @@ static nve32_t frp_add(struct osi_core_priv_data *const osi_core,
 	ret = frp_entry_add(osi_core, frp_id, (nveu8_t)(osi_core->frp_cnt & 0xFFU),
 			    cmd->match, cmd->match_length,
 			    cmd->offset, cmd->filter_mode,
-			    cmd->next_frp_id, cmd->dma_sel);
+			    cmd->next_frp_id, cmd->dma_sel,
+			    cmd->dcht, rchlist_indx);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			"Fail to add FRP entry\n",
