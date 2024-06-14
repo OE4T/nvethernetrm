@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2018-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -53,7 +53,7 @@ struct osi_macsec_mmc_counters {
 	/** This counter provides the number of late packets
 	 *received PN < lowest PN
 	 * valid values are between 0 and UINT64_MAX */
-	nveul64_t rx_pkts_late[OSI_MACSEC_SC_INDEX_MAX];
+	nveu32_t rx_pkts_late[OSI_MACSEC_SC_INDEX_MAX];
 	/** This counter provides the number of overrun packets
 	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t rx_pkts_overrun;
@@ -64,19 +64,19 @@ struct osi_macsec_mmc_counters {
 	nveul64_t rx_octets_decrypted;
 	/** This counter provides the number not valid packets
 	 * valid values are between 0 and UINT64_MAX */
-	nveul64_t rx_pkts_not_valid[OSI_MACSEC_SC_INDEX_MAX];
+	nveu32_t rx_pkts_not_valid[OSI_MACSEC_SC_INDEX_MAX];
 	/** This counter provides the number of invalid packets
 	 * valid values are between 0 and UINT64_MAX */
-	nveul64_t in_pkts_invalid[OSI_MACSEC_SC_INDEX_MAX];
+	nveu32_t in_pkts_invalid[OSI_MACSEC_SC_INDEX_MAX];
 	/** This counter provides the number of in packet delayed
 	 * valid values are between 0 and UINT64_MAX */
-	nveul64_t rx_pkts_delayed[OSI_MACSEC_SC_INDEX_MAX];
+	nveu32_t rx_pkts_delayed[OSI_MACSEC_SC_INDEX_MAX];
 	/** This counter provides the number of in packets un checked
 	 * valid values are between 0 and UINT64_MAX */
-	nveul64_t rx_pkts_unchecked[OSI_MACSEC_SC_INDEX_MAX];
+	nveu32_t rx_pkts_unchecked[OSI_MACSEC_SC_INDEX_MAX];
 	/** This counter provides the number of in packets ok
 	 * valid values are between 0 and UINT64_MAX */
-	nveul64_t rx_pkts_ok[OSI_MACSEC_SC_INDEX_MAX];
+	nveu32_t rx_pkts_ok[OSI_MACSEC_SC_INDEX_MAX];
 	/** This counter provides the number of out packets untaged
 	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t tx_pkts_untaged;
@@ -85,9 +85,9 @@ struct osi_macsec_mmc_counters {
 	nveul64_t tx_pkts_too_long;
 	/** This counter provides the number of out packets protected
 	 * valid values are between 0 and UINT64_MAX */
-	nveul64_t tx_pkts_protected[OSI_MACSEC_SC_INDEX_MAX];
+	nveu32_t tx_pkts_protected[OSI_MACSEC_SC_INDEX_MAX];
 	/** This counter provides the number of out packets encrypted */
-	nveul64_t tx_pkts_encrypted[OSI_MACSEC_SC_INDEX_MAX];
+	nveu32_t tx_pkts_encrypted[OSI_MACSEC_SC_INDEX_MAX];
 	/** This counter provides the number of out octets protected/
 	 * valid values are between 0 and UINT64_MAX */
 	nveul64_t tx_octets_protected;
