@@ -1199,8 +1199,15 @@ static nve32_t eqos_core_init(struct osi_core_priv_data *const osi_core)
 		    (nveu8_t *)osi_core->base + EQOS_MMC_CNTRL);
 
 #ifndef OSI_STRIPPED_LIB
-	/* Configure ASID */
-	eqos_configure_asid(osi_core);
+	if (osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
+		/* Configure ASID for T234 EQOS
+		 * Keep the on reset value for T264 EQOS
+		 * which is zero since EQOS SID is 0x160
+		 * and driver needs to program lower 8 bit values
+		 * which will be zero for T264
+		 */
+		eqos_configure_asid(osi_core);
+	}
 
 	/* Mapping MTL Rx queue and DMA Rx channel */
 	if (osi_core->dcs_en == OSI_ENABLE) {
