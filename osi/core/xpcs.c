@@ -484,6 +484,10 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 		T26X_XPCS_WRAP_UPHY_HW_INIT_CTRL
 	};
 
+	if ((osi_core->mac == OSI_MAC_HW_MGBE_T26X) || (osi_core->mac_ver == OSI_EQOS_MAC_5_40)) {
+		retry = 1000U;
+	}
+
 	val = osi_readla(osi_core,
 			 (nveu8_t *)xpcs_base + uphy_status_reg[osi_core->mac]);
 	if ((lane_init_en == XPCS_WRAP_UPHY_HW_INIT_CTRL_TX_EN) &&
