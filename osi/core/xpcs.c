@@ -110,6 +110,7 @@ fail:
  * @retval 0 on success
  * @retval -1 on failure.
  */
+#if 0  // FIXME: Not used for SLT EQOS bring up
 static inline nve32_t eqos_xpcs_poll_for_an_complete(
 				struct osi_core_priv_data *osi_core,
 				nveu32_t *an_status)
@@ -158,6 +159,7 @@ static inline nve32_t eqos_xpcs_poll_for_an_complete(
 fail:
 	return ret;
 }
+#endif
 
 /**
  * @brief xpcs_set_speed - Set speed at XPCS
@@ -232,29 +234,30 @@ static nve32_t xpcs_poll_flt_rx_link(struct osi_core_priv_data *osi_core)
 		}
 	}
 
-	/* poll for FLT bit to 0 */
-	cond = COND_NOT_MET;
-	count = 0;
-	while (cond == COND_NOT_MET) {
-		if (count > retry) {
-			ret = -1;
-			goto fail;
-		}
+	//FIXME: Causes lane bringup failure for SLT MGBE
+	if (osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
+			/* poll for FLT bit to 0 */
+			cond = COND_NOT_MET;
+			count = 0;
+			while (cond == COND_NOT_MET) {
+				if (count > retry) {
+					ret = -1;
+					goto fail;
+				}
 
-		count++;
+				count++;
 
-		ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_STS1);
-		if ((ctrl & XPCS_SR_XS_PCS_STS1_FLT) == 0U) {
-			cond = COND_MET;
-		} else {
+				ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_STS1);
+				if ((ctrl & XPCS_SR_XS_PCS_STS1_FLT) == 0U) {
+					cond = COND_MET;
+				} else {
 			/* Maximum wait delay as 1s */
 			osi_core->osd_ops.udelay(1000U);
+			}
 		}
 	}
-
 	/* delay 10ms to wait the staus propagate to MAC block */
 	osi_core->osd_ops.udelay(10000U);
-
 fail:
 	return ret;
 }
@@ -270,6 +273,7 @@ fail:
  * @retval 0 on success
  * @retval -1 on failure
  */
+#if 0 //FIXME: Not used for SLT EQOS bringup
 static inline nve32_t eqos_xpcs_set_speed(struct osi_core_priv_data *osi_core,
 				  nveu32_t status)
 {
@@ -300,7 +304,7 @@ static inline nve32_t eqos_xpcs_set_speed(struct osi_core_priv_data *osi_core,
 	ret = xpcs_write_safety(osi_core, XPCS_SR_MII_CTRL, ctrl);
 	return ret;
 }
-
+#endif
 
 /**
  * @brief xpcs_start - Start XPCS
@@ -791,7 +795,7 @@ fail:
 nve32_t eqos_xpcs_init(struct osi_core_priv_data *osi_core)
 {
 	void *xpcs_base = osi_core->xpcs_base;
-	nveu32_t an_status = 0;
+//	nveu32_t an_status = 0;
 	nveu32_t retry = 1000;
 	nveu32_t count;
 	nveu32_t ctrl = 0;
@@ -845,6 +849,7 @@ nve32_t eqos_xpcs_init(struct osi_core_priv_data *osi_core)
 		}
 	}
 
+#if 0 // FIXME: Re-visit below steps, not required for SLT EQOS
 	ctrl = xpcs_read(xpcs_base, XPCS_VS_MII_MMD_VR_MII_AN_CTRL_0);
 	ctrl |= (XPCS_VS_MII_MMD_VR_MII_AN_CTRL_AN_INTR_EN |
 		 XPCS_VS_MII_MMD_VR_MII_AN_CTRL_PCS_MODE);
@@ -868,6 +873,7 @@ nve32_t eqos_xpcs_init(struct osi_core_priv_data *osi_core)
 	if (ret != 0) {
 		goto fail;
 	}
+#endif
 
 	/* 7. NA */
 	/* 8. NA */
