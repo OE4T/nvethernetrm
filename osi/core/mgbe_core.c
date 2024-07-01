@@ -4654,7 +4654,7 @@ fail:
 	return ret;
 }
 
-#if defined MACSEC_SUPPORT && !defined OSI_STRIPPED_LIB
+#if (defined (MACSEC_SUPPORT) || defined (FSI_EQOS_SUPPORT)) &&  !defined OSI_STRIPPED_LIB
 /**
  * @brief mgbe_read_reg - Read a register
  *
