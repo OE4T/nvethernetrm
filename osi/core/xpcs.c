@@ -1045,11 +1045,13 @@ fail:
  */
 nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 {
+#if 0 //FIXME: matching with HW script sequence for 25G
 	void *xpcs_base = osi_core->xpcs_base;
 	nveu32_t retry = 1000;
 	nveu32_t count;
 	nveu32_t ctrl = 0;
 	nve32_t cond = COND_NOT_MET;
+#endif
 	nve32_t ret = 0;
 	nveu32_t value = 0;
 
@@ -1079,6 +1081,13 @@ nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 			goto fail;
 		}
 	}
+
+/* As a part of bringup debug, below programming is leading to the failures in block lock
+ * in XFI mode. This programming is not done in the HW scripts, but mentioned as a part of IAS.
+ * For now commenting it and need to be checked with HW team and enable it when required
+*/
+
+#if 0 //FIXME: matching with HW script sequence for 25G
 	/* Switching to USXGMII Mode to 25G based on
 	 * XLGPCS programming guideline IAS section 7.1.3.2.2.1
 	 */
@@ -1151,6 +1160,7 @@ nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 			osi_core->osd_ops.udelay(10U);
 		}
 	}
+#endif
 fail:
 	return ret;
 }
