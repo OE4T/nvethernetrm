@@ -51,10 +51,13 @@ static nveul64_t get_systime_from_mac(void *addr, nveu32_t mac_type)
         nveul64_t ns1, ns2, ns = 0;
         nveu32_t varmac_stnsr, temp1;
         nveu32_t varmac_stsr;
-        const nveu32_t mac_stnsr_mask[2U] = { EQOS_CORE_MAC_STNSR_TSSS_MASK ,
-					      MGBE_CORE_MAC_STNSR_TSSS_MASK };
-        const nveu32_t mac_stnsr[2U] = { EQOS_CORE_MAC_STNSR, MGBE_CORE_MAC_STNSR };
-        const nveu32_t mac_stsr[2U] = { EQOS_CORE_MAC_STSR , MGBE_CORE_MAC_STSR };
+	const nveu32_t mac_stnsr_mask[3U] = {EQOS_CORE_MAC_STNSR_TSSS_MASK,
+					     MGBE_CORE_MAC_STNSR_TSSS_MASK,
+					     MGBE_CORE_MAC_STNSR_TSSS_MASK};
+	const nveu32_t mac_stnsr[3U] = {EQOS_CORE_MAC_STNSR,
+					MGBE_CORE_MAC_STNSR, MGBE_CORE_MAC_STNSR};
+	const nveu32_t mac_stsr[3U] = {EQOS_CORE_MAC_STSR,
+				       MGBE_CORE_MAC_STSR, MGBE_CORE_MAC_STSR};
 
         varmac_stnsr = osi_readl((nveu8_t *)addr + mac_stnsr[mac_type]);
         temp1 = (varmac_stnsr & mac_stnsr_mask[mac_type]);
