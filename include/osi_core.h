@@ -511,6 +511,10 @@ typedef my_lint_64		nvel64_t;
  */
 #define OSI_CMD_READ_HSI_ERR		57U
 #endif /* HSI_SUPPORT */
+/**
+ * @brief Command to config camera over eth logic
+ */
+#define OSI_CMD_GMSL_COE_CONFIG		58U
 /** @} */
 
 #ifdef LOG_OSI
@@ -1569,6 +1573,8 @@ struct osi_ioctl {
 	struct osi_core_tx_ts tx_ts;
 	/** PTP TSC data */
 	struct osi_core_ptp_tsc_data ptp_tsc;
+	/** COE config data */
+	struct osi_mgbe_coe mgbe_coe;
 };
 
 /**
@@ -1860,6 +1866,10 @@ struct osi_core_priv_data {
 	nveu32_t pre_sil;
 	/** rCHlist bookkeeping **/
 	struct rchlist_index rch_index[RCHLIST_SIZE];
+	/** Flag which decides COE is enabled(1) or disabled(0) */
+	nveu32_t coe_enable;
+	/** cfg structure for COE */
+	struct osi_mgbe_coe mgbe_coe;
 	/** Parameter indicates the current operating speed */
 	nve32_t speed;
 	/** PCS BASE-R FEC enable */

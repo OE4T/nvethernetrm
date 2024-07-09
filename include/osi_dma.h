@@ -624,6 +624,7 @@ struct osi_tx_ring {
 	nveu32_t skip_dmb;
 };
 
+
 #ifndef OSI_STRIPPED_LIB
 /**
  * @brief osi_xtra_dma_stat_counters -  OSI DMA extra stats counters
@@ -739,6 +740,10 @@ struct osi_dma_priv_data {
 #endif /* !OSI_STRIPPED_LIB */
 	/** Receive Interrupt Watchdog Timer Count Units. Max value is NVETHERNETCL_PIF$UINT_MAX */
 	nveu32_t rx_riwt;
+	/** Flag which decides COE is enabled(1) or disabled(0) */
+	nveu32_t coe_enable;
+	/** cfg structure for COE */
+	struct osi_mgbe_coe mgbe_coe;
 	/** Flag which decides riwt is
 	 *  NVETHERNETCL_PIF$OSI_ENABLE or
 	 *  NVETHERNETCL_PIF$OSI_DISABLE

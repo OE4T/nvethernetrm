@@ -71,6 +71,14 @@
  * @brief Maximum bype pattern match
  */
 #define OSI_LUT_BYTE_PATTERN_MAX	4U
+/** @brief COE LUT max bytes for pattern match */
+#define OSI_COE_LUT_BYTE_PATTERN_MAX	2U
+/** @brief LUT byte pattern offset range 0-63 */
+#define OSI_COE_LUT_OFFSET_MAX		32U
+/** @brief COE LUT entry valid */
+#define OSI_COE_LUT_ENTRY_VALID		1U
+/** @brief One bit for each nibble in COE_LUT_BYTE_PATTERN */
+#define OSI_COE_LUT_BYTE_MASK_MAX	0xFU
 /** @brief LUT byte pattern offset range 0-63 */
 #define OSI_LUT_BYTE_PATTERN_MAX_OFFSET 63U
 /** @brief VLAN PCP range 0-7 */
@@ -87,8 +95,10 @@
 #define OSI_LUT_SEL_SC_STATE		3U
 /** @brief flag to select SA_STATE LUT */
 #define OSI_LUT_SEL_SA_STATE		4U
+/** @brief flag to select COE LUT */
+#define OSI_LUT_SEL_COE 		5U
 /** @brief maximum LUTs to select */
-#define OSI_LUT_SEL_MAX 		4U
+#define OSI_LUT_SEL_MAX 		5U
 /** @brief Flag indicating which bytes of DA is valid */
 #define OSI_LUT_FLAGS_DA_VALID		(OSI_BIT(0) | OSI_BIT(1) | OSI_BIT(2) |\
 					 OSI_BIT(3) | OSI_BIT(4) | OSI_BIT(5))
@@ -145,6 +155,8 @@
 /** @brief LUT write operation */
 #define OSI_LUT_WRITE		1U
 #define OSI_RW_MAX		1U
+/** @brief COE LUT max valid entries */
+#define OSI_COE_LUT_MAX_INDEX	8U
 /** @brief Maximum bypass lut table index */
 #define OSI_BYP_LUT_MAX_INDEX	31U
 /** @brief Maximum bypass lut table index for T26X */
@@ -331,6 +343,20 @@ struct osi_lut_inputs {
 };
 
 /**
+ * @brief MACSEC COE LUT entry inputs structure
+ */
+struct osi_coe_lut_inout {
+	/** 2-Byte pattern to compare from SOF */
+	nveu8_t byte_pattern[OSI_COE_LUT_BYTE_PATTERN_MAX];
+	/** Offset for 2-Byte pattern to compare */
+	nveu32_t offset;
+	/** Mask bits for each 4-bit nibble in 2-Byte pattern to compare */
+	nveu32_t byte_pattern_mask;
+	/** valid */
+	nveu32_t valid;
+};
+
+/**
  * @brief MACSEC LUT config data structure
  */
 struct osi_macsec_lut_config {
@@ -350,6 +376,8 @@ struct osi_macsec_lut_config {
 	 * for more details refer from NVETHERNETRM_PIF$OSI_LUT_FLAGS_DA_VALID to
 	 * NVETHERNETRM_PIF$OSI_LUT_FLAGS_ENTRY_VALID */
 	nveu32_t flags;
+	/** COE LUT input/output */
+	struct osi_coe_lut_inout coe_lut_inout;
 	/** LUT inputs to use */
 	struct osi_lut_inputs lut_in;
 	/** SCI LUT outputs
@@ -414,6 +442,12 @@ struct osi_macsec_core_ops {
 			nveu32_t mtu, nveu8_t *const mac_addr);
 	/** macsec de-init */
 	nve32_t (*deinit)(struct osi_core_priv_data *const osi_core);
+	/** macsec coe config */
+	nve32_t (*coe_config)(struct osi_core_priv_data *const osi_core,
+			nveu32_t coe_enable, nveu32_t coe_hdr_offset);
+	/** macsec coe LC threshold */
+	nve32_t (*coe_lc)(struct osi_core_priv_data *const osi_core,
+			nveu32_t ch, nveu32_t lc1, nveu32_t lc2);
 	/** Macsec irq handler */
 	void (*handle_irq)(struct osi_core_priv_data *const osi_core);
 	/** macsec lut config */
@@ -555,6 +589,107 @@ nve32_t osi_init_macsec_ops(struct osi_core_priv_data *const osi_core);
 #endif
 nve32_t osi_macsec_init(struct osi_core_priv_data *const osi_core,
 			nveu32_t mtu, nveu8_t *const macsec_vf_mac);
+
+/** COE */
+#define OSI_MACSEC_COE_MAX_LC		0x3FFFU
+
+/**
+ * @brief
+ * Description: Configure MACSEC COE engine
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] coe_enable: A flag variable to indicate COE logic is enabled/disabled
+ *   * Range: Binary value to indicate COE logic is enabled/disabled.
+ * @param[in] coe_hdr_offset: Variable to indicate offset from SOF where COE header is present
+ *   * Range: Within first 64B of the packet
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @return
+ *  - 0 on Successful configuration of MACSEC COE engine
+ *  - -1 on MACSEC operations being NULL
+ *  - -1 on failure to configure COE engine of MACSEC controller
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: No
+ *  - De-initialization: Yes
+ *
+ */
+#ifndef DOXYGEN_ICD
+/**
+ *
+ * Traceability Details:
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_035
+ *
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+nve32_t osi_macsec_coe_config(struct osi_core_priv_data *const osi_core,
+			nveu32_t coe_enable, nveu32_t coe_hdr_offset);
+
+/**
+ * @brief
+ * Description: Configure MACSEC COE Line counters
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] ch: Channel number
+ *   * Range: 0-47
+ * @param[in] lc1: Line counter threshold 1
+ *   * Range: 1-255
+ * @param[in] lc1: Line counter threshold 1
+ *   * Range: 1-255
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @return
+ *  - 0 on Successful configuration of MACSEC COE line counters
+ *  - -1 on MACSEC operations being NULL
+ *  - -1 on failure to configure COE engine
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: No
+ *  - De-initialization: Yes
+ *
+ */
+#ifndef DOXYGEN_ICD
+/**
+ *
+ * Traceability Details:
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_035
+ *
+ **/
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+nve32_t osi_macsec_coe_lc(struct osi_core_priv_data *const osi_core,
+			nveu32_t ch, nveu32_t lc1, nveu32_t lc2);
 
 /**
  * @brief

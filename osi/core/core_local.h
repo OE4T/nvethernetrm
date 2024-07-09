@@ -177,6 +177,8 @@ struct core_ops {
 	void (*macsec_config_mac)(struct osi_core_priv_data *const osi_core,
 				  const nveu32_t enable);
 #endif /*  MACSEC_SUPPORT */
+	nve32_t (*config_coe_buf)(struct osi_core_priv_data *const osi_core,
+				  struct osi_mgbe_coe mgbe_coe);
 #ifndef OSI_STRIPPED_LIB
 	/** Called to configure the MTL to forward/drop tx status */
 	nve32_t (*config_tx_status)(struct osi_core_priv_data *const osi_core,

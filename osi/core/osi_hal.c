@@ -3311,6 +3311,15 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 
 		apply_dynamic_cfg(osi_core);
 		break;
+	case OSI_CMD_GMSL_COE_CONFIG:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_GMSL_COE_CONFIG");
+#endif
+		ret = ops_p->config_coe_buf(osi_core, data->mgbe_coe);
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			     "CORE: OSI_CMD_GMSL_COE_CONFIG ret: \n",
+			     (nveul64_t)ret);
+		break;
 	default:
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "CORE: Incorrect command\n",

@@ -4841,6 +4841,68 @@ static void mgbe_config_for_macsec(struct osi_core_priv_data *const osi_core,
 }
 #endif /*  MACSEC_SUPPORT */
 
+static nve32_t mgbe_config_coe_buf(struct osi_core_priv_data *const osi_core,
+			    struct osi_mgbe_coe mgbe_coe)
+{
+	nve32_t ret = 0;
+	nveu32_t val = 0;
+	nveu32_t i;
+
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		/* TODO: Need to enable VLAN tag stripping as SPH feature needs untagged frame only */
+		/* Configure MAC_Ext_Cfg1 register for SPH offsets */
+		val = osi_readl((nveu8_t *)osi_core->base +
+				MGBE_MAC_EXT_CFG1);
+		val |= MGBE_MAC_EXT_CFG1_SAVE;
+		val |= (MGBE_MAC_EXT_CFG1_COE_SAVO << MGBE_MAC_EXT_CFG1_COE_SAVO_SHIFT);
+		val |= MGBE_MAC_EXT_CFG1_COE_SPLM;
+		val |= MGBE_MAC_EXT_CFG1_COE_SPLOFST;
+		osi_writel(val, (nveu8_t *)osi_core->base +
+				MGBE_MAC_EXT_CFG1);
+		/* Configure MTL_Rx_SPKT_CTRL register for COE header offset */
+		val = osi_readl((nveu8_t *)osi_core->base +
+				MGBE_MTL_RX_SPKT_CTRL);
+		val |= MGBE_MTL_RX_SPKT_CTRL_COE_HDROS;
+		osi_writel(val, (nveu8_t *)osi_core->base +
+				MGBE_MTL_RX_SPKT_CTRL);
+		/* Configure the MGBE wrapper for pktinfo cntr */
+		val = osi_readl((nveu8_t *)osi_core->base +
+				MGBE_WRAP_COE_PKTINFO_CNTR_INTR_MASK_0);
+		val = OSI_BIT(mgbe_coe.pdma);
+		osi_writel(val, (nveu8_t *)osi_core->base +
+				MGBE_WRAP_COE_PKTINFO_CNTR_INTR_MASK_0);
+		/* configure the Rx Frame buffers */
+		for (i = 0;i < OSI_MGBE_COE_NUM_RX_FRAMES; i++) {
+			val = H32(mgbe_coe.rx_fb_addr_phys[i]) &
+				MGBE_COE_RXFRAMEBUF_HI_MASK;
+			ret = mgbe_dma_indir_addr_write(osi_core,
+						MGBE_COE_MSEL_RXFRAMEBUF_HI,
+						mgbe_coe.vdma, val);
+			val = L32(mgbe_coe.rx_fb_addr_phys[i]) &
+				MGBE_COE_RXFRAMEBUF_LO_MASK;
+			ret = mgbe_dma_indir_addr_write(osi_core,
+						MGBE_COE_MSEL_RXFRAMEBUF_LO_BASE + i,
+						mgbe_coe.vdma, val);
+		}
+		/* configure the Rx pkt info buffers */
+		val = L32(mgbe_coe.rx_pib_addr_phys) &
+			MGBE_COE_RXPKTINFO_BUF_LO_MASK;
+		val |= mgbe_coe.rx_pib_sz &
+			MGBE_COE_PIB_SIZE_MASK;
+		ret = mgbe_dma_indir_addr_write(osi_core,
+					MGBE_COE_MSEL_RXPKTINFOBUF_LO,
+					mgbe_coe.pdma, val);
+		val = H32(mgbe_coe.rx_pib_addr_phys) &
+			MGBE_COE_RXPKTINFO_BUF_HI_MASK;
+		ret = mgbe_dma_indir_addr_write(osi_core,
+					MGBE_COE_MSEL_RXPKTINFOBUF_HI,
+					mgbe_coe.pdma, val);
+	}
+
+
+	return ret;
+}
+
 /**
  * @brief mgbe_init_core_ops - Initialize MGBE MAC core operations
  */
@@ -4873,6 +4935,7 @@ void mgbe_init_core_ops(struct core_ops *ops)
 #ifdef MACSEC_SUPPORT
 	ops->macsec_config_mac = mgbe_config_for_macsec;
 #endif
+	ops->config_coe_buf = mgbe_config_coe_buf;
 	ops->config_l3l4_filters = mgbe_config_l3l4_filters;
 #ifndef OSI_STRIPPED_LIB
 	ops->config_tx_status = mgbe_config_tx_status;

@@ -602,6 +602,16 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 			   chx_ctrl_reg[osi_dma->mac]);
 	}
 	if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
+		/* if COE is enabled - then enable split header
+		 * and program related registers.
+		 */
+		val = osi_dma_readl((nveu8_t *)osi_dma->base +
+				chx_ctrl_reg[osi_dma->mac]);
+		if (osi_dma->coe_enable) {
+			val |= MGBE_DMA_CHX_CTRL_SPH;
+		}
+		osi_dma_writel(val, (nveu8_t *)osi_dma->base +
+			   chx_ctrl_reg[osi_dma->mac]);
 		/* Find VDMA to PDMA mapping */
 		ret = vdma_to_pdma_map(osi_dma, dma_chan, &pdma_chan);
 		if (ret != 0) {
