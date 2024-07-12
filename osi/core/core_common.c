@@ -1332,8 +1332,7 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 						MGBE_MTL_FPE_ADV,
 						MGBE_MTL_FPE_ADV};
 
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			MTL_FPE_CTS[osi_core->mac & 0x1U]);
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + MTL_FPE_CTS[osi_core->mac]);
 	val &= ~MTL_FPE_CTS_PEC;
 	for (i = 0U; i < OSI_MAX_TC_NUM; i++) {
 		/* max 8 bit for this structure fot TC/TXQ. Set the TC for express or
@@ -1348,51 +1347,42 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 			val |= temp1;
 		}
 	}
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MTL_FPE_CTS[osi_core->mac & 0x1U]);
-
-	if ((fpe->rq == 0x0U) || (fpe->rq >= (max_number_queue[osi_core->mac & 0x1U]))) {
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MTL_FPE_CTS[osi_core->mac]);
+	if ((fpe->rq == 0x0U) || (fpe->rq >= max_number_queue[osi_core->mac])) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 				"FPE init failed due to wrong RQ\n", fpe->rq);
 		ret = -1;
 		goto done;
 	}
 
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			(MAC_RQC1R[osi_core->mac & 0x1U]));
-	val &= ~MAC_RQC1R_RQ[osi_core->mac & 0x1U];
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + (MAC_RQC1R[osi_core->mac]));
+	val &= ~MAC_RQC1R_RQ[osi_core->mac];
 	temp = fpe->rq;
-	temp = temp << ((MAC_RQC1R_RQ_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
-	temp = (temp & MAC_RQC1R_RQ[osi_core->mac & 0x1U]);
+	temp = temp << ((MAC_RQC1R_RQ_SHIFT[osi_core->mac]) & 0x1FU);
+	temp = (temp & MAC_RQC1R_RQ[osi_core->mac]);
 	val |= temp;
 	osi_core->residual_queue = fpe->rq;
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-		    MAC_RQC1R[osi_core->mac & 0x1U]);
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MAC_RQC1R[osi_core->mac]);
 
 	if (osi_core->mac != OSI_MAC_HW_EQOS) {
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				MGBE_MAC_RQC4R);
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->base + MGBE_MAC_RQC4R);
 		val &= ~MGBE_MAC_RQC4R_PMCBCQ;
 		temp = fpe->rq;
 		temp = temp << MGBE_MAC_RQC4R_PMCBCQ_SHIFT;
 		temp = (temp & MGBE_MAC_RQC4R_PMCBCQ);
 		val |= temp;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-				MGBE_MAC_RQC4R);
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MGBE_MAC_RQC4R);
 	}
 	/* initiate SVER for SMD-V and SMD-R */
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			(MTL_FPE_CTS[osi_core->mac & 0x1U]));
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + (MTL_FPE_CTS[osi_core->mac]));
 	val |= MAC_FPE_CTS_SVER;
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			(MAC_FPE_CTS[osi_core->mac & 0x1U]));
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + (MAC_FPE_CTS[osi_core->mac]));
 
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			(MTL_FPE_ADV[osi_core->mac & 0x1U]));
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + (MTL_FPE_ADV[osi_core->mac]));
 	val &= ~MTL_FPE_ADV_HADV_MASK;
 	//(minimum_fragment_size +IPG/EIPG + Preamble) *.8 ~98ns for10G
 	val |= MTL_FPE_ADV_HADV_VAL;
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			(MTL_FPE_ADV[osi_core->mac & 0x1U]));
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + (MTL_FPE_ADV[osi_core->mac]));
 
 	if (osi_core->mac == OSI_MAC_HW_MGBE) {
 #ifdef MACSEC_SUPPORT
@@ -1402,8 +1392,6 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 done:
 	return ret;
 }
-
-
 
 /**
  * @brief hw_config_fpe - Read Setting for preemption and express for TC
@@ -1464,17 +1452,13 @@ nve32_t hw_config_fpe(struct osi_core_priv_data *const osi_core,
 
 	if (((fpe->tx_queue_preemption_enable << MTL_FPE_CTS_PEC_SHIFT) &
 	     MTL_FPE_CTS_PEC) == OSI_DISABLE) {
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				 MTL_FPE_CTS[osi_core->mac & 0x1U]);
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->base + MTL_FPE_CTS[osi_core->mac]);
 		val &= ~MTL_FPE_CTS_PEC;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			    MTL_FPE_CTS[osi_core->mac & 0x1U]);
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MTL_FPE_CTS[osi_core->mac]);
 
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				 MAC_FPE_CTS[osi_core->mac & 0x1U]);
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->base + MAC_FPE_CTS[osi_core->mac]);
 		val &= ~MAC_FPE_CTS_EFPE;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			    MAC_FPE_CTS[osi_core->mac & 0x1U]);
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MAC_FPE_CTS[osi_core->mac]);
 
 		if (osi_core->mac != OSI_MAC_HW_EQOS) {
 #ifdef MACSEC_SUPPORT
@@ -1691,8 +1675,7 @@ void hw_tsn_init(struct osi_core_priv_data *osi_core)
 
 	/* Configure EST paramenters */
 	save_gcl_params(osi_core);
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			 MTL_EST_CONTROL[osi_core->mac & 0x1U]);
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + MTL_EST_CONTROL[osi_core->mac]);
 
 	/*
 	 * PTOV PTP clock period * 6
@@ -1703,48 +1686,43 @@ void hw_tsn_init(struct osi_core_priv_data *osi_core)
 	 * :
 	 * set other default value
 	 */
-	val &= ~MTL_EST_CONTROL_PTOV[osi_core->mac & 0x1U];
-	temp = MTL_EST_PTOV_RECOMMEND[osi_core->mac & 0x1U];
-	temp = temp << ((MTL_EST_CONTROL_PTOV_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
+	val &= ~MTL_EST_CONTROL_PTOV[osi_core->mac];
+	temp = MTL_EST_PTOV_RECOMMEND[osi_core->mac];
+	temp = temp << ((MTL_EST_CONTROL_PTOV_SHIFT[osi_core->mac]) & 0x1FU);
 	val |= temp;
 
-	val &= ~MTL_EST_CONTROL_CTOV[osi_core->mac & 0x1U];
-	temp = MTL_EST_CTOV_RECOMMEND[osi_core->mac & 0x1U];
-	temp = temp << ((MTL_EST_CONTROL_CTOV_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
+	val &= ~MTL_EST_CONTROL_CTOV[osi_core->mac];
+	temp = MTL_EST_CTOV_RECOMMEND[osi_core->mac];
+	temp = temp << ((MTL_EST_CONTROL_CTOV_SHIFT[osi_core->mac]) & 0x1FU);
 	val |= temp;
 
 	/*Loop Count to report Scheduling Error*/
-	val &= ~MTL_EST_CONTROL_LCSE[osi_core->mac & 0x1U];
-	val |= MTL_EST_CONTROL_LCSE_VAL[osi_core->mac & 0x1U];
+	val &= ~MTL_EST_CONTROL_LCSE[osi_core->mac];
+	val |= MTL_EST_CONTROL_LCSE_VAL[osi_core->mac];
 
 	if (osi_core->mac == OSI_MAC_HW_EQOS) {
 		val &= ~EQOS_MTL_EST_CONTROL_DFBS;
 	}
-	val &= ~MTL_EST_CONTROL_DDBF[osi_core->mac & 0x1U];
-	val |= MTL_EST_CONTROL_DDBF[osi_core->mac & 0x1U];
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-		    MTL_EST_CONTROL[osi_core->mac & 0x1U]);
+	val &= ~MTL_EST_CONTROL_DDBF[osi_core->mac];
+	val |= MTL_EST_CONTROL_DDBF[osi_core->mac];
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MTL_EST_CONTROL[osi_core->mac]);
 
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			 MTL_EST_OVERHEAD[osi_core->mac & 0x1U]);
-	val &= ~MTL_EST_OVERHEAD_OVHD[osi_core->mac & 0x1U];
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + MTL_EST_OVERHEAD[osi_core->mac]);
+	val &= ~MTL_EST_OVERHEAD_OVHD[osi_core->mac];
 	/* As per hardware programming info */
-	val |= MTL_EST_OVERHEAD_RECOMMEND[osi_core->mac & 0x1U];
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-		    MTL_EST_OVERHEAD[osi_core->mac & 0x1U]);
+	val |= MTL_EST_OVERHEAD_RECOMMEND[osi_core->mac];
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MTL_EST_OVERHEAD[osi_core->mac]);
 
 	enable_mtl_interrupts(osi_core);
 
 	/* Configure FPE parameters */
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			 MAC_RQC1R[osi_core->mac & 0x1U]);
-	val &= ~MAC_RQC1R_RQ[osi_core->mac & 0x1U];
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + MAC_RQC1R[osi_core->mac]);
+	val &= ~MAC_RQC1R_RQ[osi_core->mac];
 	temp = osi_core->residual_queue;
-	temp = temp << ((MAC_RQC1R_RQ_SHIFT[osi_core->mac & 0x1U]) & 0x1FU);
-	temp = (temp & MAC_RQC1R_RQ[osi_core->mac & 0x1U]);
+	temp = temp << ((MAC_RQC1R_RQ_SHIFT[osi_core->mac]) & 0x1FU);
+	temp = (temp & MAC_RQC1R_RQ[osi_core->mac]);
 	val |= temp;
-	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
-			MAC_RQC1R[osi_core->mac & 0x1U]);
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MAC_RQC1R[osi_core->mac]);
 
 	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
