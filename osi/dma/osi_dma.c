@@ -736,7 +736,8 @@ exit_func:
 
 static nve32_t init_dma(const struct osi_dma_priv_data *osi_dma, nveu32_t channel)
 {
-	nveu32_t chan = channel & 0xFU;
+	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
+	nveu32_t chan = channel & chan_mask[osi_dma->mac];
 	nve32_t ret = 0;
 
 	/* CERT ARR-30C issue observed without this check */

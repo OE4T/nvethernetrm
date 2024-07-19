@@ -216,8 +216,12 @@
 /**
  * @brief Maximum number of channels in MGBE
  */
-//TBD: T264, NET05 supports only 20 VDMA, change to 48 later
-#define OSI_MGBE_MAX_NUM_CHANS		20U
+#ifdef FSI_EQOS_SUPPORT
+#define OSI_MGBE_MAX_NUM_CHANS		10U
+#else
+#define OSI_MGBE_MAX_NUM_CHANS		48U
+#endif
+
 #define OSI_MGBE_T23X_MAX_NUM_CHANS	10U
 /**
  * @brief Maximum number of PDMA channels in MGBE
