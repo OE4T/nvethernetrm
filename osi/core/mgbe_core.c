@@ -2331,6 +2331,9 @@ static void mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 			   (nveu8_t *)osi_core->base + MGBE_MMC_CNTRL);
 	value |= MGBE_MMC_CNTRL_CNTRST | MGBE_MMC_CNTRL_RSTONRD |
 		 MGBE_MMC_CNTRL_CNTMCT | MGBE_MMC_CNTRL_CNTPRST;
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		value |= MGBE_MMC_CNTRL_DRCHM;
+	}
 	osi_writela(osi_core, value,
 		    (nveu8_t *)osi_core->base + MGBE_MMC_CNTRL);
 
