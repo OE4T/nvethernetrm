@@ -5027,6 +5027,14 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 		MACSEC_LOG("Write MACSEC_RX_SOT_DELAY: 0x%x\n", val);
 		osi_writela(osi_core, val, addr + MACSEC_RX_SOT_DELAY);
 
+	} else if (osi_core->mac_ver == OSI_MGBE_MAC_4_20) {
+		val = osi_readla(osi_core, addr + MACSEC_TX_SOT_DELAY);
+		MACSEC_LOG("Read MACSEC_TX_SOT_DELAY: 0x%x\n", val);
+		val &= ~(SOT_LENGTH_MASK);
+		val |= (T264_MGBE_MACSEC_TX_SOT_DELAY & SOT_LENGTH_MASK);
+		MACSEC_LOG("Write MACSEC_TX_SOT_DELAY: 0x%x\n", val);
+		osi_writela(osi_core, val, addr + MACSEC_TX_SOT_DELAY);
+
 	} else {
 		/** Do nothing */
 	}
