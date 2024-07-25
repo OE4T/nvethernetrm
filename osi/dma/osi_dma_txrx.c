@@ -1100,12 +1100,16 @@ static inline void set_clear_ioc_for_last_desc(struct osi_dma_priv_data *osi_dma
 static inline void set_swcx_pkt_id_for_ptp(struct osi_dma_priv_data *osi_dma,
 					   struct osi_tx_pkt_cx *tx_pkt_cx,
 					   struct osi_tx_swcx *last_swcx,
-					   nveu32_t pkt_id)
+					   nveu32_t pkt_id,
+					   nveu32_t vdma_id)
 {
 	if (((tx_pkt_cx->flags & OSI_PKT_CX_PTP) == OSI_PKT_CX_PTP) &&
 	    (osi_dma->mac > OSI_MAC_HW_EQOS)) {
 		last_swcx->flags |= OSI_PKT_CX_PTP;
 		last_swcx->pktid = pkt_id;
+		if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
+			last_swcx->vdmaid = vdma_id;
+		}
 	}
 }
 
@@ -1240,7 +1244,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	/* Mark it as LAST descriptor */
 	last_desc->tdes3 |= TDES3_LD;
 
-	set_swcx_pkt_id_for_ptp(osi_dma, tx_pkt_cx, last_swcx, pkt_id);
+	set_swcx_pkt_id_for_ptp(osi_dma, tx_pkt_cx, last_swcx, pkt_id, vdma_id);
 
 	/* set Interrupt on Completion*/
 	last_desc->tdes2 |= TDES2_IOC;

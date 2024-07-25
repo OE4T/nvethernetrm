@@ -3077,8 +3077,10 @@ static void mgbe_handle_mac_intrs(struct osi_core_priv_data *osi_core)
 			l_core->ts[i].in_use = OSI_ENABLE;
 			pktid = osi_readla(osi_core, base + MGBE_MAC_TSPKID);
 			l_core->ts[i].pkt_id = (pktid & MGBE_PKTID_MASK);
+			l_core->ts[i].vdma_id = 0U;
 			if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
-				l_core->ts[i].vdma_id = (pktid & MGBE_VDMAID_MASK);
+				l_core->ts[i].vdma_id =
+					((pktid & MGBE_VDMAID_MASK) >> MGBE_VDMAID_OFFSET);
 			}
 			l_core->ts[i].sec = osi_readla(osi_core, base + MGBE_MAC_TSSEC);
 			/* Add time stamp to end of list */
