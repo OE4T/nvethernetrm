@@ -27,22 +27,28 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-include $(TEGRA_TOP)/kernel/nvethernetrm/include/config.tmk
+ifeq ($(NV_L4T_BUILD),1)
+NVETHERNETRM := $(TEGRA_TOP)/kernel/nvethernetrm
+else
+NVETHERNETRM := $(TEGRA_TOP)/nvethernetrm
+endif
+
+include $(NVETHERNETRM)/include/config.tmk
 
 GLOBAL_INCLUDES += \
-	$(TEGRA_TOP)/kernel/nvethernetrm/include/ \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/common/include/ \
+	$(NVETHERNETRM)/include/ \
+	$(NVETHERNETRM)/osi/common/include/ \
 	$(TEGRA_TOP)/fsi-internal/fw/include \
 	$(TEGRA_TOP)/fsi-internal/fw/app/tests/drivers/eqos_test \
 
 MODULE_SRCS += \
-        $(TEGRA_TOP)/kernel/nvethernetrm/osi/dma/osi_dma.c \
-        $(TEGRA_TOP)/kernel/nvethernetrm/osi/dma/osi_dma_txrx.c \
-        $(TEGRA_TOP)/kernel/nvethernetrm/osi/dma/eqos_desc.c \
-        $(TEGRA_TOP)/kernel/nvethernetrm/osi/dma/mgbe_desc.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/dma/mgbe_dma.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/dma/eqos_dma.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/dma/debug.c
+        $(NVETHERNETRM)/osi/dma/osi_dma.c \
+        $(NVETHERNETRM)/osi/dma/osi_dma_txrx.c \
+        $(NVETHERNETRM)/osi/dma/eqos_desc.c \
+        $(NVETHERNETRM)/osi/dma/mgbe_desc.c \
+	$(NVETHERNETRM)/osi/dma/mgbe_dma.c \
+	$(NVETHERNETRM)/osi/dma/eqos_dma.c \
+	$(NVETHERNETRM)/osi/dma/debug.c
 
 MODULE_COMPILEFLAGS += -Wno-format
 MODULE_COMPILEFLAGS += -DFSI_EQOS_SUPPORT

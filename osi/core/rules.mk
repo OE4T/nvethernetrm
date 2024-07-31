@@ -26,30 +26,36 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-include $(TEGRA_TOP)/kernel/nvethernetrm/include/config.tmk
+ifeq ($(NV_L4T_BUILD),1)
+NVETHERNETRM := $(TEGRA_TOP)/kernel/nvethernetrm
+else
+NVETHERNETRM := $(TEGRA_TOP)/nvethernetrm
+endif
+
+include $(NVETHERNETRM)/include/config.tmk
 
 GLOBAL_INCLUDES += \
-	$(TEGRA_TOP)/kernel/nvethernetrm/ \
-	$(TEGRA_TOP)/kernel/nvethernetrm/include/ \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/common/include/ \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/ \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/dma/ \
+	$(NVETHERNETRM)/ \
+	$(NVETHERNETRM)/include/ \
+	$(NVETHERNETRM)/osi/common/include/ \
+	$(NVETHERNETRM)/osi/core/ \
+	$(NVETHERNETRM)/osi/dma/ \
 	$(TEGRA_TOP)/fsi-internal/fw/include \
 
 MODULE_SRCS += \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/osi_core.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/osi_hal.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/eqos_core.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/ivc_core.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/eqos_mmc.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/vlan_filter.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/frp.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/core_common.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/xpcs.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/mgbe_mmc.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/mgbe_core.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/macsec.c \
-	$(TEGRA_TOP)/kernel/nvethernetrm/osi/core/debug.c
+	$(NVETHERNETRM)/osi/core/osi_core.c \
+	$(NVETHERNETRM)/osi/core/osi_hal.c \
+	$(NVETHERNETRM)/osi/core/eqos_core.c \
+	$(NVETHERNETRM)/osi/core/ivc_core.c \
+	$(NVETHERNETRM)/osi/core/eqos_mmc.c \
+	$(NVETHERNETRM)/osi/core/vlan_filter.c \
+	$(NVETHERNETRM)/osi/core/frp.c \
+	$(NVETHERNETRM)/osi/core/core_common.c \
+	$(NVETHERNETRM)/osi/core/xpcs.c \
+	$(NVETHERNETRM)/osi/core/mgbe_mmc.c \
+	$(NVETHERNETRM)/osi/core/mgbe_core.c \
+	$(NVETHERNETRM)/osi/core/macsec.c \
+	$(NVETHERNETRM)/osi/core/debug.c
 
 MODULE_COMPILEFLAGS += -Wno-format
 MODULE_COMPILEFLAGS += -DFSI_EQOS_SUPPORT
