@@ -1080,6 +1080,43 @@ nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 			value |= OSI_BIT(0);
 			osi_writela(osi_core, value, (nveu8_t *)osi_core->xpcs_base +
 				    T26X_XPCS_WRAP_CONFIG_0);
+
+			osi_writela(osi_core, XPCS_WRAP_UPHY_RX_CTRL_4_CDR_RESET_WIDTH,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_4);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_TX_CTRL_1_IDDQ_SLEEP_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_1);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_TX_CTRL_1_IDDQ_SLEEP_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_1);
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
+					   T26X_XPCS_WRAP_UPHY_RX_CTRL_P_DN_0);
+			value = value & XPCS_WRAP_UPHY_RX_CTRL_P_DN_0_RXEN_SLEEP_DLY;
+			value = value | XPCS_WRAP_UPHY_RX_CTRL_P_DN_0_SLEEP_IDDQ_DLY;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_P_DN_0);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_TX_CTRL_P_DN_0_DATARDY_SLEEP_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_P_DN_0);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_TX_CTRL_P_DN_1_DATAEN_RDY_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_P_DN_1);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_TX_CTRL_P_DN_2_SLEEP_IDDQ_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_P_DN_2);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_TX_CTRL_P_DN_3_IDDQ_P_DN_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_P_DN_3);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_TX_CTRL_P_DN_4_CAL_DONE_SLP_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_P_DN_4);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_TX_CTRL_4_CAL_EN_HIGH_LOW_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_4);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_TX_CTRL_5_CAL_EN_LOW_DTRDY_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_5);
 			osi_writela(osi_core, XLGPCS_WRAP_UPHY_TO_CTRL2_EQ_DONE_TOV,
 				    (nveu8_t *)osi_core->xpcs_base +
 				    T26X_XPCS_WRAP_UPHY_T0_CTRL_2_0);
@@ -1088,12 +1125,35 @@ nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 			value |= XLGPCS_WRAP_UPHY_RX_CTRL5_RX_EQ_ENABLE;
 			osi_writela(osi_core, value, (nveu8_t *)osi_core->xpcs_base +
 				    T26X_XPCS_WRAP_UPHY_RX_CTRL_5_0);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_RX_CTRL_7_EQ_RESET_WIDTH,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_7);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_RX_CTRL_8_EQ_TRAIN_EN_DELAY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_8);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_RX_CTRL_9_EQ_TRAIN_EN_HILO_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_9);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_TX_CTRL_3_DATAREADY_DATAEN_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_3);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_RX_CTRL_2_SLEEP_CAL_EN_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_2);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_RX_CTRL_2_SLEEP_CAL_EN_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_2);
+			osi_writela(osi_core, XPCS_WRAP_UPHY_RX_CTRL_3_CAL_DONE_DATA_EN_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_3);
+
 		}
 
 		if (xpcs_lane_bring_up(osi_core) < 0) {
 			ret = -1;
 			goto fail;
 		}
+
 	}
 
 /* As a part of bringup debug, below programming is leading to the failures in block lock
