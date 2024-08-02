@@ -477,6 +477,7 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 	nveu32_t val = 0;
 	nveu32_t count;
 	nve32_t ret = 0;
+	nveu64_t retry_delay = 1U;
 	const nveu32_t uphy_status_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_XPCS_WRAP_UPHY_STATUS,
 		XPCS_WRAP_UPHY_STATUS,
@@ -490,6 +491,9 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 
 	if ((osi_core->mac == OSI_MAC_HW_MGBE_T26X) || (osi_core->mac_ver == OSI_EQOS_MAC_5_40)) {
 		retry = 1000U;
+		if (osi_core->uphy_gbe_mode == OSI_GBE_MODE_25G) {
+			retry_delay = 60U;
+		}
 	}
 
 	val = osi_readla(osi_core,
@@ -526,7 +530,7 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 				 * Most of the time loop got exited in first iteration.
 				 * but added an extra count of 4 for safer side
 				 */
-				osi_core->osd_ops.udelay(1U);
+				osi_core->osd_ops.udelay(retry_delay);
 			}
 		}
 	}
@@ -1069,11 +1073,21 @@ nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 		/* Select XLGPCS in wrapper register */
 		if ((osi_core->mac == OSI_MAC_HW_MGBE_T26X) &&
 		    (osi_core->uphy_gbe_mode == OSI_GBE_MODE_25G)) {
+
+			/* Added below programming sequence from hw scripts */
 			value = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
 					   T26X_XPCS_WRAP_CONFIG_0);
 			value |= OSI_BIT(0);
 			osi_writela(osi_core, value, (nveu8_t *)osi_core->xpcs_base +
 				    T26X_XPCS_WRAP_CONFIG_0);
+			osi_writela(osi_core, XLGPCS_WRAP_UPHY_TO_CTRL2_EQ_DONE_TOV,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_T0_CTRL_2_0);
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
+					   T26X_XPCS_WRAP_UPHY_RX_CTRL_5_0);
+			value |= XLGPCS_WRAP_UPHY_RX_CTRL5_RX_EQ_ENABLE;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_5_0);
 		}
 
 		if (xpcs_lane_bring_up(osi_core) < 0) {
