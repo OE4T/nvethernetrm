@@ -4130,46 +4130,44 @@ static void eqos_config_for_macsec(struct osi_core_priv_data *const osi_core,
 {
 	nveu32_t value = 0U, temp = 0U;
 
-	if (osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
-		/* stop MAC Tx */
-		eqos_config_mac_tx(osi_core, OSI_DISABLE);
-		if (enable == OSI_ENABLE) {
-			/* Configure IPG  {EIPG,IPG} value according to macsec IAS in
-			 * MAC_Configuration and MAC_Extended_Configuration
-			 * IPG (12 B[default] + 32 B[sectag]) = 352 bits
-			 */
-			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-					   EQOS_MAC_MCR);
-			temp = EQOS_MCR_IPG;
-			temp = temp << EQOS_MCR_IPG_SHIFT;
-			value |= temp & EQOS_MCR_IPG_MASK;
-			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				    EQOS_MAC_MCR);
-			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-					   EQOS_MAC_EXTR);
-			value |= EQOS_MAC_EXTR_EIPGEN;
-			temp = EQOS_MAC_EXTR_EIPG;
-			temp = temp << EQOS_MAC_EXTR_EIPG_SHIFT;
-			value |= temp & EQOS_MAC_EXTR_EIPG_MASK;
-			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				    EQOS_MAC_EXTR);
-		} else {
-			/* reset to default IPG 12B */
-			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-					   EQOS_MAC_MCR);
-			value &= ~EQOS_MCR_IPG_MASK;
-			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				    EQOS_MAC_MCR);
-			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-					   EQOS_MAC_EXTR);
-			value &= ~EQOS_MAC_EXTR_EIPGEN;
-			value &= ~EQOS_MAC_EXTR_EIPG_MASK;
-			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-				    EQOS_MAC_EXTR);
-		}
-		/* start MAC Tx */
-		eqos_config_mac_tx(osi_core, OSI_ENABLE);
+	/* stop MAC Tx */
+	eqos_config_mac_tx(osi_core, OSI_DISABLE);
+	if (enable == OSI_ENABLE) {
+		/* Configure IPG  {EIPG,IPG} value according to macsec IAS in
+		 * MAC_Configuration and MAC_Extended_Configuration
+		 * IPG (12 B[default] + 32 B[sectag]) = 352 bits
+		 */
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+				   EQOS_MAC_MCR);
+		temp = EQOS_MCR_IPG;
+		temp = temp << EQOS_MCR_IPG_SHIFT;
+		value |= temp & EQOS_MCR_IPG_MASK;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+			    EQOS_MAC_MCR);
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+				   EQOS_MAC_EXTR);
+		value |= EQOS_MAC_EXTR_EIPGEN;
+		temp = EQOS_MAC_EXTR_EIPG;
+		temp = temp << EQOS_MAC_EXTR_EIPG_SHIFT;
+		value |= temp & EQOS_MAC_EXTR_EIPG_MASK;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+			    EQOS_MAC_EXTR);
+	} else {
+		/* reset to default IPG 12B */
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+				   EQOS_MAC_MCR);
+		value &= ~EQOS_MCR_IPG_MASK;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+			    EQOS_MAC_MCR);
+		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+				   EQOS_MAC_EXTR);
+		value &= ~EQOS_MAC_EXTR_EIPGEN;
+		value &= ~EQOS_MAC_EXTR_EIPG_MASK;
+		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+			    EQOS_MAC_EXTR);
 	}
+	/* start MAC Tx */
+	eqos_config_mac_tx(osi_core, OSI_ENABLE);
 
 	/* Updated MTL_EST depending on MACSEC enable/disable */
 	value = osi_readla(osi_core,
