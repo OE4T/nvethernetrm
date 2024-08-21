@@ -1605,6 +1605,10 @@ static void  mgbe_update_frp_nve(struct osi_core_priv_data *const osi_core,
 	/* Add new NVE and NPE */
 	val |= (nve & MGBE_MTL_RXP_CS_NVE);
 	val |= ((nve << MGBE_MTL_RXP_CS_NPE_SHIFT) & MGBE_MTL_RXP_CS_NPE);
+	if (osi_core->uphy_gbe_mode == OSI_GBE_MODE_25G) {
+		/* Clear ANP first and for 25G overwrite Active Number of PIPE with 3 */
+		val = (val & MGBE_MTL_RXP_CS_CLR_ANP) | MGBE_MTL_RXP_CS_ANP;
+	}
 	osi_writela(osi_core, val, base + MGBE_MTL_RXP_CS);
 
 }

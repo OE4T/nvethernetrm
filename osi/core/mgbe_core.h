@@ -302,6 +302,8 @@
 						 OSI_BIT(3) | OSI_BIT(2) | \
 						 OSI_BIT(1) | OSI_BIT(0))
 
+#define MGBE_MTL_RXP_CS_CLR_ANP			~(OSI_BIT(25) | OSI_BIT(26) | OSI_BIT(27))
+#define MGBE_MTL_RXP_CS_ANP			(OSI_BIT(25) | OSI_BIT(26))
 #define MGBE_MTL_RCHlist_READ_UDELAY		1U
 #define MGBE_MTL_RCHlist_READ_RETRY		1000U
 
