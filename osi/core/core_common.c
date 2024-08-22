@@ -631,9 +631,11 @@ void hw_config_ssir(struct osi_core_priv_data *const osi_core)
 	const nveu32_t ptp_ssinc[3] = {OSI_PTP_SSINC_4, OSI_PTP_SSINC_6, OSI_PTP_SSINC_4};
 
 	/* by default Fine method is enabled */
-	/* Fix the SSINC value based on Exact MAC used */
-	//TBD: review for T264
 	val = ptp_ssinc[l_core->l_mac_ver];
+	/* EQOS T234 SSINC is different from EOQS T264, Logic added for EQOS T264 */
+	if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+		val = OSI_PTP_SSINC_4;
+	}
 
 	val |= val << MAC_SSIR_SSINC_SHIFT;
 	/* update Sub-second Increment Value */

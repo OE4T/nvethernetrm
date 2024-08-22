@@ -472,7 +472,7 @@ static nve32_t osi_ptp_configuration(struct osi_core_priv_data *const osi_core,
 		 * so addend = (2^32 * 1000)/(ptp_ref_clk_rate in MHZ * SSINC);
 		 */
 		ssinc = OSI_PTP_SSINC_4;
-		if (osi_core->mac_ver >= OSI_EQOS_MAC_5_30) {
+		if (osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
 			ssinc = OSI_PTP_SSINC_6;
 		}
 
@@ -481,14 +481,13 @@ static nve32_t osi_ptp_configuration(struct osi_core_priv_data *const osi_core,
 
 		temp1 = div_u64(temp,
 			(nveu64_t)osi_core->ptp_config.ptp_ref_clk_rate);
-
 		temp2 = div_u64(temp1, (nveu64_t)ssinc);
 
-		if (temp2 < UINT_MAX) {
+		if (temp2 <= UINT_MAX) {
 			osi_core->default_addend = (nveu32_t)temp2;
 		} else {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
-				     "core: temp2 >= UINT_MAX\n", 0ULL);
+				     "core: temp2 > UINT_MAX\n", (nveu64_t)temp2);
 			ret = -1;
 			goto fail;
 		}
@@ -615,6 +614,10 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 	(void)hw_config_rxcsum_offload(osi_core, OSI_ENABLE);
 
 	osi_core->ptp_config.ptp_ref_clk_rate = ptp_ref_clk_rate[l_core->l_mac_ver];
+	if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+		osi_core->ptp_config.ptp_ref_clk_rate = MGBE_PTP_CLK_SPEED;
+	}
+
 	osi_core->ptp_config.ptp_filter = OSI_MAC_TCR_TSENA | OSI_MAC_TCR_TSCFUPDT |
 					  OSI_MAC_TCR_TSCTRLSSR | OSI_MAC_TCR_TSVER2ENA |
 					  OSI_MAC_TCR_TSIPENA | OSI_MAC_TCR_TSIPV6ENA |
