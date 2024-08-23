@@ -2011,10 +2011,10 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 	nveu32_t value = 0U;
 	nve32_t ret = 0;
 	const nveu32_t xpcs_intr_ctrl_reg[OSI_MAX_MAC_IP_TYPES] = {
-				0,
-				XPCS_WRAP_INTERRUPT_CONTROL,
-				T26X_XPCS_WRAP_INTERRUPT_CONTROL
-			};
+		0,
+		XPCS_WRAP_INTERRUPT_CONTROL,
+		T26X_XPCS_WRAP_INTERRUPT_CONTROL
+	};
 	const nveu32_t intr_en[OSI_MAX_MAC_IP_TYPES] = {
 		0,
 		MGBE_WRAP_COMMON_INTR_ENABLE,
