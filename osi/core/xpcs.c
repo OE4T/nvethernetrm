@@ -1025,6 +1025,22 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 	if (ret != 0) {
 		goto fail;
 	}
+
+	/* Enable BASE-R FEC */
+	ctrl = xpcs_read(xpcs_base, XPCS_SR_PMA_KR_FEC_CTRL);
+	if (osi_core->pcs_base_r_fec_en == OSI_ENABLE) {
+		ctrl |= (XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN |
+			 XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND);
+	} else {
+		ctrl &= ~(XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN |
+			 XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND);
+	}
+
+	ret = xpcs_write_safety(osi_core, XPCS_SR_PMA_KR_FEC_CTRL, ctrl);
+	if (ret != 0) {
+		goto fail;
+	}
+
 	/* 4. Program PHY to operate at 10Gbps/5Gbps/2Gbps
          * this step not required since PHY speed programming
          * already done as part of phy INIT
@@ -1050,14 +1066,14 @@ fail:
 nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 {
 #if 0 //FIXME: matching with HW script sequence for 25G
-	void *xpcs_base = osi_core->xpcs_base;
 	nveu32_t retry = 1000;
 	nveu32_t count;
-	nveu32_t ctrl = 0;
 	nve32_t cond = COND_NOT_MET;
 #endif
+	void *xpcs_base = osi_core->xpcs_base;
 	nve32_t ret = 0;
 	nveu32_t value = 0;
+	nveu32_t ctrl = 0;
 
 	if (osi_core->xpcs_base == OSI_NULL) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
@@ -1154,6 +1170,21 @@ nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 			goto fail;
 		}
 
+	}
+
+	/* Enable BASE-R FEC */
+	ctrl = xpcs_read(xpcs_base, XPCS_SR_PMA_KR_FEC_CTRL);
+	if (osi_core->pcs_base_r_fec_en == OSI_ENABLE) {
+		ctrl |= (XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN |
+			 XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND);
+	} else {
+		ctrl &= ~(XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN |
+			 XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND);
+	}
+
+	ret = xpcs_write_safety(osi_core, XPCS_SR_PMA_KR_FEC_CTRL, ctrl);
+	if (ret != 0) {
+		goto fail;
 	}
 
 /* As a part of bringup debug, below programming is leading to the failures in block lock

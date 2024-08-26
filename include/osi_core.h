@@ -1825,6 +1825,8 @@ struct osi_core_priv_data {
 	struct rchlist_index rch_index[RCHLIST_SIZE];
 	/** Parameter indicates the current operating speed */
 	nve32_t speed;
+	/** PCS BASE-R FEC enable */
+	nveu32_t pcs_base_r_fec_en;
 };
 
 /**
