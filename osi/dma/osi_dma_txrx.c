@@ -1052,7 +1052,6 @@ static inline void update_frame_cnt(struct osi_dma_priv_data *osi_dma,
 	} else {
 		tx_ring->frame_cnt = 1U;
 	}
-
 }
 
 static inline void apply_write_barrier(struct osi_tx_ring *tx_ring)
@@ -1092,6 +1091,11 @@ static inline void set_clear_ioc_for_last_desc(struct osi_dma_priv_data *osi_dma
 		if (osi_dma->use_tx_frames == OSI_ENABLE) {
 			if ((tx_ring->frame_cnt % osi_dma->tx_frames) == OSI_NONE) {
 				last_desc->tdes2 |= TDES2_IOC;
+			}
+		} else if (osi_dma->use_tx_descs == OSI_ENABLE) {
+			if (tx_ring->desc_cnt >= osi_dma->intr_desc_count) {
+				last_desc->tdes2 |= TDES2_IOC;
+				tx_ring->desc_cnt = tx_ring->desc_cnt % osi_dma->intr_desc_count;
 			}
 		}
 	}
@@ -1222,12 +1226,16 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	first_desc = tx_desc;
 	last_desc = tx_desc;
 	last_swcx = tx_swcx;
+
 	tx_desc = tx_ring->tx_desc + entry;
 	tx_swcx = tx_ring->tx_swcx + entry;
 	desc_cnt--;
 
 	/* Fill remaining descriptors */
 	for (i = 0; i < desc_cnt; i++) {
+		/* Increase the desc count for first descriptor */
+		tx_ring->desc_cnt++;
+
 		tx_desc->tdes0 = L32(tx_swcx->buf_phy_addr);
 		tx_desc->tdes1 = H32(tx_swcx->buf_phy_addr);
 		tx_desc->tdes2 = tx_swcx->len;
@@ -1250,6 +1258,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	last_desc->tdes2 |= TDES2_IOC;
 
 	update_frame_cnt(osi_dma, tx_ring);
+	tx_ring->desc_cnt++;
 
 	set_clear_ioc_for_last_desc(osi_dma, tx_ring, last_desc);
 

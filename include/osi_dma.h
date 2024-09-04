@@ -616,6 +616,10 @@ struct osi_tx_ring {
 	 *  this value will be restarted. This parameter is internal to this unit only.
 	 */
 	nveu32_t frame_cnt;
+	/** Total number of desc count. Incremented for every decriptor used. This
+	 *  adjusted for every delta greater than equal to intr_desc_count.
+	 */
+	nveu32_t desc_cnt;
 	/** flag to skip memory barrier. Valid values are 1 or 0 */
 	nveu32_t skip_dmb;
 };
@@ -768,11 +772,20 @@ struct osi_dma_priv_data {
 	 *  Max value is NVETHERNETCL_PIF$UINT_MAX
 	 */
 	nveu32_t tx_frames;
+	/** Max no of descs to transfer before triggering Tx interrupt.
+	 *  Max value is NVETHERNETCL_PIF$UINT_MAX
+	 */
+	nveu32_t intr_desc_count;
 	/** Flag which decides tx_frames is
 	 *  NVETHERNETCL_PIF$OSI_ENABLE or
 	 *  NVETHERNETCL_PIF$OSI_DISABLE
 	 */
 	nveu32_t use_tx_frames;
+	/** Flag which decides Tx timer is
+	 *  NVETHERNETCL_PIF$OSI_ENABLE or
+	 *  NVETHERNETCL_PIF$OSI_DISABLE
+	 */
+	nveu32_t use_tx_descs;
 	/** DMA callback ops structure */
 	struct osd_dma_ops osd_ops;
 #ifndef OSI_STRIPPED_LIB
