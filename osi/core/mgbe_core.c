@@ -563,14 +563,14 @@ static nve32_t mgbe_rchlist_add_del(struct osi_core_priv_data *osi_core,
 		if (dma_chan < 32) {
 			rch0_data |= (nveu32_t) (1 << dma_chan);
 		} else {
-			rch1_data |= (nveu32_t) (1 << (dma_chan - 1));
+			rch1_data |= (nveu32_t) (1 << (dma_chan - 32));
 		}
 	} else {
 		/* add */
 		if (dma_chan < 32) {
 			rch0_data &= (nveu32_t) ~(1 << dma_chan);
 		} else {
-			rch1_data &= (nveu32_t) ~(1 << (dma_chan - 1));
+			rch1_data &= (nveu32_t) ~(1 << (dma_chan - 32));
 		}
 	}
 
@@ -596,7 +596,7 @@ static nve32_t mgbe_rchlist_add_del(struct osi_core_priv_data *osi_core,
 	}
 
 	osi_core->rch_index[rch_idx].dch = rch1_data;
-	osi_core->rch_index[rch_idx].dch |= ((osi_core->rch_index[rch_idx].dch << 32) | rch0_data);
+	osi_core->rch_index[rch_idx].dch = ((osi_core->rch_index[rch_idx].dch << 32) | rch0_data);
 	if (add_del) {
 		/* add */
 		osi_core->rch_index[rch_idx].in_use = OSI_ENABLE;
@@ -708,7 +708,7 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 	 * reset DDS bit in DPCSel reg
 	 */
 	if ((filter->oper_mode & OSI_OPER_ADDR_DEL) != OSI_NONE) {
-		if (osi_core->mac != OSI_MAC_HW_MGBE_T26X &&
+		if (osi_core->mac == OSI_MAC_HW_MGBE_T26X &&
 		    filter->pkt_dup != OSI_NONE) {
 			ret = mgbe_rchlist_add_del(osi_core, filter, 0, &rch_idx, &rch);
 		}
