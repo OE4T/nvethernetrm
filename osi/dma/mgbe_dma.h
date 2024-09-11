@@ -94,6 +94,7 @@
 #define MGBE_DMA_CHX_RX_CNTRL2_OWRQ_SCHAN      32U
 #define MGBE_DMA_CHX_RX_CNTRL2_OWRQ_MCHAN      64U
 #define MGBE_DMA_CHX_RX_CNTRL2_OWRQ_SHIFT      24U
+#define MGBE_DMA_CHX_TX_CTRL_TXPBL_RECOMMENDED 0x100000U
 #define MGBE_DMA_CHX_CTRL_PBL_SHIFT            16U
 /* MGBE VDMA to TC mask */
 #define MGBE_TX_VDMA_TC_MASK			(OSI_BIT(4) | OSI_BIT(5) | OSI_BIT(6))
@@ -102,23 +103,6 @@
 #define MGBE_RX_VDMA_TC_SHIFT			28
 #define MGBE_RX_DESC_WR_RNG_RWDC_SHIFT		16
 
-/** @} */
-
-/**
- * @addtogroup MGBE_PBL_settings.
- *
- * @brief Values defined for PBL settings
- * @{
- */
-/* Tx Queue size is 128KB */
-#define MGBE_TXQ_SIZE			131072U
-/* Rx Queue size is 192KB */
-#define MGBE_RXQ_SIZE			196608U
-/* MAX PBL value */
-#define MGBE_DMA_CHX_MAX_PBL		256U
-#define MGBE_DMA_CHX_MAX_PBL_VAL	0x200000U
-/* AXI Data width */
-#define MGBE_AXI_DATAWIDTH		128U
 /** @} */
 
 /**

@@ -33,44 +33,6 @@
 #endif /* OSI_DEBUG */
 #include "hw_common.h"
 
-#if 1 // copied from osi/core/common.h
-
-/**
- * @brief MTL Q size depth helper macro
- */
-#define Q_SZ_DEPTH(x)		(((x) * 1024U) / (MGBE_AXI_DATAWIDTH / 8U))
-
-/* PBL values */
-//redefined #define MGBE_DMA_CHX_MAX_PBL	32U
-#define MGBE_DMA_CHX_PBL_16	16U
-#define MGBE_DMA_CHX_PBL_8	8U
-#define MGBE_DMA_CHX_PBL_4	4U
-#define MGBE_DMA_CHX_PBL_1	1U
-
-static inline nveu32_t osi_valid_pbl_value(nveu32_t pbl_value)
-{
-	nveu32_t allowed_pbl;
-	nveu32_t pbl;
-
-	/* 8xPBL mode is set */
-	pbl = pbl_value / 8U;
-
-	if (pbl >= MGBE_DMA_CHX_MAX_PBL) {
-		allowed_pbl = MGBE_DMA_CHX_MAX_PBL;
-	} else if (pbl >= MGBE_DMA_CHX_PBL_16) {
-		allowed_pbl = MGBE_DMA_CHX_PBL_16;
-	} else if (pbl >= MGBE_DMA_CHX_PBL_8) {
-		allowed_pbl = MGBE_DMA_CHX_PBL_8;
-	} else if (pbl >= MGBE_DMA_CHX_PBL_4) {
-		allowed_pbl = MGBE_DMA_CHX_PBL_4;
-	} else {
-		allowed_pbl = MGBE_DMA_CHX_PBL_1;
-	}
-
-	return allowed_pbl;
-}
-#endif
-
 /**
  * @brief g_dma - DMA local data array.
  */
@@ -587,7 +549,7 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 	};
 	nveu32_t tx_pbl[2] = {
 		EQOS_DMA_CHX_TX_CTRL_TXPBL_RECOMMENDED,
-		EQOS_DMA_CHX_TX_CTRL_TXPBL_RECOMMENDED
+		MGBE_DMA_CHX_TX_CTRL_TXPBL_RECOMMENDED
 	};
 	const nveu32_t rx_pbl[2] = {
 		EQOS_DMA_CHX_RX_CTRL_RXPBL_RECOMMENDED,
@@ -623,24 +585,7 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 		owrq, owrq, owrq, owrq, owrq, owrq
 	};
 	nveu32_t val;
-	nveu32_t temp_tx_pbl;
 	nve32_t ret = -1;
-
-	temp_tx_pbl = (MGBE_TXQ_SIZE / osi_dma->num_dma_chans);
-	if (temp_tx_pbl <= osi_dma->mtu) {
-		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-			    "temp_tx_pbl is lower than mtu!!!\n", temp_tx_pbl);
-		goto exit_func;
-	}
-	temp_tx_pbl -= osi_dma->mtu;
-	temp_tx_pbl /= (MGBE_AXI_DATAWIDTH / 8U);
-	if (temp_tx_pbl <= 5U) {
-		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-			    "Error in distributing queues!!!\n", temp_tx_pbl);
-		goto exit_func;
-	}
-	temp_tx_pbl -= 5U;
-	tx_pbl[1] = temp_tx_pbl;
 
 	/* Enable Transmit/Receive interrupts */
 	val = osi_dma_readl((nveu8_t *)osi_dma->base + intr_en_reg[osi_dma->mac]);
@@ -679,8 +624,7 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 		 * as the TxPBL else we should be using the value whcih we get after
 		 * calculation by using above formula
 		 */
-		pbl = osi_valid_pbl_value(tx_pbl[osi_dma->mac]);
-		val |= (pbl << MGBE_DMA_CHX_CTRL_PBL_SHIFT);
+		val |= tx_pbl[osi_dma->mac];
 	} else if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
 		/* Map Tx VDMA's to TC. TC and PDMA mapped 1 to 1 */
 		val &= ~MGBE_TX_VDMA_TC_MASK;
