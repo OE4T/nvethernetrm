@@ -1661,4 +1661,31 @@ nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
  */
 #endif
 struct osi_dma_priv_data *osi_get_dma(void);
+
+#ifdef FSI_EQOS_SUPPORT
+/**
+ * @brief
+ * Description: Release osi_dma data structure.
+ *
+ * @pre OSD layer should use this as last API to release osi_dma pointer and
+ * shall not use the same after release dma resource
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ *  - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: No
+ *  - De-initialization: Yes
+ *
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
+nve32_t osi_release_dma(struct osi_dma_priv_data *osi_dma);
+#endif /* FSI_EQOS_SUPPORT */
+
 #endif /* INCLUDED_OSI_DMA_H */

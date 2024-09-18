@@ -2180,4 +2180,33 @@ nve32_t osi_handle_ioctl(struct osi_core_priv_data *osi_core,
  */
 #endif
 struct osi_core_priv_data *osi_get_core(void);
+
+#ifdef FSI_EQOS_SUPPORT
+/**
+ * @brief
+ * Description: Release the osi_core data structure.
+ *
+ * @pre OSD layer should use this as last API to release osi_core pointer and
+ * shall not use after that.
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: No
+ *  - Run time: No
+ *  - De-initialization: Yes
+ *
+ * @return
+ * 0 on success
+ * -1 on failure
+ *
+ */
+nve32_t osi_release_core(struct osi_core_priv_data *osi_core);
+#endif
+
 #endif /* INCLUDED_OSI_CORE_H */

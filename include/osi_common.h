@@ -321,6 +321,29 @@
 /** @} */
 
 /**
+ * @brief osi_memset - osi memset
+ *
+ * @param[out] s: source that need to be set
+ * @param[in] c: value to fill in source
+ * @param[in] count: first n bytes of source
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ */
+static inline void osi_memset(void *s, nveu8_t c, nveu64_t count)
+{
+	nveu8_t *xs = (nveu8_t *)s;
+	nveu64_t i = 0UL;
+
+	for (i = 0UL; i < count; i++) {
+		xs[i] = c;
+	}
+}
+
+/**
  * @brief unused function attribute
  */
 #define OSI_UNUSED  __attribute__((__unused__))

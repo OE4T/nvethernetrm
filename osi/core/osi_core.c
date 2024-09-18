@@ -91,6 +91,32 @@ fail:
 	return osi_core;
 }
 
+#ifdef FSI_EQOS_SUPPORT
+nve32_t osi_release_core(struct osi_core_priv_data *osi_core)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	nve32_t ret = 0;
+
+	if (osi_core == OSI_NULL) {
+		ret = -1;
+		goto fail;
+	}
+
+	if (l_core->magic_num != (nveu64_t)osi_core){
+		ret = -1;
+		goto fail;
+	}
+
+	l_core->magic_num = 0ULL;
+	l_core->if_init_done = OSI_DISABLE;
+
+fail:
+	return ret;
+
+}
+
+#endif /* FSI_EQOS_SUPPORT */
+
 struct osi_core_priv_data *get_role_pointer(nveu32_t role)
 {
 	nveu32_t i;

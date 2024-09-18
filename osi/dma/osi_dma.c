@@ -182,12 +182,37 @@ struct osi_dma_priv_data *osi_get_dma(void)
 	g_dma[i].magic_num = (nveu64_t)&g_dma[i].osi_dma;
 
 	osi_dma = &g_dma[i].osi_dma;
+	osi_memset(osi_dma, 0, sizeof(struct osi_dma_priv_data));
 fail:
 #ifdef OSI_CL_FTRACE
 	slogf(0, 2, "%s : Function Exit\n", __func__);
 #endif /* OSI_CL_FTRACE */
 	return osi_dma;
 }
+
+#ifdef FSI_EQOS_SUPPORT
+nve32_t osi_release_dma(struct osi_dma_priv_data *osi_dma)
+{
+	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
+	nve32_t ret = 0;
+
+	if (osi_dma == OSI_NULL) {
+		ret = -1;
+		goto fail;
+	}
+
+	if (l_dma->magic_num != (nveu64_t)osi_dma) {
+		ret = -1;
+		goto fail;
+	}
+
+	l_dma->magic_num = 0ULL;
+	l_dma->init_done = OSI_DISABLE;
+
+fail:
+	return ret;
+}
+#endif /* FSI_EQOS_SUPPORT */
 
 /**
  * @brief Function to validate input arguments of API.
