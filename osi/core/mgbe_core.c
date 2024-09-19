@@ -28,7 +28,6 @@
 #include "xpcs.h"
 #include "mgbe_mmc.h"
 #include "core_common.h"
-#include "macsec.h"
 
 /**
  * @brief mgbe_poll_for_mac_accrtl - Poll for Indirect Access control and status

@@ -25,7 +25,6 @@
 #include "mgbe_core.h"
 #include "eqos_core.h"
 #include "xpcs.h"
-#include "macsec.h"
 #include "osi_macsec.h"
 
 nve32_t poll_check(struct osi_core_priv_data *const osi_core, nveu8_t *addr,

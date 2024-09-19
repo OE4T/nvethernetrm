@@ -28,7 +28,6 @@
 #include "eqos_mmc.h"
 #include "core_local.h"
 #include "common.h"
-#include "macsec.h"
 
 /**
  * @brief ivc_handle_ioctl - marshell input argument to handle runtime command

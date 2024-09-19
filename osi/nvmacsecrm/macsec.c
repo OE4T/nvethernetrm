@@ -23,9 +23,6 @@
 #ifdef MACSEC_SUPPORT
 #include <osi_macsec.h>
 #include "macsec.h"
-#include "common.h"
-#include "eqos_core.h"
-#include "core_local.h"
 
 #if 0 /* Qnx */
 #define MACSEC_LOG(...) \
@@ -47,6 +44,7 @@ static nve32_t delete_dummy_sc(struct osi_core_priv_data *const osi_core,
 			     struct osi_macsec_sc_info *const sc);
 static nve32_t add_dummy_sc(struct osi_core_priv_data *const osi_core,
 				nveu8_t *const macsec_vf_mac);
+
 #ifdef DEBUG_MACSEC
 /**
  * @brief poll_for_dbg_buf_update - Query the status of a debug buffer update.
@@ -92,7 +90,7 @@ static nve32_t poll_for_dbg_buf_update(struct osi_core_priv_data *const osi_core
 			goto err;
 		}
 
-		dbg_buf_config = osi_readla(osi_core,
+		dbg_buf_config = osi_macsec_readla(osi_core,
 			(nveu8_t *)osi_core->macsec_base +
 			 dbg_buf_reg[osi_core->macsec]);
 		if ((dbg_buf_config & MACSEC_DEBUG_BUF_CONFIG_0_UPDATE) == OSI_NONE) {
@@ -141,7 +139,7 @@ static inline void write_dbg_buf_data(
 	for (i = 0; i < DBG_BUF_LEN; i++) {
 		dbg_buf_reg[OSI_MACSEC_T23X] = MACSEC_DEBUG_BUF_DATA_0(i);
 		dbg_buf_reg[OSI_MACSEC_T26X] = MACSEC_DEBUG_BUF_DATA_0_T26X(i);
-		osi_writela(osi_core, dbg_buf[i], base +
+		osi_macsec_writela(osi_core, dbg_buf[i], base +
 			    dbg_buf_reg[osi_core->macsec]);
 	}
 }
@@ -179,7 +177,7 @@ static inline void read_dbg_buf_data(
 	for (i = 0; i < DBG_BUF_LEN; i++) {
 		dbg_buf_reg[OSI_MACSEC_T23X] = MACSEC_DEBUG_BUF_DATA_0(i);
 		dbg_buf_reg[OSI_MACSEC_T26X] = MACSEC_DEBUG_BUF_DATA_0_T26X(i);
-		dbg_buf[i] = osi_readla(osi_core, base +
+		dbg_buf[i] = osi_macsec_readla(osi_core, base +
 					dbg_buf_reg[osi_core->macsec]);
 	}
 }
@@ -225,7 +223,7 @@ static void write_tx_dbg_trigger_evts(
 	};
 
 	flags = dbg_buf_config->flags;
-	tx_trigger_evts = osi_readla(osi_core,
+	tx_trigger_evts = osi_macsec_readla(osi_core,
 				     base + tx_dbg_trig_en_reg[macsec]);
 	if ((flags & OSI_TX_DBG_LKUP_MISS_EVT) != OSI_NONE) {
 		tx_trigger_evts |= MACSEC_TX_DBG_LKUP_MISS;
@@ -264,16 +262,16 @@ static void write_tx_dbg_trigger_evts(
 	}
 
 	MACSEC_LOG("%s: 0x%x", __func__, tx_trigger_evts);
-	osi_writela(osi_core, tx_trigger_evts,
+	osi_macsec_writela(osi_core, tx_trigger_evts,
 		    base + tx_dbg_trig_en_reg[macsec]);
 	if (tx_trigger_evts != OSI_NONE) {
 		/** Start the tx debug buffer capture */
-		debug_ctrl_reg = osi_readla(osi_core,
+		debug_ctrl_reg = osi_macsec_readla(osi_core,
 				    base + tx_dbg_ctrl_reg[macsec]);
 		debug_ctrl_reg |= MACSEC_TX_DEBUG_CONTROL_0_START_CAP;
 		MACSEC_LOG("%s: debug_ctrl_reg 0x%x", __func__,
 		       debug_ctrl_reg);
-		osi_writela(osi_core, debug_ctrl_reg,
+		osi_macsec_writela(osi_core, debug_ctrl_reg,
 			    base + tx_dbg_ctrl_reg[macsec]);
 	}
 }
@@ -315,7 +313,7 @@ static void tx_dbg_trigger_evts(
 	if (dbg_buf_config->rw == OSI_LUT_WRITE) {
 		write_tx_dbg_trigger_evts(osi_core, dbg_buf_config);
 	} else {
-		tx_trigger_evts = osi_readla(osi_core,
+		tx_trigger_evts = osi_macsec_readla(osi_core,
 				base + tx_dbg_trig_en_reg[osi_core->macsec]);
 		MACSEC_LOG("%s: 0x%x", __func__, tx_trigger_evts);
 		if ((tx_trigger_evts & MACSEC_TX_DBG_LKUP_MISS) != OSI_NONE) {
@@ -381,7 +379,7 @@ static void write_rx_dbg_trigger_evts(
 	};
 
 	flags = dbg_buf_config->flags;
-	rx_trigger_evts = osi_readla(osi_core,
+	rx_trigger_evts = osi_macsec_readla(osi_core,
 				base + rx_trig_en_reg[macsec]);
 	if ((flags & OSI_RX_DBG_LKUP_MISS_EVT) != OSI_NONE) {
 		rx_trigger_evts |= MACSEC_RX_DBG_LKUP_MISS;
@@ -419,16 +417,16 @@ static void write_rx_dbg_trigger_evts(
 		rx_trigger_evts &= ~MACSEC_RX_DBG_CAPTURE;
 	}
 	MACSEC_LOG("%s: 0x%x", __func__, rx_trigger_evts);
-	osi_writela(osi_core, rx_trigger_evts,
+	osi_macsec_writela(osi_core, rx_trigger_evts,
 		    base + rx_trig_en_reg[macsec]);
 	if (rx_trigger_evts != OSI_NONE) {
 		/** Start the tx debug buffer capture */
-		debug_ctrl_reg = osi_readla(osi_core,
+		debug_ctrl_reg = osi_macsec_readla(osi_core,
 				    base + rx_dbg_ctrl_reg[macsec]);
 		debug_ctrl_reg |= MACSEC_RX_DEBUG_CONTROL_0_START_CAP;
 		MACSEC_LOG("%s: debug_ctrl_reg 0x%x", __func__,
 		       debug_ctrl_reg);
-		osi_writela(osi_core, debug_ctrl_reg,
+		osi_macsec_writela(osi_core, debug_ctrl_reg,
 			    base + rx_dbg_ctrl_reg[macsec]);
 	}
 }
@@ -470,7 +468,7 @@ static void rx_dbg_trigger_evts(
 	if (dbg_buf_config->rw == OSI_LUT_WRITE) {
 		write_rx_dbg_trigger_evts(osi_core, dbg_buf_config);
 	} else {
-		rx_trigger_evts = osi_readla(osi_core,
+		rx_trigger_evts = osi_macsec_readla(osi_core,
 				base + rx_trig_en_reg[osi_core->macsec]);
 		MACSEC_LOG("%s: 0x%x", __func__, rx_trigger_evts);
 		if ((rx_trigger_evts & MACSEC_RX_DBG_LKUP_MISS) != OSI_NONE) {
@@ -593,7 +591,7 @@ static nve32_t macsec_dbg_buf_config(struct osi_core_priv_data *const osi_core,
 		goto err;
 	}
 
-	dbg_config_reg = osi_readla(osi_core, base + dbg_buf_reg[macsec]);
+	dbg_config_reg = osi_macsec_readla(osi_core, base + dbg_buf_reg[macsec]);
 
 	if (dbg_buf_config->ctlr_sel != OSI_NONE) {
 		dbg_config_reg |= MACSEC_DEBUG_BUF_CONFIG_0_CTLR_SEL;
@@ -612,7 +610,7 @@ static nve32_t macsec_dbg_buf_config(struct osi_core_priv_data *const osi_core,
 	dbg_config_reg &= ~MACSEC_DEBUG_BUF_CONFIG_0_IDX_MASK;
 	dbg_config_reg |= dbg_buf_config->index ;
 	dbg_config_reg |= MACSEC_DEBUG_BUF_CONFIG_0_UPDATE;
-	osi_writela(osi_core, dbg_config_reg, base + dbg_buf_reg[macsec]);
+	osi_macsec_writela(osi_core, dbg_config_reg, base + dbg_buf_reg[macsec]);
 	ret = poll_for_dbg_buf_update(osi_core);
 	if (ret < 0) {
 		goto err;
@@ -671,7 +669,7 @@ static nve32_t macsec_dbg_events_config(
 	if ((flags != OSI_NONE) && (dbg_buf_config->rw == OSI_LUT_WRITE)) {
 		for (i = 0; i < 32U; i++) {
 			if ((flags & ((nveu32_t)(1U) << i)) != OSI_NONE) {
-				events = osi_update_stats_counter(events, 1UL);
+				events = osi_macsec_update_stats_counter(events, 1UL);
 			}
 		}
 		if (events > 1U) {
@@ -728,9 +726,9 @@ static inline nveul64_t update_macsec_mmc_val(
 	nveul64_t value_lo;
 	nveul64_t value_hi;
 
-	value_lo = osi_readla(osi_core,
+	value_lo = osi_macsec_readla(osi_core,
 			      (nveu8_t *)osi_core->macsec_base + offset);
-	value_hi = osi_readla(osi_core,
+	value_hi = osi_macsec_readla(osi_core,
 			      (nveu8_t *)osi_core->macsec_base +
 			      ((offset & 0xFFFFU) + 4U));
 	return ((value_lo) | (value_hi << 31));
@@ -889,7 +887,7 @@ static nve32_t macsec_enable(struct osi_core_priv_data *const osi_core,
 	nveu8_t *base = (nveu8_t *)osi_core->macsec_base;
 	nve32_t ret = 0;
 
-	osi_lock_irq_enabled(&osi_core->macsec_fpe_lock);
+	osi_macsec_lock_irq_enabled(&osi_core->macsec_fpe_lock);
 
 	/* MACSEC and FPE cannot coexist on MGBE of T234 refer bug 3484034
 	 * Both EQOS and MGBE of T264 cannot have macsec and fpe enabled simultaneously */
@@ -901,7 +899,7 @@ static nve32_t macsec_enable(struct osi_core_priv_data *const osi_core,
 		goto exit;
 	}
 
-	val = osi_readla(osi_core, base + MACSEC_CONTROL0);
+	val = osi_macsec_readla(osi_core, base + MACSEC_CONTROL0);
 	MACSEC_LOG("Read MACSEC_CONTROL0: 0x%x \n", val);
 
 	if (enable == OSI_ENABLE) {
@@ -917,10 +915,10 @@ static nve32_t macsec_enable(struct osi_core_priv_data *const osi_core,
 	}
 
 	MACSEC_LOG("Write MACSEC_CONTROL0: 0x%x\n", val);
-	osi_writela(osi_core, val, base + MACSEC_CONTROL0);
+	osi_macsec_writela(osi_core, val, base + MACSEC_CONTROL0);
 
 exit:
-	osi_unlock_irq_enabled(&osi_core->macsec_fpe_lock);
+	osi_macsec_unlock_irq_enabled(&osi_core->macsec_fpe_lock);
 	return ret;
 }
 
@@ -953,7 +951,7 @@ static inline nve32_t poll_for_kt_update(struct osi_core_priv_data *osi_core)
 
 		count++;
 
-		kt_config = osi_readla(osi_core,
+		kt_config = osi_macsec_readla(osi_core,
 				       (nveu8_t *)osi_core->tz_base +
 				       MACSEC_GCM_KEYTABLE_CONFIG);
 		if ((kt_config & MACSEC_KT_CONFIG_UPDATE) == OSI_NONE) {
@@ -975,7 +973,7 @@ static nve32_t kt_key_read(struct osi_core_priv_data *const osi_core,
 	nveu32_t i, j;
 
 	for (i = 0; i < MACSEC_KT_DATA_REG_CNT; i++) {
-		kt_key[i] = osi_readla(osi_core,
+		kt_key[i] = osi_macsec_readla(osi_core,
 				       (nveu8_t *)osi_core->tz_base +
 				       MACSEC_GCM_KEYTABLE_DATA(i));
 	}
@@ -1033,7 +1031,7 @@ static nve32_t kt_key_write(struct osi_core_priv_data *const osi_core,
 	}
 
 	for (i = 0; i < MACSEC_KT_DATA_REG_CNT; i++) {
-		osi_writela(osi_core, kt_key[i],
+		osi_macsec_writela(osi_core, kt_key[i],
 			    (nveu8_t *)osi_core->tz_base +
 			    MACSEC_GCM_KEYTABLE_DATA(i));
 	}
@@ -1074,7 +1072,7 @@ static nve32_t macsec_kt_config(struct osi_core_priv_data *const osi_core,
 		goto err;
 	}
 
-	kt_config_reg = osi_readla(osi_core, base + MACSEC_GCM_KEYTABLE_CONFIG);
+	kt_config_reg = osi_macsec_readla(osi_core, base + MACSEC_GCM_KEYTABLE_CONFIG);
 	if (kt_config->table_config.ctlr_sel != OSI_NONE) {
 		kt_config_reg |= MACSEC_KT_CONFIG_CTLR_SEL;
 	} else {
@@ -1096,7 +1094,7 @@ static nve32_t macsec_kt_config(struct osi_core_priv_data *const osi_core,
 	kt_config_reg |= (kt_config->table_config.index);
 
 	kt_config_reg |= MACSEC_KT_CONFIG_UPDATE;
-	osi_writela(osi_core, kt_config_reg, base + MACSEC_GCM_KEYTABLE_CONFIG);
+	osi_macsec_writela(osi_core, kt_config_reg, base + MACSEC_GCM_KEYTABLE_CONFIG);
 	/* Wait for this KT update to finish */
 	ret = poll_for_kt_update(osi_core);
 	if (ret < 0) {
@@ -1160,7 +1158,7 @@ static inline nve32_t poll_for_lut_update(struct osi_core_priv_data *osi_core)
 
 		count++;
 
-		lut_config = osi_readla(osi_core,
+		lut_config = osi_macsec_readla(osi_core,
 					(nveu8_t *)osi_core->macsec_base +
 					MACSEC_LUT_CONFIG);
 		if ((lut_config & MACSEC_LUT_CONFIG_UPDATE) == OSI_NONE) {
@@ -1203,7 +1201,7 @@ static inline void read_lut_data(struct osi_core_priv_data *const osi_core,
 
 	/* Commit the LUT entry to HW */
 	for (i = 0; i < MACSEC_LUT_DATA_REG_CNT; i++) {
-		lut_data[i] = osi_readla(osi_core, base + MACSEC_LUT_DATA(i));
+		lut_data[i] = osi_macsec_readla(osi_core, base + MACSEC_LUT_DATA(i));
 	}
 }
 
@@ -1556,7 +1554,7 @@ static nve32_t byp_lut_read(struct osi_core_priv_data *const osi_core,
 	if (ret == OSI_NONE_SIGNED) {
 		/* update byp LUT index if it is > 32 */
 		index &= 0x1FU;
-		val = osi_readla(osi_core, paddr);
+		val = osi_macsec_readla(osi_core, paddr);
 		if ((val & ((nveu32_t)(1U) << (index & 0x1FU))) != OSI_NONE) {
 			flags |= OSI_LUT_FLAGS_ENTRY_VALID;
 		}
@@ -1639,7 +1637,7 @@ static void tx_sci_lut_read(struct osi_core_priv_data *const osi_core,
 
 	/* update SCI LUT index if it is > 32 */
 	index &= 0x1FU;
-	val = osi_readla(osi_core, addr+tx_sci_lut_reg[macsec]);
+	val = osi_macsec_readla(osi_core, addr+tx_sci_lut_reg[macsec]);
 	if ((val & ((nveu32_t)(1U) << (index & 0xFFU))) != OSI_NONE) {
 		lut_config->flags |= OSI_LUT_FLAGS_ENTRY_VALID;
 	}
@@ -1729,7 +1727,7 @@ static nve32_t sci_lut_read(struct osi_core_priv_data *const osi_core,
 			}
 		}
 
-		val = osi_readla(osi_core, addr+rx_sci_lut_reg[macsec]);
+		val = osi_macsec_readla(osi_core, addr+rx_sci_lut_reg[macsec]);
 		if ((val & ((nveu32_t)(1U) << index)) != OSI_NONE) {
 			lut_config->flags |= OSI_LUT_FLAGS_ENTRY_VALID;
 		}
@@ -2013,7 +2011,7 @@ static inline void commit_lut_data(struct osi_core_priv_data *const osi_core,
 
 	/* Commit the LUT entry to HW */
 	for (i = 0; i < MACSEC_LUT_DATA_REG_CNT; i++) {
-		osi_writela(osi_core, lut_data[i], base + MACSEC_LUT_DATA(i));
+		osi_macsec_writela(osi_core, lut_data[i], base + MACSEC_LUT_DATA(i));
 	}
 }
 
@@ -2955,16 +2953,16 @@ static nve32_t sci_lut_config(struct osi_core_priv_data *const osi_core,
 
 		if ((lut_config->flags & OSI_LUT_FLAGS_ENTRY_VALID) ==
 			OSI_LUT_FLAGS_ENTRY_VALID) {
-			val = osi_readla(osi_core, addr +
+			val = osi_macsec_readla(osi_core, addr +
 					 tx_sci_lut_reg[macsec]);
 			val |= ((nveu32_t)(1U) << index);
-			osi_writela(osi_core, val, addr +
+			osi_macsec_writela(osi_core, val, addr +
 				    tx_sci_lut_reg[macsec]);
 		} else {
-			val = osi_readla(osi_core, addr +
+			val = osi_macsec_readla(osi_core, addr +
 					 tx_sci_lut_reg[macsec]);
 			val &= ~((nveu32_t)(1U) << index);
-			osi_writela(osi_core, val, addr +
+			osi_macsec_writela(osi_core, val, addr +
 				    tx_sci_lut_reg[macsec]);
 		}
 
@@ -2974,16 +2972,16 @@ static nve32_t sci_lut_config(struct osi_core_priv_data *const osi_core,
 
 		if ((lut_config->flags & OSI_LUT_FLAGS_ENTRY_VALID) ==
 			OSI_LUT_FLAGS_ENTRY_VALID) {
-			val = osi_readla(osi_core, addr +
+			val = osi_macsec_readla(osi_core, addr +
 					 rx_sci_lut_reg[macsec]);
 			val |= ((nveu32_t)(1U) << index);
-			osi_writela(osi_core, val, addr +
+			osi_macsec_writela(osi_core, val, addr +
 				    rx_sci_lut_reg[macsec]);
 		} else {
-			val = osi_readla(osi_core, addr +
+			val = osi_macsec_readla(osi_core, addr +
 					 rx_sci_lut_reg[macsec]);
 			val &= ~((nveu32_t)(1U) << index);
-			osi_writela(osi_core, val, addr +
+			osi_macsec_writela(osi_core, val, addr +
 				    rx_sci_lut_reg[macsec]);
 		}
 	}
@@ -3066,16 +3064,16 @@ static nve32_t byp_lut_config(struct osi_core_priv_data *const osi_core,
 	case OSI_CTLR_SEL_TX:
 		if ((flags & OSI_LUT_FLAGS_ENTRY_VALID) ==
 		     OSI_LUT_FLAGS_ENTRY_VALID) {
-			val = osi_readla(osi_core, addr +
+			val = osi_macsec_readla(osi_core, addr +
 					 tx_byp_lut_reg[osi_core->macsec]);
 			val |= ((nveu32_t)(1U) << (index & 0x1FU));
-			osi_writela(osi_core, val, addr +
+			osi_macsec_writela(osi_core, val, addr +
 				    tx_byp_lut_reg[osi_core->macsec]);
 		} else {
-			val = osi_readla(osi_core, addr +
+			val = osi_macsec_readla(osi_core, addr +
 					 tx_byp_lut_reg[osi_core->macsec]);
 			val &= ~((nveu32_t)(1U) << (index & 0x1FU));
-			osi_writela(osi_core, val, addr +
+			osi_macsec_writela(osi_core, val, addr +
 				    tx_byp_lut_reg[osi_core->macsec]);
 		}
 		break;
@@ -3083,16 +3081,16 @@ static nve32_t byp_lut_config(struct osi_core_priv_data *const osi_core,
 	case OSI_CTLR_SEL_RX:
 		if ((flags & OSI_LUT_FLAGS_ENTRY_VALID) ==
 		     OSI_LUT_FLAGS_ENTRY_VALID) {
-			val = osi_readla(osi_core, addr +
+			val = osi_macsec_readla(osi_core, addr +
 					 rx_byp_lut_reg[osi_core->macsec]);
 			val |= ((nveu32_t)(1U) << (index & 0x1FU));
-			osi_writela(osi_core, val, addr +
+			osi_macsec_writela(osi_core, val, addr +
 				    rx_byp_lut_reg[osi_core->macsec]);
 		} else {
-			val = osi_readla(osi_core, addr +
+			val = osi_macsec_readla(osi_core, addr +
 					 rx_byp_lut_reg[osi_core->macsec]);
 			val &= ~((nveu32_t)(1U) << (index & 0x1FU));
-			osi_writela(osi_core, val, addr +
+			osi_macsec_writela(osi_core, val, addr +
 				    rx_byp_lut_reg[osi_core->macsec]);
 		}
 
@@ -3256,7 +3254,7 @@ static nve32_t macsec_lut_config(struct osi_core_priv_data *const osi_core,
 		goto exit;
 	}
 
-	lut_config_reg = osi_readla(osi_core, base + MACSEC_LUT_CONFIG);
+	lut_config_reg = osi_macsec_readla(osi_core, base + MACSEC_LUT_CONFIG);
 	if (lut_config->table_config.ctlr_sel != OSI_NONE) {
 		lut_config_reg |= MACSEC_LUT_CONFIG_CTLR_SEL;
 	} else {
@@ -3282,7 +3280,7 @@ static nve32_t macsec_lut_config(struct osi_core_priv_data *const osi_core,
 	lut_config_reg |= (nveu32_t)(lut_config->table_config.index);
 
 	lut_config_reg |= MACSEC_LUT_CONFIG_UPDATE;
-	osi_writela(osi_core, lut_config_reg, base + MACSEC_LUT_CONFIG);
+	osi_macsec_writela(osi_core, lut_config_reg, base + MACSEC_LUT_CONFIG);
 
 	/* Wait for this LUT update to finish */
 	ret = poll_for_lut_update(osi_core);
@@ -3336,8 +3334,8 @@ static inline void handle_rx_sc_invalid_key(
 
 	/** check which SC/AN had triggered and clear */
 	for (i = 0U; i < reg_count[macsec]; i++) {
-		clear = osi_readla(osi_core, addr + reg_off[macsec] + (4U * i));
-		osi_writela(osi_core, clear, addr + reg_off[macsec] + (4U * i));
+		clear = osi_macsec_readla(osi_core, addr + reg_off[macsec] + (4U * i));
+		osi_macsec_writela(osi_core, clear, addr + reg_off[macsec] + (4U * i));
 	}
 
 }
@@ -3378,8 +3376,8 @@ static inline void handle_tx_sc_invalid_key(
 
 	/** check which SC/AN had triggered and clear */
 	for (i = 0U; i < reg_count[macsec]; i++) {
-		clear = osi_readla(osi_core, addr + reg_off[macsec] + (4U*i));
-		osi_writela(osi_core, clear, addr + reg_off[macsec] + (4U*i));
+		clear = osi_macsec_readla(osi_core, addr + reg_off[macsec] + (4U*i));
+		osi_macsec_writela(osi_core, clear, addr + reg_off[macsec] + (4U*i));
 	}
 
 }
@@ -3445,9 +3443,9 @@ static inline void handle_rx_sc_replay_err(
 	nveu32_t i;
 
 	for (i = 0U; i < reg_count[macsec]; i++) {
-		clear = osi_readla(osi_core, addr +
+		clear = osi_macsec_readla(osi_core, addr +
 				   reg_off[macsec] + (4U*i));
-		osi_writela(osi_core, clear, addr +
+		osi_macsec_writela(osi_core, clear, addr +
 			    reg_off[macsec] + (4U*i));
 	}
 
@@ -3487,9 +3485,9 @@ static inline void handle_rx_pn_exhausted(
 
 	/* Check which SC/AN had triggered and clear */
 	for (i = 0U; i < reg_count[macsec]; i++) {
-		clear = osi_readla(osi_core, addr +
+		clear = osi_macsec_readla(osi_core, addr +
 				   reg_off[macsec] + (4U*i));
-		osi_writela(osi_core, clear, addr +
+		osi_macsec_writela(osi_core, clear, addr +
 			       reg_off[macsec] + (4U*i));
 	}
 
@@ -3527,9 +3525,9 @@ static inline void handle_tx_sc_err(struct osi_core_priv_data *const osi_core)
 	nveu32_t i;
 
 	for (i = 0U; i < reg_count[macsec]; i++) {
-		clear = osi_readla(osi_core, addr +
+		clear = osi_macsec_readla(osi_core, addr +
 				   reg_off[macsec] + (4U*i));
-		osi_writela(osi_core, clear, addr +
+		osi_macsec_writela(osi_core, clear, addr +
 			    reg_off[macsec] + (4U*i));
 	}
 }
@@ -3568,8 +3566,8 @@ static inline void handle_tx_pn_threshold(
 
 	/* check which SC/AN had triggered and clear */
 	for (i = 0U; i < reg_count[osi_core->macsec]; i++) {
-		clear = osi_readla(osi_core, addr + reg_off[macsec] + (4U*i));
-		osi_writela(osi_core, clear, addr + reg_off[macsec] + (4U*i));
+		clear = osi_macsec_readla(osi_core, addr + reg_off[macsec] + (4U*i));
+		osi_macsec_writela(osi_core, clear, addr + reg_off[macsec] + (4U*i));
 	}
 
 }
@@ -3608,9 +3606,9 @@ static inline void handle_tx_pn_exhausted(
 
 	for (i = 0U; i < reg_count[macsec]; i++) {
 		/* check which SC/AN had triggered and clear */
-		clear = osi_readla(osi_core, addr +
+		clear = osi_macsec_readla(osi_core, addr +
 				   reg_off[macsec] + (4U*i));
-		osi_writela(osi_core, clear, addr +
+		osi_macsec_writela(osi_core, clear, addr +
 			    reg_off[macsec] + (4U*i));
 	}
 
@@ -3662,22 +3660,22 @@ static inline void handle_dbg_evt_capture_done(
 	};
 
 	if (ctrl_sel == OSI_CTLR_SEL_TX) {
-		trigger_evts = osi_readla(osi_core, addr +
+		trigger_evts = osi_macsec_readla(osi_core, addr +
 					  tx_dbg_sts_reg[macsec]);
-		osi_writela(osi_core, trigger_evts, addr +
+		osi_macsec_writela(osi_core, trigger_evts, addr +
 			    tx_dbg_sts_reg[macsec]);
 		/* clear all trigger events */
 		trigger_evts = 0U;
-		osi_writela(osi_core, trigger_evts,
+		osi_macsec_writela(osi_core, trigger_evts,
 			    addr + tx_trig_reg[macsec]);
 	} else {
-		trigger_evts = osi_readla(osi_core, addr +
+		trigger_evts = osi_macsec_readla(osi_core, addr +
 					  rx_dbg_sts_reg[macsec]);
-		osi_writela(osi_core, trigger_evts, addr +
+		osi_macsec_writela(osi_core, trigger_evts, addr +
 			    rx_dbg_sts_reg[macsec]);
 		/* clear all trigger events */
 		trigger_evts = 0U;
-		osi_writela(osi_core, trigger_evts,
+		osi_macsec_writela(osi_core, trigger_evts,
 			    addr + rx_trig_reg[macsec]);
 	}
 }
@@ -3689,7 +3687,7 @@ static inline void handle_macsec_tx_mac_crc_error(struct osi_core_priv_data *con
 	nveu64_t tx_crc_err = 0;
 #endif
 	if ((tx_isr & MACSEC_TX_MAC_CRC_ERROR) == MACSEC_TX_MAC_CRC_ERROR) {
-		osi_core->macsec_irq_stats.tx_mac_crc_error = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.tx_mac_crc_error = osi_macsec_update_stats_counter(
 							osi_core->macsec_irq_stats.tx_mac_crc_error,
 							1UL);
 		*clear |= MACSEC_TX_MAC_CRC_ERROR;
@@ -3744,13 +3742,13 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 	nveu32_t tx_isr, clear = 0;
 	nveu8_t *addr = (nveu8_t *)osi_core->macsec_base;
 
-	tx_isr = osi_readla(osi_core, addr + MACSEC_TX_ISR);
+	tx_isr = osi_macsec_readla(osi_core, addr + MACSEC_TX_ISR);
 	MACSEC_LOG("%s(): tx_isr 0x%x\n", __func__, tx_isr);
 	if ((tx_isr & MACSEC_TX_DBG_BUF_CAPTURE_DONE) ==
 	    MACSEC_TX_DBG_BUF_CAPTURE_DONE) {
 		handle_dbg_evt_capture_done(osi_core, OSI_CTLR_SEL_TX);
 		osi_core->macsec_irq_stats.tx_dbg_capture_done =
-						osi_update_stats_counter(
+						osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.tx_dbg_capture_done,
 						1UL);
 		clear |= MACSEC_TX_DBG_BUF_CAPTURE_DONE;
@@ -3758,7 +3756,7 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 
 	if ((tx_isr & MACSEC_TX_MTU_CHECK_FAIL) == MACSEC_TX_MTU_CHECK_FAIL) {
 		osi_core->macsec_irq_stats.tx_mtu_check_fail =
-						osi_update_stats_counter(
+						osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.tx_mtu_check_fail,
 						1UL);
 		clear |= MACSEC_TX_MTU_CHECK_FAIL;
@@ -3766,7 +3764,7 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 
 	if ((tx_isr & MACSEC_TX_AES_GCM_BUF_OVF) == MACSEC_TX_AES_GCM_BUF_OVF) {
 		osi_core->macsec_irq_stats.tx_aes_gcm_buf_ovf =
-						osi_update_stats_counter(
+						osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.tx_aes_gcm_buf_ovf,
 						1UL);
 		clear |= MACSEC_TX_AES_GCM_BUF_OVF;
@@ -3774,7 +3772,7 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 
 	if ((tx_isr & MACSEC_TX_SC_AN_NOT_VALID) == MACSEC_TX_SC_AN_NOT_VALID) {
 		osi_core->macsec_irq_stats.tx_sc_an_not_valid =
-						osi_update_stats_counter(
+						osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.tx_sc_an_not_valid,
 						1UL);
 		handle_tx_sc_err(osi_core);
@@ -3785,7 +3783,7 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 
 	if ((tx_isr & MACSEC_TX_PN_THRSHLD_RCHD) == MACSEC_TX_PN_THRSHLD_RCHD) {
 		osi_core->macsec_irq_stats.tx_pn_threshold =
-						osi_update_stats_counter(
+						osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.tx_pn_threshold,
 						1UL);
 		handle_tx_pn_threshold(osi_core);
@@ -3793,14 +3791,14 @@ static inline void handle_tx_irq(struct osi_core_priv_data *const osi_core)
 	}
 
 	if ((tx_isr & MACSEC_TX_PN_EXHAUSTED) == MACSEC_TX_PN_EXHAUSTED) {
-		osi_core->macsec_irq_stats.tx_pn_exhausted = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.tx_pn_exhausted = osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.tx_pn_exhausted,
 						1UL);
 		handle_tx_pn_exhausted(osi_core);
 		clear |= MACSEC_TX_PN_EXHAUSTED;
 	}
 	if (clear != OSI_NONE) {
-		osi_writela(osi_core, clear, addr + MACSEC_TX_ISR);
+		osi_macsec_writela(osi_core, clear, addr + MACSEC_TX_ISR);
 	}
 }
 
@@ -3808,7 +3806,7 @@ static inline void handle_macsec_rx_irqs(struct osi_core_priv_data *const osi_co
 					 nveu32_t rx_isr, nveu32_t *clear)
 {
 	if ((rx_isr & MACSEC_RX_REPLAY_ERROR) == MACSEC_RX_REPLAY_ERROR) {
-		osi_core->macsec_irq_stats.rx_replay_error = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.rx_replay_error = osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.rx_replay_error,
 						1UL);
 		handle_rx_sc_replay_err(osi_core);
@@ -3816,21 +3814,21 @@ static inline void handle_macsec_rx_irqs(struct osi_core_priv_data *const osi_co
 	}
 
 	if ((rx_isr & MACSEC_RX_MTU_CHECK_FAIL) == MACSEC_RX_MTU_CHECK_FAIL) {
-		osi_core->macsec_irq_stats.rx_mtu_check_fail = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.rx_mtu_check_fail = osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.rx_mtu_check_fail,
 						1UL);
 		*clear |= MACSEC_RX_MTU_CHECK_FAIL;
 	}
 
 	if ((rx_isr & MACSEC_RX_AES_GCM_BUF_OVF) == MACSEC_RX_AES_GCM_BUF_OVF) {
-		osi_core->macsec_irq_stats.rx_aes_gcm_buf_ovf = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.rx_aes_gcm_buf_ovf = osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.rx_aes_gcm_buf_ovf,
 						1UL);
 		*clear |= MACSEC_RX_AES_GCM_BUF_OVF;
 	}
 
 	if ((rx_isr & MACSEC_RX_PN_EXHAUSTED) == MACSEC_RX_PN_EXHAUSTED) {
-		osi_core->macsec_irq_stats.rx_pn_exhausted = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.rx_pn_exhausted = osi_macsec_update_stats_counter(
 							osi_core->macsec_irq_stats.rx_pn_exhausted,
 							1UL);
 		handle_rx_pn_exhausted(osi_core);
@@ -3882,20 +3880,20 @@ static inline void handle_rx_irq(struct osi_core_priv_data *const osi_core)
 	nveu64_t rx_icv_err = 0;
 #endif
 
-	rx_isr = osi_readla(osi_core, addr + rx_isr_reg[osi_core->macsec]);
+	rx_isr = osi_macsec_readla(osi_core, addr + rx_isr_reg[osi_core->macsec]);
 	MACSEC_LOG("%s(): rx_isr 0x%x\n", __func__, rx_isr);
 
 	if ((rx_isr & MACSEC_RX_DBG_BUF_CAPTURE_DONE) ==
 	    MACSEC_RX_DBG_BUF_CAPTURE_DONE) {
 		handle_dbg_evt_capture_done(osi_core, OSI_CTLR_SEL_RX);
-		osi_core->macsec_irq_stats.rx_dbg_capture_done = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.rx_dbg_capture_done = osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.rx_dbg_capture_done,
 						1UL);
 		clear |= MACSEC_RX_DBG_BUF_CAPTURE_DONE;
 	}
 
 	if ((rx_isr & MACSEC_RX_ICV_ERROR) == MACSEC_RX_ICV_ERROR) {
-		osi_core->macsec_irq_stats.rx_icv_err_threshold = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.rx_icv_err_threshold = osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.rx_icv_err_threshold,
 						1UL);
 		clear |= MACSEC_RX_ICV_ERROR;
@@ -3919,7 +3917,7 @@ static inline void handle_rx_irq(struct osi_core_priv_data *const osi_core)
 	handle_macsec_rx_irqs(osi_core, rx_isr, &clear);
 
 	if ((rx_isr & MACSEC_RX_MAC_CRC_ERROR) == MACSEC_RX_MAC_CRC_ERROR) {
-		osi_core->macsec_irq_stats.rx_mac_crc_error = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.rx_mac_crc_error = osi_macsec_update_stats_counter(
 							osi_core->macsec_irq_stats.rx_mac_crc_error,
 							1UL);
 		clear |= MACSEC_RX_MAC_CRC_ERROR;
@@ -3940,7 +3938,7 @@ static inline void handle_rx_irq(struct osi_core_priv_data *const osi_core)
 	}
 
 	if (clear != OSI_NONE) {
-		osi_writela(osi_core, clear, addr + rx_isr_reg[osi_core->macsec]);
+		osi_macsec_writela(osi_core, clear, addr + rx_isr_reg[osi_core->macsec]);
 	}
 }
 
@@ -3979,11 +3977,11 @@ static inline void handle_common_irq(struct osi_core_priv_data *const osi_core)
 				MACSEC_COMMON_ISR_T26X
 	};
 
-	common_isr = osi_readla(osi_core, addr + common_isr_reg[macsec]);
+	common_isr = osi_macsec_readla(osi_core, addr + common_isr_reg[macsec]);
 	MACSEC_LOG("%s(): common_isr 0x%x\n", __func__, common_isr);
 
 	if ((common_isr & MACSEC_SECURE_REG_VIOL) == MACSEC_SECURE_REG_VIOL) {
-		osi_core->macsec_irq_stats.secure_reg_viol = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.secure_reg_viol = osi_macsec_update_stats_counter(
 							osi_core->macsec_irq_stats.secure_reg_viol,
 							1UL);
 		clear |= MACSEC_SECURE_REG_VIOL;
@@ -3998,7 +3996,7 @@ static inline void handle_common_irq(struct osi_core_priv_data *const osi_core)
 
 	if ((common_isr & MACSEC_RX_UNINIT_KEY_SLOT) ==
 	    MACSEC_RX_UNINIT_KEY_SLOT) {
-		osi_core->macsec_irq_stats.rx_uninit_key_slot =	osi_update_stats_counter(
+		osi_core->macsec_irq_stats.rx_uninit_key_slot =	osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.rx_uninit_key_slot,
 						1UL);
 		clear |= MACSEC_RX_UNINIT_KEY_SLOT;
@@ -4006,7 +4004,7 @@ static inline void handle_common_irq(struct osi_core_priv_data *const osi_core)
 	}
 
 	if ((common_isr & MACSEC_RX_LKUP_MISS) == MACSEC_RX_LKUP_MISS) {
-		osi_core->macsec_irq_stats.rx_lkup_miss = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.rx_lkup_miss = osi_macsec_update_stats_counter(
 							osi_core->macsec_irq_stats.rx_lkup_miss,
 							1UL);
 		clear |= MACSEC_RX_LKUP_MISS;
@@ -4014,7 +4012,7 @@ static inline void handle_common_irq(struct osi_core_priv_data *const osi_core)
 
 	if ((common_isr & MACSEC_TX_UNINIT_KEY_SLOT) ==
 	    MACSEC_TX_UNINIT_KEY_SLOT) {
-		osi_core->macsec_irq_stats.tx_uninit_key_slot = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.tx_uninit_key_slot = osi_macsec_update_stats_counter(
 						osi_core->macsec_irq_stats.tx_uninit_key_slot,
 						1UL);
 		clear |= MACSEC_TX_UNINIT_KEY_SLOT;
@@ -4022,13 +4020,13 @@ static inline void handle_common_irq(struct osi_core_priv_data *const osi_core)
 	}
 
 	if ((common_isr & MACSEC_TX_LKUP_MISS) == MACSEC_TX_LKUP_MISS) {
-		osi_core->macsec_irq_stats.tx_lkup_miss = osi_update_stats_counter(
+		osi_core->macsec_irq_stats.tx_lkup_miss = osi_macsec_update_stats_counter(
 							osi_core->macsec_irq_stats.tx_lkup_miss,
 							1UL);
 		clear |= MACSEC_TX_LKUP_MISS;
 	}
 	if (clear != OSI_NONE) {
-		osi_writela(osi_core, clear, addr + common_isr_reg[macsec]);
+		osi_macsec_writela(osi_core, clear, addr + common_isr_reg[macsec]);
 	}
 }
 
@@ -4065,7 +4063,7 @@ static void macsec_handle_irq(struct osi_core_priv_data *const osi_core)
 				MACSEC_COMMON_ISR_T26X
 	};
 
-	irq_common_sr = osi_readla(osi_core, addr + MACSEC_INTERRUPT_COMMON_SR);
+	irq_common_sr = osi_macsec_readla(osi_core, addr + MACSEC_INTERRUPT_COMMON_SR);
 	MACSEC_LOG("%s(): common_sr 0x%x\n", __func__, irq_common_sr);
 	if ((irq_common_sr & MACSEC_COMMON_SR_TX) == MACSEC_COMMON_SR_TX) {
 		handle_tx_irq(osi_core);
@@ -4080,7 +4078,7 @@ static void macsec_handle_irq(struct osi_core_priv_data *const osi_core)
 		handle_safety_err_irq(osi_core);
 	}
 
-	common_isr = osi_readla(osi_core, addr + common_isr_reg[macsec]);
+	common_isr = osi_macsec_readla(osi_core, addr + common_isr_reg[macsec]);
 	if (common_isr != OSI_NONE) {
 		handle_common_irq(osi_core);
 	}
@@ -4116,7 +4114,7 @@ static nve32_t macsec_cipher_config(struct osi_core_priv_data *const osi_core,
 	nveu32_t val;
 	nve32_t ret = 0;
 
-	val = osi_readla(osi_core, base + MACSEC_GCM_AES_CONTROL_0);
+	val = osi_macsec_readla(osi_core, base + MACSEC_GCM_AES_CONTROL_0);
 
 	val &= ~MACSEC_TX_AES_MODE_MASK;
 	val &= ~MACSEC_RX_AES_MODE_MASK;
@@ -4131,7 +4129,7 @@ static nve32_t macsec_cipher_config(struct osi_core_priv_data *const osi_core,
 		goto exit;
 	}
 
-	osi_writela(osi_core, val, base + MACSEC_GCM_AES_CONTROL_0);
+	osi_macsec_writela(osi_core, val, base + MACSEC_GCM_AES_CONTROL_0);
 exit:
 	return ret;
 }
@@ -4168,7 +4166,7 @@ static nve32_t macsec_loopback_config(
 	nveu32_t val;
 	nve32_t ret = 0;
 
-	val = osi_readla(osi_core, base + MACSEC_CONTROL1);
+	val = osi_macsec_readla(osi_core, base + MACSEC_CONTROL1);
 
 	if (enable == OSI_ENABLE) {
 		val |= MACSEC_LOOPBACK_MODE_EN;
@@ -4179,7 +4177,7 @@ static nve32_t macsec_loopback_config(
 		goto exit;
 	}
 
-	osi_writela(osi_core, val, base + MACSEC_CONTROL1);
+	osi_macsec_writela(osi_core, val, base + MACSEC_CONTROL1);
 exit:
 	return ret;
 }
@@ -4571,16 +4569,14 @@ exit:
 static nve32_t macsec_deinit(struct osi_core_priv_data *const osi_core)
 {
 	nveu32_t i;
-	const struct core_local *l_core = (void *)osi_core;
 
 	(void)macsec_enable(osi_core, OSI_DISABLE);
 	for (i = OSI_CTLR_SEL_TX; i <= OSI_CTLR_SEL_RX; i++) {
-		osi_memset(&osi_core->macsec_lut_status[i], OSI_NONE,
+		osi_macsec_memset(&osi_core->macsec_lut_status[i], OSI_NONE,
 			   sizeof(struct osi_macsec_lut_status));
 	}
 
 	/* Update MAC as per macsec requirement */
-	l_core->ops_p->macsec_config_mac(osi_core, OSI_DISABLE);
 	osi_core->macsec_initialized = OSI_DISABLE;
 
 	return 0;
@@ -4624,19 +4620,19 @@ static nve32_t macsec_update_mtu(struct osi_core_priv_data *const osi_core,
 		goto exit;
 	}
 	/* Set MTU */
-	val = osi_readla(osi_core, addr + MACSEC_TX_MTU_LEN);
+	val = osi_macsec_readla(osi_core, addr + MACSEC_TX_MTU_LEN);
 	MACSEC_LOG("Read MACSEC_TX_MTU_LEN: 0x%x\n", val);
 	val &= ~(MTU_LENGTH_MASK);
 	val |= (mtu & MTU_LENGTH_MASK);
 	MACSEC_LOG("Write MACSEC_TX_MTU_LEN: 0x%x\n", val);
-	osi_writela(osi_core, val, addr + MACSEC_TX_MTU_LEN);
+	osi_macsec_writela(osi_core, val, addr + MACSEC_TX_MTU_LEN);
 
-	val = osi_readla(osi_core, addr + MACSEC_RX_MTU_LEN);
+	val = osi_macsec_readla(osi_core, addr + MACSEC_RX_MTU_LEN);
 	MACSEC_LOG("Read MACSEC_RX_MTU_LEN: 0x%x\n", val);
 	val &= ~(MTU_LENGTH_MASK);
 	val |= (mtu & MTU_LENGTH_MASK);
 	MACSEC_LOG("Write MACSEC_RX_MTU_LEN: 0x%x\n", val);
-	osi_writela(osi_core, val, addr + MACSEC_RX_MTU_LEN);
+	osi_macsec_writela(osi_core, val, addr + MACSEC_RX_MTU_LEN);
 exit:
 	return ret;
 }
@@ -4885,7 +4881,7 @@ static void macsec_intr_config(struct osi_core_priv_data *const osi_core, nveu32
 	};
 	(void)enable;
 
-	val = osi_readla(osi_core, addr + MACSEC_TX_IMR);
+	val = osi_macsec_readla(osi_core, addr + MACSEC_TX_IMR);
 	MACSEC_LOG("Read MACSEC_TX_IMR: 0x%x\n", val);
 	val |= (MACSEC_TX_DBG_BUF_CAPTURE_DONE_INT_EN |
 		MACSEC_TX_MTU_CHECK_FAIL_INT_EN |
@@ -4893,10 +4889,10 @@ static void macsec_intr_config(struct osi_core_priv_data *const osi_core, nveu32
 		MACSEC_TX_AES_GCM_BUF_OVF_INT_EN |
 		MACSEC_TX_PN_EXHAUSTED_INT_EN |
 		MACSEC_TX_PN_THRSHLD_RCHD_INT_EN);
-	osi_writela(osi_core, val, addr + MACSEC_TX_IMR);
+	osi_macsec_writela(osi_core, val, addr + MACSEC_TX_IMR);
 	MACSEC_LOG("Write MACSEC_TX_IMR: 0x%x\n", val);
 
-	val = osi_readla(osi_core, addr + rx_imr_reg[macsec]);
+	val = osi_macsec_readla(osi_core, addr + rx_imr_reg[macsec]);
 	MACSEC_LOG("Read MACSEC_RX_IMR: 0x%x\n", val);
 
 	val |= (MACSEC_RX_DBG_BUF_CAPTURE_DONE_INT_EN |
@@ -4905,16 +4901,16 @@ static void macsec_intr_config(struct osi_core_priv_data *const osi_core, nveu32
 		MACSEC_RX_AES_GCM_BUF_OVF_INT_EN |
 		MACSEC_RX_PN_EXHAUSTED_INT_EN
 	       );
-	osi_writela(osi_core, val, addr + rx_imr_reg[macsec]);
+	osi_macsec_writela(osi_core, val, addr + rx_imr_reg[macsec]);
 	MACSEC_LOG("Write MACSEC_RX_IMR: 0x%x\n", val);
 
-	val = osi_readla(osi_core, addr + common_imr_reg[macsec]);
+	val = osi_macsec_readla(osi_core, addr + common_imr_reg[macsec]);
 	MACSEC_LOG("Read MACSEC_COMMON_IMR: 0x%x\n", val);
 	val |= (MACSEC_RX_UNINIT_KEY_SLOT_INT_EN |
 		MACSEC_RX_LKUP_MISS_INT_EN |
 		MACSEC_TX_UNINIT_KEY_SLOT_INT_EN |
 		MACSEC_TX_LKUP_MISS_INT_EN);
-	osi_writela(osi_core, val, addr + common_imr_reg[macsec]);
+	osi_macsec_writela(osi_core, val, addr + common_imr_reg[macsec]);
 	MACSEC_LOG("Write MACSEC_COMMON_IMR: 0x%x\n", val);
 }
 
@@ -4960,10 +4956,7 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 				 nveu8_t *const macsec_vf_mac)
 {
 	nveu32_t val = 0;
-	nveu32_t value = 0;
-	const struct core_local *l_core = (void *)osi_core;
 	nveu8_t *addr = (nveu8_t *)osi_core->macsec_base;
-	void *mac_addr = osi_core->base;
 	nve32_t ret = 0;
 	nveu32_t macsec = osi_core->macsec;
 	const nveu32_t common_imr_reg[MAX_MACSEC_IP_TYPES] = {
@@ -4984,8 +4977,6 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 		goto exit;
 	}
 
-	/* Update MAC value as per macsec requirement */
-	l_core->ops_p->macsec_config_mac(osi_core, OSI_ENABLE);
 	/* Set MTU */
 	ret = macsec_update_mtu(osi_core, mtu);
 	if (ret < 0) {
@@ -4999,48 +4990,48 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 	 * default value matches for MGBE
 	 */
 	if (osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
-		val = osi_readla(osi_core, addr + MACSEC_TX_SOT_DELAY);
+		val = osi_macsec_readla(osi_core, addr + MACSEC_TX_SOT_DELAY);
 		MACSEC_LOG("Read MACSEC_TX_SOT_DELAY: 0x%x\n", val);
 		val &= ~(SOT_LENGTH_MASK);
 		val |= (EQOS_MACSEC_SOT_DELAY & SOT_LENGTH_MASK);
 		MACSEC_LOG("Write MACSEC_TX_SOT_DELAY: 0x%x\n", val);
-		osi_writela(osi_core, val, addr + MACSEC_TX_SOT_DELAY);
+		osi_macsec_writela(osi_core, val, addr + MACSEC_TX_SOT_DELAY);
 
-		val = osi_readla(osi_core, addr + MACSEC_RX_SOT_DELAY);
+		val = osi_macsec_readla(osi_core, addr + MACSEC_RX_SOT_DELAY);
 		MACSEC_LOG("Read MACSEC_RX_SOT_DELAY: 0x%x\n", val);
 		val &= ~(SOT_LENGTH_MASK);
 		val |= (EQOS_MACSEC_SOT_DELAY & SOT_LENGTH_MASK);
 		MACSEC_LOG("Write MACSEC_RX_SOT_DELAY: 0x%x\n", val);
-		osi_writela(osi_core, val, addr + MACSEC_RX_SOT_DELAY);
+		osi_macsec_writela(osi_core, val, addr + MACSEC_RX_SOT_DELAY);
 	} else if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
-		val = osi_readla(osi_core, addr + MACSEC_TX_SOT_DELAY);
+		val = osi_macsec_readla(osi_core, addr + MACSEC_TX_SOT_DELAY);
 		MACSEC_LOG("Read MACSEC_TX_SOT_DELAY: 0x%x\n", val);
 		val &= ~(SOT_LENGTH_MASK);
 		val |= (T264_EQOS_MACSEC_TX_SOT_DELAY & SOT_LENGTH_MASK);
 		MACSEC_LOG("Write MACSEC_TX_SOT_DELAY: 0x%x\n", val);
-		osi_writela(osi_core, val, addr + MACSEC_TX_SOT_DELAY);
+		osi_macsec_writela(osi_core, val, addr + MACSEC_TX_SOT_DELAY);
 
-		val = osi_readla(osi_core, addr + MACSEC_RX_SOT_DELAY);
+		val = osi_macsec_readla(osi_core, addr + MACSEC_RX_SOT_DELAY);
 		MACSEC_LOG("Read MACSEC_RX_SOT_DELAY: 0x%x\n", val);
 		val &= ~(SOT_LENGTH_MASK);
 		val |= (T264_EQOS_MACSEC_RX_SOT_DELAY & SOT_LENGTH_MASK);
 		MACSEC_LOG("Write MACSEC_RX_SOT_DELAY: 0x%x\n", val);
-		osi_writela(osi_core, val, addr + MACSEC_RX_SOT_DELAY);
+		osi_macsec_writela(osi_core, val, addr + MACSEC_RX_SOT_DELAY);
 
 	} else if (osi_core->mac_ver == OSI_MGBE_MAC_4_20) {
-		val = osi_readla(osi_core, addr + MACSEC_TX_SOT_DELAY);
+		val = osi_macsec_readla(osi_core, addr + MACSEC_TX_SOT_DELAY);
 		MACSEC_LOG("Read MACSEC_TX_SOT_DELAY: 0x%x\n", val);
 		val &= ~(SOT_LENGTH_MASK);
 		val |= (T264_MGBE_MACSEC_TX_SOT_DELAY & SOT_LENGTH_MASK);
 		MACSEC_LOG("Write MACSEC_TX_SOT_DELAY: 0x%x\n", val);
-		osi_writela(osi_core, val, addr + MACSEC_TX_SOT_DELAY);
+		osi_macsec_writela(osi_core, val, addr + MACSEC_TX_SOT_DELAY);
 
 	} else {
 		/** Do nothing */
 	}
 
 	/* Set essential MACsec control configuration */
-	val = osi_readla(osi_core, addr + MACSEC_CONTROL0);
+	val = osi_macsec_readla(osi_core, addr + MACSEC_CONTROL0);
 	MACSEC_LOG("Read MACSEC_CONTROL0: 0x%x\n", val);
 	val |= (MACSEC_TX_LKUP_MISS_NS_INTR | MACSEC_RX_LKUP_MISS_NS_INTR |
 		MACSEC_TX_LKUP_MISS_BYPASS | MACSEC_RX_LKUP_MISS_BYPASS);
@@ -5048,49 +5039,43 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 	val |= MACSEC_VALIDATE_FRAMES_STRICT;
 	val |= MACSEC_RX_REPLAY_PROT_EN;
 	MACSEC_LOG("Write MACSEC_CONTROL0: 0x%x\n", val);
-	osi_writela(osi_core, val, addr + MACSEC_CONTROL0);
+	osi_macsec_writela(osi_core, val, addr + MACSEC_CONTROL0);
 
-	val = osi_readla(osi_core, addr + MACSEC_CONTROL1);
+	val = osi_macsec_readla(osi_core, addr + MACSEC_CONTROL1);
 	MACSEC_LOG("Read MACSEC_CONTROL1: 0x%x\n", val);
 	val |= (MACSEC_RX_MTU_CHECK_EN | MACSEC_TX_LUT_PRIO_BYP |
 		MACSEC_TX_MTU_CHECK_EN);
 
-	if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
-		value = osi_readla(osi_core, (nveu8_t *)mac_addr + EQOS_MAC_MCR);
-		/* Disable MAC Transmit as per suggestion in bug 4456073 */
-		value &= ~EQOS_MCR_TE;
-		osi_writela(osi_core, value, (nveu8_t *)mac_addr + EQOS_MAC_MCR);
-	}
 	MACSEC_LOG("Write MACSEC_CONTROL1: 0x%x\n", val);
-	osi_writela(osi_core, val, addr + MACSEC_CONTROL1);
+	osi_macsec_writela(osi_core, val, addr + MACSEC_CONTROL1);
 
-	val = osi_readla(osi_core, addr + MACSEC_STATS_CONTROL_0);
+	val = osi_macsec_readla(osi_core, addr + MACSEC_STATS_CONTROL_0);
 	MACSEC_LOG("Read MACSEC_STATS_CONTROL_0: 0x%x\n", val);
 	/* set STATS rollover bit */
 	val |= MACSEC_STATS_CONTROL0_CNT_RL_OVR_CPY;
 	MACSEC_LOG("Write MACSEC_STATS_CONTROL_0: 0x%x\n", val);
-	osi_writela(osi_core, val, addr + MACSEC_STATS_CONTROL_0);
+	osi_macsec_writela(osi_core, val, addr + MACSEC_STATS_CONTROL_0);
 
 	/* Enable default HSI related interrupts needed */
-	val = osi_readla(osi_core, addr + MACSEC_TX_IMR);
+	val = osi_macsec_readla(osi_core, addr + MACSEC_TX_IMR);
 	MACSEC_LOG("Read MACSEC_TX_IMR: 0x%x\n", val);
 	val |= MACSEC_TX_MAC_CRC_ERROR_INT_EN;
 	MACSEC_LOG("Write MACSEC_TX_IMR: 0x%x\n", val);
-	osi_writela(osi_core, val, addr + MACSEC_TX_IMR);
+	osi_macsec_writela(osi_core, val, addr + MACSEC_TX_IMR);
 
 	/* set ICV error threshold to 1 */
-	osi_writela(osi_core, 1U, addr + MACSEC_RX_ICV_ERR_CNTRL);
+	osi_macsec_writela(osi_core, 1U, addr + MACSEC_RX_ICV_ERR_CNTRL);
 	/* Enabling interrupts only related to HSI */
-	val = osi_readla(osi_core, addr + rx_imr_reg[macsec]);
+	val = osi_macsec_readla(osi_core, addr + rx_imr_reg[macsec]);
 	MACSEC_LOG("Read MACSEC_RX_IMR: 0x%x\n", val);
 	val |= (MACSEC_RX_ICV_ERROR_INT_EN |
 		MACSEC_RX_MAC_CRC_ERROR_INT_EN);
 	MACSEC_LOG("Write MACSEC_RX_IMR: 0x%x\n", val);
-	osi_writela(osi_core, val, addr + rx_imr_reg[macsec]);
+	osi_macsec_writela(osi_core, val, addr + rx_imr_reg[macsec]);
 
-	val = osi_readla(osi_core, addr + common_imr_reg[macsec]);
+	val = osi_macsec_readla(osi_core, addr + common_imr_reg[macsec]);
 	val |= MACSEC_SECURE_REG_VIOL_INT_EN;
-	osi_writela(osi_core, val, addr + common_imr_reg[macsec]);
+	osi_macsec_writela(osi_core, val, addr + common_imr_reg[macsec]);
 
 	/* Set AES mode
 	 * Default power on reset is AES-GCM128, leave it.
@@ -5129,12 +5114,6 @@ upd_byp_sci_lut:
 		goto exit;
 	}
 exit:
-	if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
-		value = osi_readla(osi_core, (nveu8_t *)mac_addr + EQOS_MAC_MCR);
-		/* Enable MAC Transmit as per suggestion in bug 4456073 */
-		value |= EQOS_MCR_TE;
-		osi_writela(osi_core, value, (nveu8_t *)mac_addr + EQOS_MAC_MCR);
-	}
 	return ret;
 }
 
@@ -5173,7 +5152,7 @@ static struct osi_macsec_sc_info *find_existing_sc(
 	nveu32_t i;
 
 	for (i = 0; i < OSI_MAX_NUM_SC; i++) {
-		if (osi_memcmp(lut_status_ptr->sc_info[i].sci, sc->sci,
+		if (osi_macsec_memcmp(lut_status_ptr->sc_info[i].sci, sc->sci,
 			       (nve32_t)OSI_SCI_LEN) == OSI_NONE_SIGNED) {
 			sc_found = &lut_status_ptr->sc_info[i];
 		}
@@ -5253,7 +5232,7 @@ static nve32_t macsec_get_key_index(struct osi_core_priv_data *const osi_core,
 	const struct osi_macsec_sc_info *sc_info = OSI_NULL;
 	nve32_t ret = 0;
 
-	(void)osi_memcpy(sc.sci, sci, OSI_SCI_LEN);
+	(void)osi_macsec_memcpy(sc.sci, sci, OSI_SCI_LEN);
 	sc_info = find_existing_sc(osi_core, &sc, ctlr);
 	if (sc_info == OSI_NULL) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
@@ -5520,7 +5499,7 @@ static void add_upd_sc_err_cleanup(struct osi_core_priv_data *const osi_core,
 	if ((error_mask & CLEAR_SCI_LUT) != OSI_NONE) {
 		/* Cleanup SCI LUT */
 		error_mask &= ((~CLEAR_SCI_LUT) & (0xFFU));
-		osi_memset(&lut_config, 0, sizeof(lut_config));
+		osi_macsec_memset(&lut_config, 0, sizeof(lut_config));
 		table_config = &lut_config.table_config;
 		table_config->ctlr_sel = ctlr;
 		table_config->rw = OSI_LUT_WRITE;
@@ -5538,7 +5517,7 @@ static void add_upd_sc_err_cleanup(struct osi_core_priv_data *const osi_core,
 	if ((error_mask & CLEAR_SC_PARAM_LUT) != OSI_NONE) {
 		/* cleanup SC param */
 		error_mask &= ((~CLEAR_SC_PARAM_LUT) & (0xFFU));
-		osi_memset(&lut_config, 0, sizeof(lut_config));
+		osi_macsec_memset(&lut_config, 0, sizeof(lut_config));
 		table_config = &lut_config.table_config;
 		table_config->ctlr_sel = ctlr;
 		lut_config.lut_sel = OSI_LUT_SEL_SC_PARAM;
@@ -5549,7 +5528,7 @@ static void add_upd_sc_err_cleanup(struct osi_core_priv_data *const osi_core,
 	if ((error_mask & CLEAR_SA_STATE_LUT) != OSI_NONE) {
 		/* Cleanup SA state LUT */
 		error_mask &= ((~CLEAR_SA_STATE_LUT) & (0xFFU));
-		osi_memset(&lut_config, 0, sizeof(lut_config));
+		osi_macsec_memset(&lut_config, 0, sizeof(lut_config));
 		table_config = &lut_config.table_config;
 		table_config->ctlr_sel = ctlr;
 		table_config->rw = OSI_LUT_WRITE;
@@ -5562,7 +5541,7 @@ static void add_upd_sc_err_cleanup(struct osi_core_priv_data *const osi_core,
 #ifdef MACSEC_KEY_PROGRAM
 	if ((error_mask & CLEAR_KEY_LUT) != OSI_NONE) {
 		error_mask &= ((~CLEAR_KEY_LUT) & (0xFFU));
-		osi_memset(&kt_config, 0, sizeof(kt_config));
+		osi_macsec_memset(&kt_config, 0, sizeof(kt_config));
 		table_config = &kt_config.table_config;
 		table_config->ctlr_sel = ctlr;
 		table_config->rw = OSI_LUT_WRITE;
@@ -5777,10 +5756,10 @@ exit:
 static void memcpy_sci_sak_hkey(struct osi_macsec_sc_info *dst_sc,
 				   struct osi_macsec_sc_info *src_sc)
 {
-	(void)osi_memcpy(dst_sc->sci, src_sc->sci, OSI_SCI_LEN);
-	(void)osi_memcpy(dst_sc->sak, src_sc->sak, OSI_KEY_LEN_128);
+	(void)osi_macsec_memcpy(dst_sc->sci, src_sc->sci, OSI_SCI_LEN);
+	(void)osi_macsec_memcpy(dst_sc->sak, src_sc->sak, OSI_KEY_LEN_128);
 #ifdef MACSEC_KEY_PROGRAM
-	(void)osi_memcpy(dst_sc->hkey, src_sc->hkey, OSI_KEY_LEN_128);
+	(void)osi_macsec_memcpy(dst_sc->hkey, src_sc->hkey, OSI_KEY_LEN_128);
 #endif /* MACSEC_KEY_PROGRAM */
 
 	return;
@@ -5956,7 +5935,7 @@ static nve32_t macsec_configure(struct osi_core_priv_data *const osi_core,
 				if ((existing_sc->an_valid == OSI_NONE) &&
 				    (lut_status_ptr->num_of_sc_used != OSI_NONE)) {
 					lut_status_ptr->num_of_sc_used--;
-					osi_memset(existing_sc, OSI_NONE,
+					osi_macsec_memset(existing_sc, OSI_NONE,
 						   sizeof(*existing_sc));
 				}
 
@@ -6037,7 +6016,7 @@ static nve32_t delete_dummy_sc(struct osi_core_priv_data *const osi_core,
 	/** Using a dummy parameters used in add_dummy_sc */
 	dummy_sc.sci[6] = 0xFFU;
 	dummy_sc.sci[7] = 0xFFU;
-	(void)osi_memcpy(&dummy_sc.sci[0], &sc->sci[0], (OSI_ETH_ALEN & 0xFFU));
+	(void)osi_macsec_memcpy(&dummy_sc.sci[0], &sc->sci[0], (OSI_ETH_ALEN & 0xFFU));
 	dummy_sc.curr_an = 0x0U;
 	dummy_sc.lowest_pn = 0x1U;
 	dummy_sc.next_pn = 0x1U;
@@ -6046,7 +6025,7 @@ static nve32_t delete_dummy_sc(struct osi_core_priv_data *const osi_core,
 	dummy_sc.flags = 0U;
 
 	for (i = 0U; i < OSI_MAX_NUM_SC; i++) {
-		if (osi_memcmp(&osi_core->macsec_dummy_sc_macids[i][0], sc->sci,
+		if (osi_macsec_memcmp(&osi_core->macsec_dummy_sc_macids[i][0], sc->sci,
 			       (nve32_t)OSI_ETH_ALEN) == OSI_NONE_SIGNED) {
 			existing_sc = find_existing_sc(osi_core, &dummy_sc,
 						       OSI_CTLR_SEL_TX);
@@ -6055,7 +6034,7 @@ static nve32_t delete_dummy_sc(struct osi_core_priv_data *const osi_core,
 			}
 			if (del_upd_sc(osi_core, existing_sc, &dummy_sc, OSI_CTLR_SEL_TX,
 					&kt_idx) == OSI_NONE_SIGNED) {
-				(void)osi_memcpy(&osi_core->macsec_dummy_sc_macids[i][0],
+				(void)osi_macsec_memcpy(&osi_core->macsec_dummy_sc_macids[i][0],
 						 zero_mac, (OSI_ETH_ALEN & 0xFFU));
 				break;
 			} else {
@@ -6104,7 +6083,7 @@ static nve32_t add_dummy_sc(struct osi_core_priv_data *const osi_core, nveu8_t *
 	/** Using dummy SC parameters to create TX SC entry in LUTs */
 	sc.sci[6] = 0xFFU;
 	sc.sci[7] = 0xFFU;
-	(void)osi_memcpy(&sc.sci[0], macsec_vf_mac, (OSI_ETH_ALEN & 0xFFU));
+	(void)osi_macsec_memcpy(&sc.sci[0], macsec_vf_mac, (OSI_ETH_ALEN & 0xFFU));
 	sc.curr_an = 0x0U;
 	sc.lowest_pn = 0x1U;
 	sc.next_pn = 0x1U;
@@ -6119,13 +6098,13 @@ static nve32_t add_dummy_sc(struct osi_core_priv_data *const osi_core, nveu8_t *
 		goto exit_func;
 	}
 	for (i = 0U; i < OSI_MAX_NUM_SC; i++) {
-		if (osi_memcmp(&osi_core->macsec_dummy_sc_macids[i][0], macsec_vf_mac,
+		if (osi_macsec_memcmp(&osi_core->macsec_dummy_sc_macids[i][0], macsec_vf_mac,
 			       (nve32_t)OSI_ETH_ALEN) == OSI_NONE_SIGNED) {
 			break;
 		}
-		if (osi_memcmp(&osi_core->macsec_dummy_sc_macids[i][0], zero_mac,
+		if (osi_macsec_memcmp(&osi_core->macsec_dummy_sc_macids[i][0], zero_mac,
 			       (nve32_t)OSI_ETH_ALEN) == OSI_NONE_SIGNED) {
-			(void)osi_memcpy(&osi_core->macsec_dummy_sc_macids[i][0],
+			(void)osi_macsec_memcpy(&osi_core->macsec_dummy_sc_macids[i][0],
 				     macsec_vf_mac, (OSI_ETH_ALEN & 0xFFU));
 			break;
 		}
@@ -6134,7 +6113,6 @@ static nve32_t add_dummy_sc(struct osi_core_priv_data *const osi_core, nveu8_t *
 exit_func:
 	return ret;
 }
-
 
 /**
  * @brief osi_init_macsec_ops - macsec initialize operations
@@ -6161,582 +6139,27 @@ exit_func:
  * @retval 0 on success
  * @retval -1 on failure
  */
-nve32_t osi_init_macsec_ops(struct osi_core_priv_data *const osi_core)
+void macsec_init_ops(void *macsecops)
 {
-	static struct osi_macsec_core_ops virt_macsec_ops;
-	nve32_t ret = 0;
-	struct core_local *l_core = (struct core_local *)(void *)osi_core;
-	static struct osi_macsec_core_ops macsec_ops = {
-		.init = macsec_initialize,
-		.deinit = macsec_deinit,
-		.handle_irq = macsec_handle_irq,
-		.lut_config = macsec_lut_config,
+	struct osi_macsec_core_ops *ops = (struct osi_macsec_core_ops *) macsecops;
+
+	ops->init = macsec_initialize;
+	ops->deinit = macsec_deinit;
+	ops->handle_irq = macsec_handle_irq;
+	ops->lut_config = macsec_lut_config;
 #ifdef MACSEC_KEY_PROGRAM
-		.kt_config = macsec_kt_config,
+	ops->kt_config = macsec_kt_config;
 #endif /* MACSEC_KEY_PROGRAM */
-		.cipher_config = macsec_cipher_config,
-		.config = macsec_configure,
-		.read_mmc = macsec_read_mmc,
-		.get_sc_lut_key_index = macsec_get_key_index,
-		.update_mtu = macsec_update_mtu,
+	ops->cipher_config = macsec_cipher_config;
+	ops->config = macsec_configure;
+	ops->read_mmc = macsec_read_mmc;
+	ops->update_mtu = macsec_update_mtu;
 #ifdef DEBUG_MACSEC
-		.loopback_config = macsec_loopback_config,
-		.dbg_buf_config = macsec_dbg_buf_config,
-		.dbg_events_config = macsec_dbg_events_config,
-		.intr_config = macsec_intr_config,
+	ops->loopback_config = macsec_loopback_config;
+	ops->dbg_buf_config = macsec_dbg_buf_config;
+	ops->dbg_events_config = macsec_dbg_events_config;
+	ops->intr_config = macsec_intr_config;
 #endif
-	};
-
-	if (osi_core == OSI_NULL) {
-		ret = -1;
-		goto exit;
-	}
-
-	if (osi_core->use_virtualization == OSI_ENABLE) {
-#ifdef OSI_RM_FTRACE
-		ethernet_server_entry_log();
-#endif
-		l_core->macsec_ops = &virt_macsec_ops;
-		ivc_init_macsec_ops(l_core->macsec_ops);
-#ifdef OSI_RM_FTRACE
-		ethernet_server_exit_log();
-#endif
-	} else {
-		if (osi_core->macsec_base == OSI_NULL) {
-			ret = -1;
-			goto exit;
-		}
-		l_core->macsec_ops = &macsec_ops;
-	}
-exit:
-	return ret;
+	ops->get_sc_lut_key_index = macsec_get_key_index;
 }
-
-/**
- * @brief osi_macsec_init - Initialize the macsec controller
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Configure MTU, controller configs, interrupts, clear all LUT's and
- *    set BYP LUT entries for MKPDU and BC packets
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure.
- * @param[in] mtu: mtu to be programmed
- * @param[in] macsec_vf_mac: Pointer to VF MACID
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_init(struct osi_core_priv_data *const osi_core,
-			nveu32_t mtu, nveu8_t *const macsec_vf_mac)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->init != OSI_NULL) &&
-	    (macsec_vf_mac != OSI_NULL)) {
-#ifdef OSI_RM_FTRACE
-		ethernet_server_entry_log();
-#endif
-		ret = l_core->macsec_ops->init(osi_core, mtu, macsec_vf_mac);
-#ifdef OSI_RM_FTRACE
-		ethernet_server_exit_log();
-#endif
-	}
-
-	return ret;
-}
-
-/**
- * @brief osi_macsec_deinit - De-Initialize the macsec controller
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Resets macsec global data structured and restores the mac confirguration
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_deinit(struct osi_core_priv_data *const osi_core)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->deinit != OSI_NULL)) {
-#ifdef OSI_RM_FTRACE
-		ethernet_server_entry_log();
-#endif
-		ret = l_core->macsec_ops->deinit(osi_core);
-#ifdef OSI_RM_FTRACE
-		ethernet_server_exit_log();
-#endif
-	}
-	return ret;
-}
-
-/**
- * @brief osi_macsec_isr - macsec irq handler
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - handles macsec interrupts
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- */
-void osi_macsec_isr(struct osi_core_priv_data *const osi_core)
-{
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->handle_irq != OSI_NULL)) {
-#ifdef OSI_RM_FTRACE
-		ethernet_server_entry_log();
-#endif
-		l_core->macsec_ops->handle_irq(osi_core);
-#ifdef OSI_RM_FTRACE
-		ethernet_server_exit_log();
-#endif
-	}
-}
-
-/**
- * @brief osi_macsec_config_lut - Read or write to macsec LUTs
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Reads or writes to MACSEC LUTs
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[out] lut_config: Pointer to the lut configuration
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_config_lut(struct osi_core_priv_data *const osi_core,
-			  struct osi_macsec_lut_config *const lut_config)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->lut_config != OSI_NULL) &&
-	    (lut_config != OSI_NULL)) {
-#ifdef OSI_RM_FTRACE
-		ethernet_server_entry_log();
-#endif
-		ret = l_core->macsec_ops->lut_config(osi_core, lut_config);
-#ifdef OSI_RM_FTRACE
-		ethernet_server_exit_log();
-#endif
-	}
-
-	return ret;
-}
-
-/**
- * @brief osi_macsec_get_sc_lut_key_index - API to get key index for a given SCI
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - gets the key index for the given sci
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] sci: Pointer to sci that needs to be found
- * @param[out] key_index: Pointer to key_index
- * @param[in] ctlr: macsec controller selected
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_get_sc_lut_key_index(struct osi_core_priv_data *const osi_core,
-					nveu8_t *sci, nveu32_t *key_index,
-					nveu16_t ctlr)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->get_sc_lut_key_index != OSI_NULL) &&
-	    (sci != OSI_NULL) && (key_index != OSI_NULL) && (ctlr <= OSI_CTLR_SEL_MAX)) {
-#ifdef OSI_RM_FTRACE
-		ethernet_server_entry_log();
-#endif
-		ret = l_core->macsec_ops->get_sc_lut_key_index(osi_core, sci, key_index,
-								  ctlr);
-#ifdef OSI_RM_FTRACE
-		ethernet_server_exit_log();
-#endif
-	}
-
-	return ret;
-}
-
-#ifdef MACSEC_KEY_PROGRAM
-/**
- * @brief osi_macsec_config_kt - API to read or update the keys
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Read or write the keys
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] kt_config: Keys that needs to be programmed
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_config_kt(struct osi_core_priv_data *const osi_core,
-			 struct osi_macsec_kt_config *const kt_config)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->kt_config != OSI_NULL) &&
-	    (kt_config != OSI_NULL)) {
-		ret = l_core->macsec_ops->kt_config(osi_core, kt_config);
-	}
-
-	return ret;
-}
-#endif /* MACSEC_KEY_PROGRAM */
-
-/**
- * @brief osi_macsec_cipher_config - API to update the cipher
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Updates cipher to use
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] cipher: Cipher suit to be used
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_cipher_config(struct osi_core_priv_data *const osi_core,
-			      nveu32_t cipher)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->cipher_config != OSI_NULL)) {
-#ifdef OSI_RM_FTRACE
-		ethernet_server_entry_log();
-#endif
-		ret = l_core->macsec_ops->cipher_config(osi_core, cipher);
-#ifdef OSI_RM_FTRACE
-		ethernet_server_exit_log();
-#endif
-	}
-
-	return ret;
-}
-
-#ifdef DEBUG_MACSEC
-/**
- * @brief osi_macsec_loopback - API to enable/disable macsec loopback
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Enables/disables macsec loopback
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] enable: parameter to enable or disable
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_loopback(struct osi_core_priv_data *const osi_core,
-			nveu32_t enable)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->loopback_config != OSI_NULL)) {
-		ret = l_core->macsec_ops->loopback_config(osi_core, enable);
-	}
-
-	return ret;
-}
-#endif /* DEBUG_MACSEC */
-
-/**
- * @brief osi_macsec_config - Updates SC or SA in the macsec
- *
- * @note
- * Algorithm:
- *  - Return -1 if passed params are invalid
- *  - Return -1 if osi core or ops is null
- *  - Update/add/delete SC/SA
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] sc: Pointer to the sc that needs to be added/deleted/updated
- * @param[in] enable: enable or disable
- * @param[in] ctlr: Controller selected
- * @param[out] kt_idx: Pointer to the kt_index passed to OSD
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_config(struct osi_core_priv_data *const osi_core,
-		      struct osi_macsec_sc_info *const sc,
-		      nveu32_t enable, nveu16_t ctlr,
-		      nveu16_t *kt_idx)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if (((enable != OSI_ENABLE) && (enable != OSI_DISABLE)) ||
-	    (ctlr > OSI_CTLR_SEL_MAX) || (kt_idx == OSI_NULL)) {
-		goto exit;
-	}
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->config != OSI_NULL) && (sc != OSI_NULL)) {
-#ifdef OSI_RM_FTRACE
-		ethernet_server_entry_log();
-#endif
-		ret = l_core->macsec_ops->config(osi_core, sc,
-						    enable, ctlr, kt_idx);
-#ifdef OSI_RM_FTRACE
-		ethernet_server_exit_log();
-#endif
-	}
-exit:
-	return ret;
-}
-
-/**
- * @brief osi_macsec_read_mmc - Updates the mmc counters
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Updates the mcc counters in osi_core structure
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[out] osi_core: OSI core private data structure
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_read_mmc(struct osi_core_priv_data *const osi_core)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->read_mmc != OSI_NULL)) {
-#ifdef OSI_RM_FTRACE
-		ethernet_server_entry_log();
-#endif
-		l_core->macsec_ops->read_mmc(osi_core);
-		ret = 0;
-#ifdef OSI_RM_FTRACE
-		ethernet_server_exit_log();
-#endif
-	}
-	return ret;
-}
-
-#ifdef DEBUG_MACSEC
-/**
- * @brief osi_macsec_config_dbg_buf - Reads the debug buffer captured
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Reads the dbg buffers captured
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[out] dbg_buf_config: dbg buffer data captured
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_config_dbg_buf(
-		struct osi_core_priv_data *const osi_core,
-		struct osi_macsec_dbg_buf_config *const dbg_buf_config)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->dbg_buf_config != OSI_NULL) &&
-	    (dbg_buf_config != OSI_NULL) &&
-	    (osi_core->macsec != OSI_MACSEC_T26X)) {
-		ret = l_core->macsec_ops->dbg_buf_config(osi_core,
-							dbg_buf_config);
-	}
-
-	return ret;
-}
-
-/**
- * @brief osi_macsec_dbg_events_config - Enables debug buffer events
- *
- * @note
- * Algorithm:
- *  - Return -1 if osi core or ops is null
- *  - Enables specific events to capture debug buffers
- *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
- *  - TraceID: ***********
- *
- * @param[in] osi_core: OSI core private data structure
- * @param[in] dbg_buf_config: dbg buffer data captured
- *
- * @pre MACSEC needs to be out of reset and proper clock configured.
- *
- * @note
- * API Group:
- * - Initialization: No
- * - Run time: Yes
- * - De-initialization: No
- *
- * @retval 0 on success
- * @retval -1 on failure
- */
-nve32_t osi_macsec_dbg_events_config(
-		struct osi_core_priv_data *const osi_core,
-		struct osi_macsec_dbg_buf_config *const dbg_buf_config)
-{
-	nve32_t ret = -1;
-	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
-
-	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
-	    (l_core->macsec_ops->dbg_events_config != OSI_NULL) &&
-	    (dbg_buf_config != OSI_NULL) &&
-	    (osi_core->macsec != OSI_MACSEC_T26X)) {
-		ret = l_core->macsec_ops->dbg_events_config(osi_core,
-							dbg_buf_config);
-	}
-
-	return ret;
-}
-
-#endif /* DEBUG_MACSEC */
 #endif /* MACSEC_SUPPORT */

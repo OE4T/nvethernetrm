@@ -26,7 +26,6 @@
 #include "eqos_mmc.h"
 #include "core_local.h"
 #include "core_common.h"
-#include "macsec.h"
 #include "xpcs.h"
 
 /*

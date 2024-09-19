@@ -1,6 +1,6 @@
 ###################################
 #
-# Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2023-2024, NVIDIA CORPORATION. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -40,6 +40,7 @@ GLOBAL_INCLUDES += \
 	$(NVETHERNETRM)/osi/common/include/ \
 	$(NVETHERNETRM)/osi/core/ \
 	$(NVETHERNETRM)/osi/dma/ \
+	$(NVETHERNETRM)/osi/nvmacsecrm/ \
 	$(TEGRA_TOP)/fsi-internal/fw/include \
 
 MODULE_SRCS += \
@@ -54,7 +55,7 @@ MODULE_SRCS += \
 	$(NVETHERNETRM)/osi/core/xpcs.c \
 	$(NVETHERNETRM)/osi/core/mgbe_mmc.c \
 	$(NVETHERNETRM)/osi/core/mgbe_core.c \
-	$(NVETHERNETRM)/osi/core/macsec.c \
+	$(NVETHERNETRM)/osi/core/common_macsec.c \
 	$(NVETHERNETRM)/osi/core/debug.c
 
 MODULE_COMPILEFLAGS += -Wno-format

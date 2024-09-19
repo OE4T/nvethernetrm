@@ -537,4 +537,164 @@
 #define MACSEC_COMMON_ISR_SET_T26X	0xD06cU
 #endif
 
+/**
+ * @addtogroup Generic helper MACROS
+ *
+ * @brief These are Generic helper macros used at various places.
+ * @{
+ */
+#define RETRY_COUNT     1000U
+#define COND_MET        0
+#define COND_NOT_MET    1
+#define RETRY_DELAY     1U
+/** @} */
+
+/**
+ * @brief osi_macsec_readla - Read a memory mapped register.
+ *
+ * @ note
+ * The difference between osi_macsec_readla & osi_readl is osi_core argument.
+ * In case of ethernet server, osi_core used to define policy for each VM.
+ * In case of non virtualization osi_core argument is ignored.
+ *
+ * @param[in] priv: Priv address.
+ * @param[in] addr: Memory mapped address.
+ *
+ * @note Physical address has to be memmory mapped.
+ *
+ * @return Data from memory mapped register - success.
+ */
+static inline nveu32_t osi_macsec_readla(OSI_UNUSED void *priv, void *addr)
+{
+	(void)priv;
+	return *(volatile nveu32_t *)addr;
+}
+
+/**
+ *
+ * @ note
+ * @brief osi_macsec_writela - Write to a memory mapped register.
+ * The difference between osi_macsec_writela & osi_writel is osi_core argument.
+ * In case of ethernet server, osi_core used to define policy for each VM.
+ * In case of non virtualization osi_core argument is ignored.
+ *
+ * @param[in] priv: Priv address.
+ * @param[in] val:  Value to be written.
+ * @param[in] addr: Memory mapped address.
+ *
+ * @note Physical address has to be memmory mapped.
+ */
+static inline void osi_macsec_writela(OSI_UNUSED void *priv, nveu32_t val, void *addr)
+{
+	(void)priv;
+	*(volatile nveu32_t *)addr = val;
+}
+
+static nveu64_t osi_macsec_update_stats_counter(nveu64_t last_value, nveu64_t incr)
+{
+	return ((last_value & (nveu64_t)OSI_LLONG_MAX) + (incr & (nveu64_t)OSI_LLONG_MAX));
+}
+
+/**
+ * @brief osi_macsec_lock_irq_enabled - Spin lock. Busy loop till lock is acquired.
+ *
+ * @note
+ * Algorithm:
+ *  - Atomic compare and swap operation till lock is held.
+ *
+ * @param[in] lock - Pointer to lock to be acquired.
+ *
+ * @note
+ *  - Does not disable irq. Do not call this API to acquire any
+ *    lock that is shared between top/bottom half. It will result in deadlock.
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ */
+static inline void osi_macsec_lock_irq_enabled(nveu32_t *lock)
+{
+	/* __sync_val_compare_and_swap(lock, old value, new value) returns the
+	 * old value if successful.
+	 */
+	while (__sync_val_compare_and_swap(lock, OSI_UNLOCKED, OSI_LOCKED) !=
+	       OSI_UNLOCKED) {
+		 /* Spinning.
+		  * Will deadlock if any ISR tried to lock again.
+		  */
+	}
+}
+
+/**
+ * @brief osi_macsec_unlock_irq_enabled - Release lock.
+ *
+ * @note
+ * Algorithm:
+ *  - Atomic compare and swap operation to release lock.
+ *
+ * @param[in] lock - Pointer to lock to be released.
+ *
+ * @note
+ *  - Does not disable irq. Do not call this API to release any
+ *    lock that is shared between top/bottom half.
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ */
+static inline void osi_macsec_unlock_irq_enabled(nveu32_t *lock)
+{
+	if (__sync_val_compare_and_swap(lock, OSI_LOCKED, OSI_UNLOCKED) !=
+	    OSI_LOCKED) {
+		/* Do nothing. Already unlocked */
+	}
+}
+
+static inline void osi_macsec_memset(void *s, nveu8_t c, nveu64_t count)
+{
+	nveu8_t *xs = (nveu8_t *)s;
+	nveu64_t i = 0UL;
+
+	for (i = 0UL; i < count; i++) {
+		xs[i] = c;
+	}
+}
+
+static inline void osi_macsec_memcpy(void *dest, const void *src, nveu64_t n)
+{
+	nve8_t *cdest = dest;
+	const nve8_t *csrc = src;
+	nveu64_t i = 0;
+
+	for (i = 0; i < n; i++) {
+		cdest[i] = csrc[i];
+	}
+}
+
+static inline nve32_t osi_macsec_memcmp(const void *dest, const void *src, nve32_t n)
+{
+	const nve8_t *const cdest = dest;
+	const nve8_t *const csrc = src;
+	nve32_t ret = 0;
+	nve32_t i;
+
+	for (i = 0; i < n; i++) {
+		if (csrc[i] < cdest[i]) {
+			ret = -1;
+			goto fail;
+		} else if (csrc[i] > cdest[i]) {
+			ret = 1;
+			goto fail;
+		} else {
+			/* Do Nothing */
+		}
+	}
+fail:
+	return ret;
+}
+
 #endif /* INCLUDED_MACSEC_H */
