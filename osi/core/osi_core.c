@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -212,7 +212,7 @@ nve32_t osi_init_core_ops(struct osi_core_priv_data *const osi_core)
 		l_core->m2m_tsync = OSI_DISABLE;
 	}
 
-	if (osi_core->pps_frq <= OSI_ENABLE) {
+	if (osi_core->pps_frq <= OSI_MAX_PPS_HZ) {
 		l_core->pps_freq = osi_core->pps_frq;
 	} else {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,

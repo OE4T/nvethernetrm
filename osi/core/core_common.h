@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -76,6 +76,9 @@
 #define MAC_TCR_TSADDREG		OSI_BIT(5)
 #define MAC_PPS_CTL_PPSCTRL0		(OSI_BIT(3) | OSI_BIT(2) |\
 					OSI_BIT(1) | OSI_BIT(0))
+#define MAC_PPS_CTL_PPSEN0		OSI_BIT(4)
+#define MAC_PPS_CTL_PPS_TRGTMODSEL0	(OSI_BIT(6) | OSI_BIT(5))
+#define MAC_PPS_TT_NSEC_TRG_BUSY	OSI_BIT(31)
 #define MAC_SSIR_SSINC_SHIFT		16U
 #define MAC_PFR_DAIF			OSI_BIT(3)
 #define MAC_PFR_DBF			OSI_BIT(5)
@@ -180,6 +183,7 @@ nve32_t hw_set_systime_to_mac(struct osi_core_priv_data *const osi_core,
 nve32_t hw_config_addend(struct osi_core_priv_data *const osi_core,
 			 const nveu32_t addend);
 void hw_config_tscr(struct osi_core_priv_data *const osi_core, const nveu32_t ptp_filter);
+void hw_config_pps(struct osi_core_priv_data *const osi_core);
 void hw_config_ssir(struct osi_core_priv_data *const osi_core);
 nve32_t hw_ptp_tsc_capture(struct osi_core_priv_data *const osi_core,
 			   struct osi_core_ptp_tsc_data *data);

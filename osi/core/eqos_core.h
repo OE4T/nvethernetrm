@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -287,6 +287,10 @@
 #define EQOS_MAC_STNSUR			0x0B14
 #define EQOS_MAC_TAR			0x0B18
 #define EQOS_MAC_PPS_CTL		0x0B70
+#define EQOS_MAC_PPS_TT_SEC		0x0B80
+#define EQOS_MAC_PPS_TT_NSEC		0x0B84
+#define EQOS_MAC_PPS_INTERVAL		0x0B88
+#define EQOS_MAC_PPS_WIDTH		0x0B8C
 #define EQOS_DMA_BMR			0x1000
 #define EQOS_DMA_SBUS			0x1004
 #define EQOS_DMA_ISR			0x1008

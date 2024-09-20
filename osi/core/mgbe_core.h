@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -402,6 +402,10 @@
 #define MGBE_MAC_TSSEC			0x0D34
 #define MGBE_MAC_TSPKID			0x0D38
 #define MGBE_MAC_PPS_CTL		0x0D70
+#define MGBE_MAC_PPS_TT_SEC		0x0D80
+#define MGBE_MAC_PPS_TT_NSEC		0x0D84
+#define MGBE_MAC_PPS_INTERVAL		0x0D88
+#define MGBE_MAC_PPS_WIDTH		0x0D8C
 /** @} */
 
 /**

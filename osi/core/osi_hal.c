@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -512,6 +512,8 @@ static nve32_t osi_ptp_configuration(struct osi_core_priv_data *const osi_core,
 #ifndef OSI_STRIPPED_LIB
 	}
 #endif /* !OSI_STRIPPED_LIB */
+
+	hw_config_pps(osi_core);
 fail:
 	return ret;
 }
@@ -2512,6 +2514,7 @@ static nve32_t handle_set_systohw_time_ioctl(struct osi_core_priv_data *osi_core
 		}
 	}
 
+	hw_config_pps(osi_core);
 exit:
 	return ret;
 }
@@ -2638,6 +2641,7 @@ static nve32_t handle_adjust_time_ioctl(struct osi_core_priv_data *osi_core,
 
 	ret = handle_time_ether_m2m_role(osi_core);
 
+	hw_config_pps(osi_core);
 exit:
 	return ret;
 }

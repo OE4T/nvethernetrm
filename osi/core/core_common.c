@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -57,7 +57,6 @@ nve32_t poll_check(struct osi_core_priv_data *const osi_core, nveu8_t *addr,
 fail:
 	return ret;
 }
-
 
 nve32_t hw_poll_for_swr(struct osi_core_priv_data *const osi_core)
 {
@@ -523,6 +522,123 @@ fail:
 	return ret;
 }
 
+void hw_config_pps(struct osi_core_priv_data *const osi_core)
+{
+	const nveu32_t mac_pps_tt_nsec[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_PPS_TT_NSEC,
+		MGBE_MAC_PPS_TT_NSEC,
+		MGBE_MAC_PPS_TT_NSEC
+	};
+	const nveu32_t mac_pps_tt_sec[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_PPS_TT_SEC,
+		MGBE_MAC_PPS_TT_SEC,
+		MGBE_MAC_PPS_TT_SEC
+	};
+	const nveu32_t mac_pps_interval[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_PPS_INTERVAL,
+		MGBE_MAC_PPS_INTERVAL,
+		MGBE_MAC_PPS_INTERVAL
+	};
+	const nveu32_t mac_pps_width[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_PPS_WIDTH,
+		MGBE_MAC_PPS_WIDTH,
+		MGBE_MAC_PPS_WIDTH
+	};
+	const nveu32_t mac_pps[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_MAC_PPS_CTL,
+		MGBE_MAC_PPS_CTL,
+		MGBE_MAC_PPS_CTL
+	};
+	void *addr = osi_core->base;
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	nveul64_t temp = 0U;
+	nveu32_t value = 0x0U;
+	nveu32_t interval = 0U;
+	nveu32_t width = 0U;
+	nveu32_t sec = 0U;
+	nveu32_t nsec = 0U;
+	nveu32_t ssinc_val = OSI_PTP_SSINC_4;
+	nve32_t ret = 0;
+
+
+	if (l_core->pps_freq > OSI_ENABLE) { // PPS_CMD related code
+		if (osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
+			ssinc_val = OSI_PTP_SSINC_6;
+		}
+
+		value = osi_readla(osi_core, (nveu8_t *)addr + mac_pps[osi_core->mac]);
+		value &= ~MAC_PPS_CTL_PPSCTRL0;
+		value |= MAC_PPS_CTL_PPSEN0; //set enable bit
+		/* Set mode to 0b'10 for with interrupt, 0b'11 for non interrupt */
+		value |= MAC_PPS_CTL_PPS_TRGTMODSEL0;
+		/* If want to stop all ready running the pps train we need to write b'0101
+		 * in mac_pps[osi_core->mac])
+		 */
+		value |= OSI_PPS_STOP_CMD;
+		osi_writela(osi_core, value, ((nveu8_t *)addr + mac_pps[osi_core->mac]));
+
+		/*
+		 * nvidia,pps_op_ctl  = 0  – 1Hz (pps fixed mode)
+		 * nvidia,pps_op_ctl  = 1  – 1Hz (pps fixed mode, 2 Edges)
+		 * nvidia,pps_op_ctl  = x – x Hz ( pps CMD by programming width and interval)
+		 */
+		temp = OSI_NSEC_PER_SEC / ((nveul64_t)l_core->pps_freq * (nveul64_t)ssinc_val);
+		if (temp <= UINT_MAX) {
+			interval = (nveu32_t)temp;
+			width = (interval / 2U);
+		}
+		/* Target time programming */
+		ret = poll_check(osi_core, ((nveu8_t *)addr + mac_pps_tt_nsec[osi_core->mac]),
+				 MAC_PPS_TT_NSEC_TRG_BUSY, &value);
+		if (ret < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "Not able to program PPS trigger time\n", (nveul64_t)value);
+			goto error;
+		}
+
+		core_get_systime_from_mac(osi_core->base, osi_core->mac, &sec, &nsec);
+
+		if ((OSI_NSEC_PER_SEC_U - 100000000U) > nsec) {
+			nsec += 100000000U; //Trigger PPS train after 100ms
+		} else if (sec < UINT_MAX) {
+			sec += 1U;
+			nsec = nsec - OSI_NSEC_PER_SEC_U + OSI_PPS_TRIG_DELAY;
+		} else {
+			/* Do nothing */
+		}
+		osi_writela(osi_core, sec, ((nveu8_t *)addr + mac_pps_tt_sec[osi_core->mac]));
+		osi_writela(osi_core, nsec, ((nveu8_t *)addr + mac_pps_tt_nsec[osi_core->mac]));
+
+		/* interval programming */
+		if (interval >= 1U) {
+			osi_writela(osi_core, (interval - 1U),
+				    ((nveu8_t *)addr + mac_pps_interval[osi_core->mac]));
+		}
+		/* width programming */
+		if (width >= 1U) {
+			osi_writela(osi_core, (width - 1U),
+				    ((nveu8_t *)addr + mac_pps_width[osi_core->mac]));
+		}
+	}
+
+error:
+	value = osi_readla(osi_core, (nveu8_t *)addr + mac_pps[osi_core->mac]);
+	value &= ~MAC_PPS_CTL_PPSCTRL0;
+	if (ret < 0) {
+		value &= ~MAC_PPS_CTL_PPSEN0;
+	} else if (l_core->pps_freq == OSI_ENABLE) {
+		value &= ~MAC_PPS_CTL_PPSEN0;
+		value |= OSI_ENABLE;//Fixed PPS
+	} else if (l_core->pps_freq > OSI_ENABLE) {
+		value |= OSI_PPS_START_CMD; //0b'10 start after TT. PPS_CMD
+	} else {
+		value &= ~MAC_PPS_CTL_PPSEN0;
+	}
+	osi_writela(osi_core, value, ((nveu8_t *)addr + mac_pps[osi_core->mac]));
+
+	return;
+}
+
 #ifndef OSI_STRIPPED_LIB
 void hw_config_tscr(struct osi_core_priv_data *const osi_core, const nveu32_t ptp_filter)
 #else
@@ -530,21 +646,15 @@ void hw_config_tscr(struct osi_core_priv_data *const osi_core, OSI_UNUSED const 
 #endif /* !OSI_STRIPPED_LIB */
 {
 	void *addr = osi_core->base;
-	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nveu32_t mac_tcr = 0U;
 #ifndef OSI_STRIPPED_LIB
 	nveu32_t i = 0U, temp = 0U;
 #endif /* !OSI_STRIPPED_LIB */
-	nveu32_t value = 0x0U;
+
 	const nveu32_t mac_tscr[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_MAC_TCR,
 		MGBE_MAC_TCR,
 		MGBE_MAC_TCR
-	};
-	const nveu32_t mac_pps[OSI_MAX_MAC_IP_TYPES] = {
-		EQOS_MAC_PPS_CTL,
-		MGBE_MAC_PPS_CTL,
-		MGBE_MAC_PPS_CTL
 	};
 
 	(void)ptp_filter; // unused
@@ -609,12 +719,7 @@ void hw_config_tscr(struct osi_core_priv_data *const osi_core, OSI_UNUSED const 
 
 	osi_writela(osi_core, mac_tcr, ((nveu8_t *)addr + mac_tscr[osi_core->mac]));
 
-	value = osi_readla(osi_core, (nveu8_t *)addr + mac_pps[osi_core->mac]);
-	value &= ~MAC_PPS_CTL_PPSCTRL0;
-	if (l_core->pps_freq == OSI_ENABLE) {
-		value |= OSI_ENABLE;
-	}
-	osi_writela(osi_core, value, ((nveu8_t *)addr + mac_pps[osi_core->mac]));
+	return;
 }
 
 void hw_config_ssir(struct osi_core_priv_data *const osi_core)

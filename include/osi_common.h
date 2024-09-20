@@ -51,6 +51,8 @@
 #define OSI_LOCKED		0x1U
 /** @brief Number of Nano seconds per second */
 #define OSI_NSEC_PER_SEC	1000000000ULL
+#define OSI_NSEC_PER_SEC_U	1000000000U
+
 #define OSI_MGBE_MAX_RX_RIIT_NSEC	17500U
 #define OSI_MGBE_MIN_RX_RIIT_NSEC	535U
 #ifndef OSI_STRIPPED_LIB
@@ -431,4 +433,21 @@ static inline nveu32_t osi_valid_pbl_value(nveu32_t pbl_value)
 
 	return allowed_pbl;
 }
+
+/**
+ * @addtogroup PTP PPS related information
+ *
+ * @brief PPS frequency configuration
+ * @{
+ */
+/** Max PPS pulse supported */
+#define OSI_MAX_PPS_HZ		8U
+/** PPS_CMD Trigger delay 100 ms*/
+#define OSI_PPS_TRIG_DELAY	100000000U
+/** PPS train stop immediately */
+#define OSI_PPS_START_CMD	2U
+/** PPS train start after trigger time */
+#define OSI_PPS_STOP_CMD	5U
+/** @} */
+
 #endif /* OSI_COMMON_H */
