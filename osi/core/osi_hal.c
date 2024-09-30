@@ -2360,11 +2360,19 @@ static void cfg_frp(struct core_local *l_core)
 	(void)frp_hw_write(osi_core, l_core->ops_p);
 }
 
+#ifdef HSI_SUPPORT
+static void cfg_hsi(struct core_local *l_core)
+{
+	(void)l_core->ops_p->core_hsi_configure((struct osi_core_priv_data *)(void *)l_core,
+						l_core->cfg.hsi_en_dis);
+}
+#endif /* HSI_SUPPORT */
+
 static void apply_dynamic_cfg(struct osi_core_priv_data *osi_core)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	typedef void (*cfg_fn)(struct core_local *local_core);
-	const cfg_fn fn[11] = {
+	const cfg_fn fn[12] = {
 		[DYNAMIC_CFG_L3_L4_IDX] = cfg_l3_l4_filter,
 		[DYNAMIC_CFG_L2_IDX] = cfg_l2_filter,
 		[DYNAMIC_CFG_RXCSUM_IDX] = cfg_rxcsum,
@@ -2374,6 +2382,9 @@ static void apply_dynamic_cfg(struct osi_core_priv_data *osi_core)
 		[DYNAMIC_CFG_EEE_IDX] = cfg_eee,
 		[DYNAMIC_CFG_PTP_IDX] = cfg_ptp,
 #endif /* !OSI_STRIPPED_LIB */
+#ifdef HSI_SUPPORT
+		[DYNAMIC_CFG_HSI_IDX] = cfg_hsi,
+#endif /* HSI_SUPPORT */
 		[DYNAMIC_CFG_AVB_IDX] = cfg_avb,
 		[DYNAMIC_CFG_EST_IDX] = cfg_est,
 		[DYNAMIC_CFG_FPE_IDX] = cfg_fpe,
@@ -3257,6 +3268,11 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		ethernet_server_cmd_log("OSI_CMD_HSI_CONFIGURE");
 #endif
 		ret = ops_p->core_hsi_configure(osi_core, data->arg1_u32);
+		if (ret == 0) {
+			l_core->cfg.hsi_en_dis = data->arg1_u32;
+			l_core->cfg.flags |= DYNAMIC_CFG_HSI;
+		}
+
 		break;
 #ifdef NV_VLTEST_BUILD
 	case OSI_CMD_HSI_INJECT_ERR:

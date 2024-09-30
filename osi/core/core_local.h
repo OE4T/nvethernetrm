@@ -66,6 +66,9 @@
 #define DYNAMIC_CFG_EST		OSI_BIT(8)
 #define DYNAMIC_CFG_FPE		OSI_BIT(9)
 #define DYNAMIC_CFG_FRP		OSI_BIT(10)
+#ifdef HSI_SUPPORT
+#define DYNAMIC_CFG_HSI		OSI_BIT(11)
+#endif /* HSI_SUPPORT */
 
 #ifndef OSI_STRIPPED_LIB
 #define DYNAMIC_CFG_FC		OSI_BIT(1)
@@ -84,7 +87,9 @@
 #define DYNAMIC_CFG_EST_IDX	8U
 #define DYNAMIC_CFG_FPE_IDX	9U
 #define DYNAMIC_CFG_FRP_IDX	10U
-
+#ifdef HSI_SUPPORT
+#define DYNAMIC_CFG_HSI_IDX	11U
+#endif /* HSI_SUPPORT */
 #define OSI_SUSPENDED		OSI_BIT(0)
 
 
@@ -345,6 +350,10 @@ struct dynamic_cfg {
 	struct osi_filter l2_filter;
 	/** L2 filter configuration */
 	struct core_l2 l2[EQOS_MAX_MAC_ADDRESS_FILTER];
+#ifdef HSI_SUPPORT
+	/** HSI state */
+	nveu32_t hsi_en_dis;
+#endif /* HSI_SUPPORT */
 };
 
 /**
