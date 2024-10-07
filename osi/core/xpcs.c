@@ -796,6 +796,41 @@ fail:
 }
 
 /**
+ * @brief xpcs_base_r_fec - Enable BASE-R FEC based on sysfs setting
+ *
+ * Algorithm: This routine enable or disable the PCS BASE-R FEC.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+static nve32_t xpcs_base_r_fec(struct osi_core_priv_data *osi_core)
+{
+	void *xpcs_base = osi_core->xpcs_base;
+	nveu32_t ctrl = 0;
+	nve32_t ret = 0;
+
+	/* Enable/Disable BASE-R FEC */
+	ctrl = xpcs_read(xpcs_base, XPCS_SR_PMA_KR_FEC_CTRL);
+	if (osi_core->pcs_base_r_fec_en == OSI_ENABLE) {
+		ctrl |= (XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN |
+			 XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND);
+	} else {
+		ctrl &= ~(XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN |
+			 XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND);
+	}
+
+	ret = xpcs_write_safety(osi_core, XPCS_SR_PMA_KR_FEC_CTRL, ctrl);
+	if (ret != 0) {
+		goto fail;
+    }
+
+fail:
+	return ret;
+}
+
+/**
  * @brief xpcs_init - XPCS initialization
  *
  * Algorithm: This routine initialize XPCS in USXMII mode.
@@ -815,6 +850,14 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "Pre-silicon, skipping lane bring up", 0ULL);
 	} else {
+		/* Enable/Disable BASE-R FEC before lane bring up */
+		ret = xpcs_base_r_fec(osi_core);
+		if (ret != 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "xpcs_base_r_fec failed", 0ULL);
+			goto fail;
+		}
+
 		if (xpcs_lane_bring_up(osi_core) < 0) {
 			ret = -1;
 			goto fail;
@@ -849,21 +892,6 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 		goto fail;
 	}
 
-	/* Enable BASE-R FEC */
-	ctrl = xpcs_read(xpcs_base, XPCS_SR_PMA_KR_FEC_CTRL);
-	if (osi_core->pcs_base_r_fec_en == OSI_ENABLE) {
-		ctrl |= (XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN |
-			 XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND);
-	} else {
-		ctrl &= ~(XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN |
-			 XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND);
-	}
-
-	ret = xpcs_write_safety(osi_core, XPCS_SR_PMA_KR_FEC_CTRL, ctrl);
-	if (ret != 0) {
-		goto fail;
-	}
-
 	/* 4. Program PHY to operate at 10Gbps/5Gbps/2Gbps
          * this step not required since PHY speed programming
          * already done as part of phy INIT
@@ -893,10 +921,8 @@ nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 	nveu32_t count;
 	nve32_t cond = COND_NOT_MET;
 #endif
-	void *xpcs_base = osi_core->xpcs_base;
 	nve32_t ret = 0;
 	nveu32_t value = 0;
-	nveu32_t ctrl = 0;
 
 	if (osi_core->xpcs_base == OSI_NULL) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
@@ -988,26 +1014,17 @@ nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core)
 
 		}
 
+		/* Enable/Disable BASE-R FEC before lane bring up */
+		ret = xpcs_base_r_fec(osi_core);
+		if (ret != 0) {
+		    goto fail;
+		}
+
 		if (xpcs_lane_bring_up(osi_core) < 0) {
 			ret = -1;
 			goto fail;
 		}
 
-	}
-
-	/* Enable BASE-R FEC */
-	ctrl = xpcs_read(xpcs_base, XPCS_SR_PMA_KR_FEC_CTRL);
-	if (osi_core->pcs_base_r_fec_en == OSI_ENABLE) {
-		ctrl |= (XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN |
-			 XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND);
-	} else {
-		ctrl &= ~(XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN |
-			 XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND);
-	}
-
-	ret = xpcs_write_safety(osi_core, XPCS_SR_PMA_KR_FEC_CTRL, ctrl);
-	if (ret != 0) {
-		goto fail;
 	}
 
 /* As a part of bringup debug, below programming is leading to the failures in block lock
