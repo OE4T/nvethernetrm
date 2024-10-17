@@ -71,7 +71,8 @@ static nve32_t add_dummy_sc(struct osi_core_priv_data *const osi_core,
  */
 static nve32_t poll_for_dbg_buf_update(struct osi_core_priv_data *const osi_core)
 {
-	nveu32_t retry = RETRY_COUNT;
+	/* 1 busy wait, and the remaining retries are sleeps of granularity MIN_USLEEP_10US */
+	nveu32_t retry = (RETRY_COUNT / MIN_USLEEP_10US) + 1U;
 	nveu32_t dbg_buf_config;
 	nve32_t cond = COND_NOT_MET;
 	nve32_t ret = 0;
@@ -80,6 +81,7 @@ static nve32_t poll_for_dbg_buf_update(struct osi_core_priv_data *const osi_core
 		MACSEC_DEBUG_BUF_CONFIG_0,
 		MACSEC_DEBUG_BUF_CONFIG_0_T26X
 	};
+	nveu32_t once = 0U;
 
 	count = 0;
 	while (cond == COND_NOT_MET) {
@@ -99,7 +101,17 @@ static nve32_t poll_for_dbg_buf_update(struct osi_core_priv_data *const osi_core
 
 		count++;
 		/* wait on UPDATE bit to reset */
-		osi_core->osd_ops.udelay(RETRY_DELAY);
+		if (once == 0U) {
+			osi_core->osd_ops.udelay(RETRY_DELAY);
+			/* udelay is a busy wait, so don't call it too frequently.
+			 * call it once to be optimistic, and then use usleep
+			 * with a longer timeout to yield to other CPU users.
+			 */
+			once = 1U;
+		} else {
+			osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
+						       MIN_USLEEP_10US + MIN_USLEEP_10US);
+		}
 	}
 err:
 	return ret;
@@ -934,10 +946,12 @@ exit:
 static inline nve32_t poll_for_kt_update(struct osi_core_priv_data *osi_core)
 {
 	/* half sec timeout */
-	nveu32_t retry = RETRY_COUNT;
+	/* 1 busy wait, and the remaining retries are sleeps of granularity MIN_USLEEP_10US */
+	nveu32_t retry = (RETRY_COUNT / MIN_USLEEP_10US) + 1U;
 	nveu32_t kt_config;
 	nveu32_t count;
 	nve32_t cond = 1;
+	nveu32_t once = 0U;
 
 	count = 0;
 	while (cond == 1) {
@@ -959,7 +973,17 @@ static inline nve32_t poll_for_kt_update(struct osi_core_priv_data *osi_core)
 			cond = 0;
 		} else {
 			/* wait on UPDATE bit to reset */
-			osi_core->osd_ops.udelay(RETRY_DELAY);
+			if (once == 0U) {
+				osi_core->osd_ops.udelay(RETRY_DELAY);
+				/* udelay is a busy wait, so don't call it too frequently.
+				 * call it once to be optimistic, and then use usleep
+				 * with a longer timeout to yield to other CPU users.
+				 */
+				once = 1U;
+			} else {
+				osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
+							       MIN_USLEEP_10US + MIN_USLEEP_10US);
+			}
 		}
 	}
 
@@ -1139,11 +1163,13 @@ err:
 static inline nve32_t poll_for_lut_update(struct osi_core_priv_data *osi_core)
 {
 	/* half sec timeout */
-	nveu32_t retry = RETRY_COUNT;
+	/* 1 busy wait, and the remaining retries are sleeps of granularity MIN_USLEEP_10US */
+	nveu32_t retry = (RETRY_COUNT / MIN_USLEEP_10US) + 1U;
 	nveu32_t lut_config;
 	nveu32_t count;
 	nve32_t cond = 1;
 	nve32_t ret = 0;
+	nveu32_t once = 0U;
 
 	count = 0;
 	while (cond == 1) {
@@ -1166,7 +1192,17 @@ static inline nve32_t poll_for_lut_update(struct osi_core_priv_data *osi_core)
 			cond = 0;
 		} else {
 			/* wait on UPDATE bit to reset */
-			osi_core->osd_ops.udelay(RETRY_DELAY);
+			if (once == 0U) {
+				osi_core->osd_ops.udelay(RETRY_DELAY);
+				/* udelay is a busy wait, so don't call it too frequently.
+				 * call it once to be optimistic, and then use usleep
+				 * with a longer timeout to yield to other CPU users.
+				 */
+				once = 1U;
+			} else {
+				osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
+							       MIN_USLEEP_10US + MIN_USLEEP_10US);
+			}
 		}
 	}
 exit:

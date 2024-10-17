@@ -27,6 +27,7 @@
 #ifdef MACSEC_SUPPORT
 #include <osi_macsec.h>
 #endif /* MACSEC_SUPPORT */
+#include "common.h"
 
 /**
  * @brief Maximum number of OSI core instances.
@@ -567,4 +568,87 @@ static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,
 {
 	return ((last_value & (nveu64_t)OSI_LLONG_MAX) + (incr & (nveu64_t)OSI_LLONG_MAX));
 }
+/**
+ * @addtogroup Generic helper MACROS
+ *
+ * @brief These are Generic helper macros used at various places.
+ * @{
+ */
+/* RETRY_COUNT should be atleast MIN_USLEEP_10US
+ * so that RETRY_COUNT/MIN_USLEEP_10US will result in
+ * atleast 1 iteration.
+ */
+#define RETRY_COUNT	1000U
+#define RETRY_ONCE	1U
+#define COND_MET	0
+#define COND_NOT_MET	1
+#define RETRY_DELAY	1U
+#define OSI_DELAY_4US		4U
+#define OSI_DELAY_10US		10U
+#ifndef OSI_STRIPPED_LIB
+#define OSI_DELAY_100US		100U
+#endif
+#define OSI_DELAY_200US		200U
+#define OSI_DELAY_1000US	1000U
+#define OSI_DELAY_10000US	10000U
+#define OSI_DELAY_30000US	30000U
+/* 7usec is minimum to use usleep, anything less should use udelay, set to 10us */
+#define MIN_USLEEP_10US		10U
+
+/** @} */
+
+/** \cond DO_NOT_DOCUMENT */
+/**
+ * @brief osi_readl_poll_timeout - Periodically poll an address until
+ * a condition is met or a timeout occurs
+ *
+ * @param[in] addr: Memory mapped address.
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] lmask: input mask to be masked against register value for poll condition.
+ * @param[in] rmask: expected output value to be compared against masked register value
+ * with lmask for poll condition.
+ * @param[in] delay_us: Maximum time to sleep between reads in us.
+ * @param[in] retry: Retry count.
+
+ * @note Physical address has to be memmory mapped.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+/* note: all users of osi_readl_poll_timeout are calling delay_us with 1us.
+ * if delay_us > MIN_USLEEP_10US, then min_delay can be adjusted to input param instead.
+ * currently adding this check to avoid logical dead code
+ */
+static inline nve32_t osi_readl_poll_timeout(void *addr, struct osi_core_priv_data *osi_core,
+					     nveu32_t lmask, nveu32_t rmask, nveu32_t delay_us,
+					     nveu32_t retry)
+{
+	nveu32_t once = 0;
+	nveu32_t total_delay = (delay_us) * (retry);
+	nveu16_t min_delay = MIN_USLEEP_10US;
+	nveu32_t elapsed_delay = 0;
+	nve32_t ret = -1;
+	nveu32_t val;
+
+	while (elapsed_delay < total_delay) {
+		val = osi_readl((nveu8_t *)addr);
+		if ((val & lmask) == rmask) {
+			ret = 0;
+			break;
+		}
+		if (once == 0U) {
+			osi_core->osd_ops.udelay(OSI_DELAY_1US);
+			once = 1U;
+			elapsed_delay += 1U;
+		} else {
+			osi_core->osd_ops.usleep_range(min_delay, min_delay + MIN_USLEEP_10US);
+			elapsed_delay &= (nveu32_t)INT_MAX;
+			elapsed_delay += min_delay;
+		}
+	}
+
+	return ret;
+}
+/** \endcond */
+
 #endif /* INCLUDED_CORE_LOCAL_H */

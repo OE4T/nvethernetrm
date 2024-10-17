@@ -74,7 +74,8 @@ static inline nve32_t xpcs_poll_for_an_complete(struct osi_core_priv_data *osi_c
 		status = xpcs_read(xpcs_base, XPCS_VR_MII_AN_INTR_STS);
 		if ((status & XPCS_VR_MII_AN_INTR_STS_CL37_ANCMPLT_INTR) == 0U) {
 			/* autoneg not completed - poll */
-			osi_core->osd_ops.udelay(1000U);
+			osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
+						       OSI_DELAY_1000US + MIN_USLEEP_10US);
 		} else {
 			/* 15. clear interrupt */
 			status &= ~XPCS_VR_MII_AN_INTR_STS_CL37_ANCMPLT_INTR;
@@ -207,57 +208,61 @@ static nve32_t xpcs_poll_flt_rx_link(struct osi_core_priv_data *osi_core)
 {
 	void *xpcs_base = osi_core->xpcs_base;
 	nve32_t cond = COND_NOT_MET;
-	nveu32_t retry = RETRY_COUNT;
+	nveu32_t retry = RETRY_ONCE;
 	nveu32_t count = 0;
+	nveu32_t once = 0;
 	nve32_t ret = 0;
 	nveu32_t ctrl = 0;
 
 	/* poll for Rx link up */
 	while (cond == COND_NOT_MET) {
-		if (count > retry) {
-			ret = -1;
-			goto fail;
-		}
-
-		count++;
-
 		ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_STS1);
 		if ((ctrl & XPCS_SR_XS_PCS_STS1_RLU) == XPCS_SR_XS_PCS_STS1_RLU) {
 			cond = COND_MET;
 		} else {
-			/* Maximum wait delay as per HW team is 1msec.
-			 * So add a loop for 1000 iterations with 1usec delay,
-			 * so that if check get satisfies before 1msec will come
-			 * out of loop and it can save some boot time
-			 */
-			osi_core->osd_ops.udelay(1U);
+			/* Maximum wait delay as per HW team is 1msec */
+			if (count > retry) {
+				ret = -1;
+				goto fail;
+			}
+			count++;
+			if (once == 0U) {
+				osi_core->osd_ops.udelay(OSI_DELAY_1US);
+				once = 1U;
+			} else {
+				osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
+							       OSI_DELAY_1000US + MIN_USLEEP_10US);
+			}
 		}
 	}
 
 	//FIXME: Causes lane bringup failure for SLT MGBE
 	if (osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
-			/* poll for FLT bit to 0 */
-			cond = COND_NOT_MET;
-			count = 0;
-			while (cond == COND_NOT_MET) {
-				if (count > retry) {
-					ret = -1;
-					goto fail;
-				}
+		/* poll for FLT bit to 0 */
+		cond = COND_NOT_MET;
+		count = 0;
+		retry = RETRY_COUNT;
+		while (cond == COND_NOT_MET) {
+			if (count > retry) {
+				ret = -1;
+				goto fail;
+			}
 
-				count++;
+			count++;
 
-				ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_STS1);
-				if ((ctrl & XPCS_SR_XS_PCS_STS1_FLT) == 0U) {
-					cond = COND_MET;
-				} else {
-			/* Maximum wait delay as 1s */
-			osi_core->osd_ops.udelay(1000U);
+			ctrl = xpcs_read(xpcs_base, XPCS_SR_XS_PCS_STS1);
+			if ((ctrl & XPCS_SR_XS_PCS_STS1_FLT) == 0U) {
+				cond = COND_MET;
+			} else {
+				/* Maximum wait delay as 1s */
+				osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
+							       OSI_DELAY_1000US + MIN_USLEEP_10US);
 			}
 		}
 	}
 	/* delay 10ms to wait the staus propagate to MAC block */
-	osi_core->osd_ops.udelay(10000U);
+	osi_core->osd_ops.usleep_range(OSI_DELAY_10000US, OSI_DELAY_10000US + MIN_USLEEP_10US);
+
 fail:
 	return ret;
 }
@@ -359,7 +364,8 @@ nve32_t xpcs_start(struct osi_core_priv_data *osi_core)
 			if ((ctrl & XPCS_VR_XS_PCS_DIG_CTRL1_USRA_RST) == 0U) {
 				cond = COND_MET;
 			} else {
-				osi_core->osd_ops.udelay(1000U);
+				osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
+							       OSI_DELAY_1000US + MIN_USLEEP_10US);
 			}
 		}
 	}
@@ -472,11 +478,12 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 				       nveu32_t lane_init_en)
 {
 	void *xpcs_base = osi_core->xpcs_base;
-	nveu32_t retry = 5U;
+	nveu32_t retry = RETRY_ONCE;
 	nve32_t cond = COND_NOT_MET;
 	nveu32_t val = 0;
 	nveu32_t count;
 	nve32_t ret = 0;
+	nveu32_t once = 0;
 	nveu64_t retry_delay = 1U;
 	const nveu32_t uphy_status_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_XPCS_WRAP_UPHY_STATUS,
@@ -513,12 +520,6 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 
 		count = 0;
 		while (cond == COND_NOT_MET) {
-			if (count > retry) {
-				ret = -1;
-				goto done;
-			}
-			count++;
-
 			val = osi_readla(osi_core,
 					(nveu8_t *)xpcs_base +
 					uphy_init_ctrl_reg[osi_core->mac]);
@@ -526,11 +527,21 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 				/* exit loop */
 				cond = COND_MET;
 			} else {
+				if (count > retry) {
+					ret = -1;
+					goto done;
+				}
+				count++;
 				/* Max wait time is 1usec.
 				 * Most of the time loop got exited in first iteration.
 				 * but added an extra count of 4 for safer side
 				 */
-				osi_core->osd_ops.udelay(retry_delay);
+				if (once == 0U) {
+					osi_core->osd_ops.udelay(OSI_DELAY_1US);
+					once = 1U;
+				} else {
+					osi_core->osd_ops.udelay(OSI_DELAY_4US);
+				}
 			}
 		}
 	}
@@ -552,7 +563,7 @@ done:
 static nve32_t xpcs_check_pcs_lock_status(struct osi_core_priv_data *osi_core)
 {
 	void *xpcs_base = osi_core->xpcs_base;
-	nveu32_t retry = RETRY_COUNT;
+	nveu32_t retry = RETRY_ONCE;
 	nve32_t cond = COND_NOT_MET;
 	nveu32_t val = 0;
 	nveu32_t count;
@@ -565,12 +576,6 @@ static nve32_t xpcs_check_pcs_lock_status(struct osi_core_priv_data *osi_core)
 
 	count = 0;
 	while (cond == COND_NOT_MET) {
-		if (count > retry) {
-			ret = -1;
-			goto fail;
-		}
-		count++;
-
 		val = osi_readla(osi_core,
 				 (nveu8_t *)xpcs_base +
 				 uphy_irq_sts_reg[osi_core->mac]);
@@ -579,12 +584,15 @@ static nve32_t xpcs_check_pcs_lock_status(struct osi_core_priv_data *osi_core)
 			/* exit loop */
 			cond = COND_MET;
 		} else {
-			/* Maximum wait delay as per HW team is 1msec.
-			 * So add a loop for 1000 iterations with 1usec delay,
-			 * so that if check get satisfies before 1msec will come
-			 * out of loop and it can save some boot time
-			 */
-			osi_core->osd_ops.udelay(1U);
+			if (count >= retry) {
+				ret = -1;
+				goto fail;
+			}
+			count++;
+
+			/* Maximum wait delay as per HW team is 1msec. */
+			osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
+						       OSI_DELAY_1000US + MIN_USLEEP_10US);
 		}
 	}
 
@@ -693,25 +701,24 @@ static nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
 		cond = COND_NOT_MET;
 		count = 0;
 		while (cond == COND_NOT_MET) {
-			if (count > retry) {
-				ret = -1;
-				goto fail;
-			}
-			count++;
 			val = osi_readla(osi_core,
 					 (nveu8_t *)osi_core->xpcs_base +
 					 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
 			if ((val & XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CAL_EN) == 0U) {
 				cond = COND_MET;
 			} else {
+				if (count > retry) {
+					ret = -1;
+					goto fail;
+				}
+				count++;
+
 				/* Maximum wait delay as per HW team is 100 usec.
 				 * But most of the time as per experiments it takes
-				 * around 14usec to satisy the condition, so add a
-				 * minimum delay of 14usec and loop it for 7times.
-				 * With this 14usec delay condition gets satifies
-				 * in first iteration itself.
+				 * around 14usec to satisy the condition.
+				 * Use 200US to yield CPU for other users.
 				 */
-				osi_core->osd_ops.udelay(200U);
+				osi_core->osd_ops.usleep_range(OSI_DELAY_200US, OSI_DELAY_200US + MIN_USLEEP_10US);
 			}
 		}
 
@@ -758,7 +765,7 @@ step10:
 		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
 			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
 		/* Step14: wait for 30ms */
-		osi_core->osd_ops.udelay(30000U);
+		osi_core->osd_ops.usleep_range(OSI_DELAY_30000US, OSI_DELAY_30000US + MIN_USLEEP_10US);
 
 		/* Step15 RX_CDR_RESET */
 		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
@@ -768,7 +775,7 @@ step10:
 			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
 
 		/* Step16: wait for 30ms */
-		osi_core->osd_ops.udelay(30000U);
+		osi_core->osd_ops.usleep_range(OSI_DELAY_30000US, OSI_DELAY_30000US + MIN_USLEEP_10US);
 	}
 
 	if (xpcs_check_pcs_lock_status(osi_core) < 0) {
@@ -945,7 +952,8 @@ static nve32_t vendor_specifc_sw_rst_usxgmii_an_en(struct osi_core_priv_data *os
 		if ((ctrl & XPCS_VR_XS_PCS_DIG_CTRL1_VR_RST) == 0U) {
 			cond = 0;
 		} else {
-			osi_core->osd_ops.udelay(1000U);
+			osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
+						       OSI_DELAY_1000US + MIN_USLEEP_10US);
 		}
 	}
 

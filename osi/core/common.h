@@ -25,47 +25,6 @@
 #include <nvethernet_type.h>
 #include <osi_common.h>
 
-/**
- * @addtogroup Generic helper MACROS
- *
- * @brief These are Generic helper macros used at various places.
- * @{
- */
-#define RETRY_COUNT	1000U
-#define COND_MET	0
-#define COND_NOT_MET	1
-#define RETRY_DELAY	1U
-/** @} */
-
-/**
- * @brief osi_readl_poll_timeout - Periodically poll an address until
- * a condition is met or a timeout occurs
- *
- * @param[in] addr: Memory mapped address.
- * @param[in] fn: function to be used.
- * @param[in] val: Variable to read the value.
- * @param[in] cond: Break condition.
- * @param[in] delay_us: Maximum time to sleep between reads in us.
- * @param[in] retry: Retry count.
-
- * @note Physical address has to be memmory mapped.
- *
- * @retval 0 on success
- * @retval -1 on failure.
- */
-#define osi_readl_poll_timeout(addr, fn, val, cond, delay_us, retry) \
-({ \
-	nveu32_t count = 0; \
-	while (count++ < retry) { \
-		val = osi_readl((nveu8_t *)addr); \
-		if ((cond)) { \
-			break; \
-		} \
-		fn(delay_us); \
-	} \
-	(cond) ? 0 : -1; \
-})
-
 struct osi_core_priv_data;
 
 /**

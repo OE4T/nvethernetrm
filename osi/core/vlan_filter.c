@@ -202,8 +202,12 @@ static inline nve32_t poll_for_vlan_filter_reg_rw(
 			/* Set cond to 0 to exit loop */
 			cond = 0;
 		} else {
-			/* wait for 10 usec for XB clear */
-			osi_core->osd_ops.udelay(10U);
+			/* wait for 10 usec for XB clear.
+			 * Use usleep instead of udelay to
+			 * yield to other CPU users.
+			 */
+			osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
+						       MIN_USLEEP_10US + MIN_USLEEP_10US);
 		}
 	}
 

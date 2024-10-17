@@ -514,6 +514,7 @@ typedef my_lint_64		nvel64_t;
 #define OSI_DELAY_1000US	1000U
 #define OSI_DELAY_1US		1U
 #define RCHLIST_SIZE		48U
+
 /**
  * @addtogroup PTP PTP related information
  *
@@ -1260,9 +1261,9 @@ struct osd_core_ops {
 	void (*ops_log)(void *priv, const nve8_t *func, nveu32_t line,
 			nveu32_t level, nveu32_t type, const nve8_t *err,
 			nveul64_t loga);
-	/** udelay callback */
+	/** udelay callback for sleep < 7usec as this is busy wait in most OSes */
 	void (*udelay)(nveu64_t usec);
-	/** usleep range callback */
+	/** usleep range callback for longer sleep duration */
 	void (*usleep_range)(nveu64_t umin, nveu64_t umax);
 	/** ivcsend callback*/
 	nve32_t (*ivc_send)(void *priv, struct ivc_msg_common *ivc,

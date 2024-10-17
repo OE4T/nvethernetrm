@@ -24,7 +24,7 @@
 #ifndef INCLUDED_XPCS_H_
 #define INCLUDED_XPCS_H_
 
-#include "common.h"
+#include "core_local.h"
 #include <osi_core.h>
 
 /**
@@ -294,17 +294,36 @@ static inline nve32_t xpcs_write_safety(struct osi_core_priv_data *osi_core,
 {
 	void *xpcs_base = osi_core->xpcs_base;
 	nveu32_t read_val;
-	nve32_t retry = 10;
+	/* 1 busy wait, and the remaining retries are sleeps of granularity MIN_USLEEP_10US */
+	nveu32_t retry = RETRY_ONCE;
+	nveu32_t count = 0;
+	nveu32_t once = 0U;
 	nve32_t ret = XPCS_WRITE_FAIL_CODE;
+	nve32_t cond = COND_NOT_MET;
 
-	while (--retry > 0) {
+	while (cond == COND_NOT_MET) {
 		xpcs_write(xpcs_base, reg_addr, val);
 		read_val = xpcs_read(xpcs_base, reg_addr);
 		if (val == read_val) {
 			ret = 0;
-			break;
+			cond = COND_MET;
+		} else {
+			if (count > retry) {
+				break;
+			}
+			count++;
+			if (once == 0U) {
+				osi_core->osd_ops.udelay(OSI_DELAY_1US);
+				/* udelay is a busy wait, so don't call it too frequently.
+				 * call it once to be optimistic, and then use usleep with
+				 * a longer timeout to yield to other CPU users.
+				 */
+				once = 1U;
+			} else {
+				osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
+							       MIN_USLEEP_10US + MIN_USLEEP_10US);
+			}
 		}
-		osi_core->osd_ops.udelay(OSI_DELAY_1US);
 	}
 
 #ifndef OSI_STRIPPED_LIB

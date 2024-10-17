@@ -389,10 +389,8 @@ static nve32_t eqos_config_frp(struct osi_core_priv_data *const osi_core,
 
 	/* Verify RXPI bit set in MTL_RXP_Control_Status */
 	ret = osi_readl_poll_timeout((base + EQOS_MTL_RXP_CS),
-				     (osi_core->osd_ops.udelay),
-				     (val),
-				     ((val & EQOS_MTL_RXP_CS_RXPI) ==
-				      EQOS_MTL_RXP_CS_RXPI),
+				     osi_core,
+				     EQOS_MTL_RXP_CS_RXPI, EQOS_MTL_RXP_CS_RXPI,
 				     (EQOS_MTL_FRP_READ_UDELAY),
 				     (EQOS_MTL_FRP_READ_RETRY));
 	if (ret < 0) {
@@ -481,10 +479,8 @@ static nve32_t eqos_frp_write(struct osi_core_priv_data *osi_core,
 
 	/* Wait for ready */
 	ret = osi_readl_poll_timeout((base + EQOS_MTL_RXP_IND_CS),
-				     (osi_core->osd_ops.udelay),
-				     (val),
-				     ((val & EQOS_MTL_RXP_IND_CS_BUSY) ==
-				      OSI_NONE),
+				     osi_core,
+				     EQOS_MTL_RXP_IND_CS_BUSY, OSI_NONE,
 				     (EQOS_MTL_FRP_READ_UDELAY),
 				     (EQOS_MTL_FRP_READ_RETRY));
 	if (ret < 0) {
@@ -511,10 +507,8 @@ static nve32_t eqos_frp_write(struct osi_core_priv_data *osi_core,
 
 	/* Wait for complete */
 	ret = osi_readl_poll_timeout((base + EQOS_MTL_RXP_IND_CS),
-				     (osi_core->osd_ops.udelay),
-				     (val),
-				     ((val & EQOS_MTL_RXP_IND_CS_BUSY) ==
-				      OSI_NONE),
+				     osi_core,
+				     EQOS_MTL_RXP_IND_CS_BUSY, OSI_NONE,
 				     (EQOS_MTL_FRP_READ_UDELAY),
 				     (EQOS_MTL_FRP_READ_RETRY));
 	if (ret < 0) {
@@ -2364,7 +2358,7 @@ static inline nve32_t eqos_poll_for_update_ts_complete(
 		}
 
 		count++;
-		osi_core->osd_ops.udelay(OSI_DELAY_1000US);
+		osi_core->osd_ops.usleep_range(OSI_DELAY_1000US, OSI_DELAY_1000US + MIN_USLEEP_10US);
 	}
 fail:
 	return ret;
@@ -2599,7 +2593,7 @@ static inline nve32_t poll_for_mii_idle(struct osi_core_priv_data *osi_core)
 			cond = COND_MET;
 		} else {
 			/* wait on GMII Busy set */
-			osi_core->osd_ops.udelay(10U);
+			osi_core->osd_ops.usleep_range(OSI_DELAY_10US, OSI_DELAY_10US + MIN_USLEEP_10US);
 		}
 	}
 fail:
@@ -3895,7 +3889,7 @@ static inline nve32_t poll_for_mac_tx_rx_idle(struct osi_core_priv_data *osi_cor
 			break;
 		}
 		/* wait */
-		osi_core->osd_ops.udelay(OSI_DELAY_COUNT);
+		osi_core->osd_ops.usleep_range(OSI_DELAY_COUNT, OSI_DELAY_COUNT + MIN_USLEEP_10US);
 		retry++;
 	}
 	if (retry >= OSI_TXRX_IDLE_RETRY) {

@@ -547,6 +547,7 @@
 #define COND_MET        0
 #define COND_NOT_MET    1
 #define RETRY_DELAY     1U
+#define MIN_USLEEP_10US 10U
 /** @} */
 
 /**

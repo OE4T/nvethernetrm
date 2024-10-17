@@ -61,7 +61,8 @@ static nve32_t mgbe_poll_for_mac_acrtl(struct osi_core_priv_data *osi_core)
 		}
 
 		/* wait for 10 usec for OB clear and retry */
-		osi_core->osd_ops.udelay(MGBE_MAC_INDIR_AC_OB_WAIT);
+		osi_core->osd_ops.usleep_range(MGBE_MAC_INDIR_AC_OB_WAIT,
+					       MGBE_MAC_INDIR_AC_OB_WAIT + MIN_USLEEP_10US);
 		count++;
 	}
 
@@ -431,12 +432,10 @@ static nve32_t mgbe_rchlist_write(struct osi_core_priv_data *osi_core,
 
 	/* Wait for ready */
 	ret = osi_readl_poll_timeout((base + MGBE_MTL_RXP_IND_CS),
-				     (osi_core->osd_ops.udelay),
-				     (val),
-				     ((val & MGBE_MTL_RXP_IND_CS_BUSY) ==
-				      OSI_NONE),
-				     (MGBE_MTL_RCHlist_READ_UDELAY),
-				     (MGBE_MTL_RCHlist_READ_RETRY));
+				     osi_core,
+				     MGBE_MTL_RXP_IND_CS_BUSY, OSI_NONE,
+				     MGBE_MTL_RCHlist_READ_UDELAY,
+				     MGBE_MTL_RCHlist_READ_RETRY);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			"Fail to read/write\n",
@@ -477,12 +476,10 @@ static nve32_t mgbe_rchlist_write(struct osi_core_priv_data *osi_core,
 
 	/* Wait for complete */
 	ret = osi_readl_poll_timeout((base + MGBE_MTL_RXP_IND_CS),
-				     (osi_core->osd_ops.udelay),
-				     (val),
-				     ((val & MGBE_MTL_RXP_IND_CS_BUSY) ==
-				      OSI_NONE),
-				     (MGBE_MTL_RCHlist_READ_UDELAY),
-				     (MGBE_MTL_RCHlist_READ_RETRY));
+				     osi_core,
+				     MGBE_MTL_RXP_IND_CS_BUSY, OSI_NONE,
+				     MGBE_MTL_RCHlist_READ_UDELAY,
+				     MGBE_MTL_RCHlist_READ_RETRY);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			"Fail to write\n",
@@ -856,7 +853,8 @@ static nve32_t mgbe_poll_for_l3l4crtl(struct osi_core_priv_data *osi_core)
 			cond = 0;
 		} else {
 			/* wait for 10 usec for XB clear */
-			osi_core->osd_ops.udelay(MGBE_MAC_XB_WAIT);
+			osi_core->osd_ops.usleep_range(MGBE_MAC_XB_WAIT,
+						       MGBE_MAC_XB_WAIT + MIN_USLEEP_10US);
 		}
 	}
 fail:
@@ -1321,12 +1319,10 @@ static nve32_t mgbe_config_frp(struct osi_core_priv_data *const osi_core,
 
 		/* Verify RXPI bit set in MTL_RXP_Control_Status */
 		ret = osi_readl_poll_timeout((base + MGBE_MTL_RXP_CS),
-					     (osi_core->osd_ops.udelay),
-					     (val),
-					     ((val & MGBE_MTL_RXP_CS_RXPI) ==
-					      MGBE_MTL_RXP_CS_RXPI),
+					     osi_core,
+					     MGBE_MTL_RXP_CS_RXPI, MGBE_MTL_RXP_CS_RXPI,
 					     (MGBE_MTL_FRP_READ_UDELAY),
-					     (MGBE_MTL_FRP_READ_RETRY));
+					     MGBE_MTL_FRP_READ_RETRY);
 		if (ret < 0) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				"Fail to enable FRP\n",
@@ -1349,10 +1345,8 @@ static nve32_t mgbe_config_frp(struct osi_core_priv_data *const osi_core,
 
 		/* Verify RXPI bit reset in MTL_RXP_Control_Status */
 		ret = osi_readl_poll_timeout((base + MGBE_MTL_RXP_CS),
-					     (osi_core->osd_ops.udelay),
-					     (val),
-					     ((val & MGBE_MTL_RXP_CS_RXPI) ==
-					      OSI_NONE),
+					     osi_core,
+					     MGBE_MTL_RXP_CS_RXPI, OSI_NONE,
 					     (MGBE_MTL_FRP_READ_UDELAY),
 					     (MGBE_MTL_FRP_READ_RETRY));
 		if (ret < 0) {
@@ -1405,10 +1399,8 @@ static nve32_t mgbe_frp_write(struct osi_core_priv_data *osi_core,
 
 	/* Wait for ready */
 	ret = osi_readl_poll_timeout((base + MGBE_MTL_RXP_IND_CS),
-				     (osi_core->osd_ops.udelay),
-				     (val),
-				     ((val & MGBE_MTL_RXP_IND_CS_BUSY) ==
-				      OSI_NONE),
+				     osi_core,
+				     MGBE_MTL_RXP_IND_CS_BUSY, OSI_NONE,
 				     (MGBE_MTL_FRP_READ_UDELAY),
 				     (MGBE_MTL_FRP_READ_RETRY));
 	if (ret < 0) {
@@ -1443,10 +1435,8 @@ static nve32_t mgbe_frp_write(struct osi_core_priv_data *osi_core,
 
 	/* Wait for complete */
 	ret = osi_readl_poll_timeout((base + MGBE_MTL_RXP_IND_CS),
-				     (osi_core->osd_ops.udelay),
-				     (val),
-				     ((val & MGBE_MTL_RXP_IND_CS_BUSY) ==
-				      OSI_NONE),
+				     osi_core,
+				     MGBE_MTL_RXP_IND_CS_BUSY, OSI_NONE,
 				     (MGBE_MTL_FRP_READ_UDELAY),
 				     (MGBE_MTL_FRP_READ_RETRY));
 	if (ret < 0) {
@@ -1856,7 +1846,8 @@ static nve32_t mgbe_rss_write_reg(struct osi_core_priv_data *osi_core,
 		if ((value & MGBE_MAC_RSS_ADDR_OB) == OSI_NONE) {
 			cond = 0;
 		} else {
-			osi_core->osd_ops.udelay(100);
+			osi_core->osd_ops.usleep_range(OSI_DELAY_100US,
+						       OSI_DELAY_100US + MIN_USLEEP_10US);
 		}
 	}
 
@@ -4053,7 +4044,7 @@ static nve32_t mgbe_mdio_busy_wait(struct osi_core_priv_data *const osi_core)
 		if ((mac_gmiiar & MGBE_MDIO_SCCD_SBUSY) == 0U) {
 			cond = 0;
 		} else {
-			osi_core->osd_ops.udelay(10U);
+			osi_core->osd_ops.usleep_range(OSI_DELAY_10US, OSI_DELAY_10US + MIN_USLEEP_10US);
 		}
 	}
 fail:
@@ -4572,7 +4563,8 @@ static inline nve32_t mgbe_poll_for_update_ts_complete(
 		}
 
 		retry++;
-		osi_core->osd_ops.udelay(OSI_DELAY_1000US);
+		osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
+					       OSI_DELAY_1000US + MIN_USLEEP_10US);
 	}
 
 	return ret;

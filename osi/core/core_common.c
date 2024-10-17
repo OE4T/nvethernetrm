@@ -51,7 +51,8 @@ nve32_t poll_check(struct osi_core_priv_data *const osi_core, nveu8_t *addr,
 		if ((*value & bit_check) == OSI_NONE) {
 			cond = COND_MET;
 		} else {
-			osi_core->osd_ops.udelay(OSI_DELAY_1000US);
+			osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
+						       OSI_DELAY_1000US + MIN_USLEEP_10US);
 		}
 	}
 fail:
@@ -790,7 +791,9 @@ static inline nve32_t hw_est_read(struct osi_core_priv_data *osi_core,
 				  OSI_UNUSED nveu32_t gcla, nveu32_t bunk,
 				  nveu32_t mac)
 {
-	nve32_t retry = 1000;
+	/* 1 busy wait, and the remaining retries are sleeps of granularity MIN_USLEEP_10US */
+	nveu32_t retry = (RETRY_COUNT / MIN_USLEEP_10US) + 1U;
+	nveu32_t once = 0U;
 	nveu32_t val = 0U;
 	nve32_t ret;
 	const nveu32_t MTL_EST_GCL_CONTROL[OSI_MAX_MAC_IP_TYPES] = {
@@ -812,14 +815,24 @@ static inline nve32_t hw_est_read(struct osi_core_priv_data *osi_core,
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
 		    MTL_EST_GCL_CONTROL[mac]);
 
-	while (--retry > 0) {
+	while (retry > 0U) {
+		retry--;
 		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 				 MTL_EST_GCL_CONTROL[mac]);
 		if ((val & MTL_EST_SRWO) == MTL_EST_SRWO) {
+			if (once == 0U) {
+				osi_core->osd_ops.udelay(OSI_DELAY_1US);
+				/* udelay is a busy wait, so don't call it too frequently.
+				 * call it once to be optimistic, and then use usleep
+				 * with a longer timeout to yield to other CPU users.
+				 */
+				once = 1U;
+			} else {
+				osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
+							       MIN_USLEEP_10US + MIN_USLEEP_10US);
+			}
 			continue;
 		}
-		osi_core->osd_ops.udelay(OSI_DELAY_1US);
-
 		break;
 	}
 
@@ -1086,7 +1099,9 @@ static nve32_t hw_est_write(struct osi_core_priv_data *osi_core,
 			    nveu32_t addr_val, nveu32_t data,
 			    nveu32_t gcla)
 {
-	nve32_t retry = 1000;
+	/* 1 busy wait, and the remaining retries are sleeps of granularity MIN_USLEEP_10US */
+	nveu32_t retry = (RETRY_COUNT / MIN_USLEEP_10US) + 1U;
+	nveu32_t once = 0U;
 	nveu32_t val = 0x0;
 	nve32_t ret = 0;
 	const nveu32_t MTL_EST_DATA[OSI_MAX_MAC_IP_TYPES] = {
@@ -1110,11 +1125,22 @@ static nve32_t hw_est_write(struct osi_core_priv_data *osi_core,
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base +
 		    MTL_EST_GCL_CONTROL[osi_core->mac]);
 
-	while (--retry > 0) {
+	while (retry > 0U) {
+		retry--;
 		val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 				 MTL_EST_GCL_CONTROL[osi_core->mac]);
 		if ((val & MTL_EST_SRWO) == MTL_EST_SRWO) {
-			osi_core->osd_ops.udelay(OSI_DELAY_1US);
+			if (once == 0U) {
+				osi_core->osd_ops.udelay(OSI_DELAY_1US);
+				/* udelay is a busy wait, so don't call it too frequently.
+				 * call it once to be optimistic, and then use usleep
+				 * with a longer timeout to yield to other CPU users.
+				 */
+				once = 1U;
+			} else {
+				osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
+							       MIN_USLEEP_10US + MIN_USLEEP_10US);
+			}
 			continue;
 		}
 
