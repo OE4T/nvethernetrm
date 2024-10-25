@@ -5627,6 +5627,7 @@ static nve32_t add_upd_sc(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = 0;
 	nveu32_t i;
 	nveu8_t error_mask = 0;
+	const nveu8_t zero_mac[OSI_ETH_ALEN] = {0U};
 #ifdef MACSEC_KEY_PROGRAM
 	struct osi_macsec_kt_config kt_config = {0};
 #endif /* MACSEC_KEY_PROGRAM */
@@ -5709,6 +5710,12 @@ static nve32_t add_upd_sc(struct osi_core_priv_data *const osi_core,
 	/* Extract the mac sa from the SCI itself */
 	copy_rev_order(lut_config.lut_in.sa, sc->sci, OSI_ETH_ALEN);
 	lut_config.flags |= OSI_LUT_FLAGS_SA_VALID;
+	/* Update peer MACID in DA of tx SCI_LUT */
+	copy_rev_order(lut_config.lut_in.da, sc->peer_macid, OSI_ETH_ALEN);
+	if (osi_macsec_memcmp(&sc->peer_macid[0], zero_mac,
+			      (nve32_t)OSI_ETH_ALEN) != OSI_NONE_SIGNED) {
+		lut_config.flags |= OSI_LUT_FLAGS_DA_VALID;
+	}
 	lut_config.sci_lut_out.sc_index = sc->sc_idx_start;
 	for (i = 0; i < OSI_SCI_LEN; i++) {
 		lut_config.sci_lut_out.sci[i] = sc->sci[OSI_SCI_LEN - 1U - i];
@@ -5859,6 +5866,8 @@ static nve32_t add_new_sc(struct osi_core_priv_data *const osi_core,
 	}
 	new_sc = &lut_status_ptr->sc_info[avail_sc_idx];
 	memcpy_sci_sak_hkey(new_sc, sc);
+	(void)osi_macsec_memcpy(new_sc->peer_macid, sc->peer_macid,
+				OSI_ETH_ALEN);
 	new_sc->curr_an = sc->curr_an;
 	new_sc->next_pn = sc->next_pn;
 	new_sc->pn_window = sc->pn_window;
@@ -5984,6 +5993,9 @@ static nve32_t macsec_configure(struct osi_core_priv_data *const osi_core,
 			 */
 			*tmp_sc_p = *existing_sc;
 			memcpy_sci_sak_hkey(tmp_sc_p, sc);
+			(void)osi_macsec_memcpy(tmp_sc_p->peer_macid,
+						sc->peer_macid,
+						OSI_ETH_ALEN);
 			tmp_sc_p->curr_an = sc->curr_an;
 			tmp_sc_p->next_pn = sc->next_pn;
 			tmp_sc_p->pn_window = sc->pn_window;

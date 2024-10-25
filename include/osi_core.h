@@ -1334,6 +1334,9 @@ struct osi_macsec_sc_info {
         2: Indicates offset as 50
         */
         nveu8_t conf_offset;
+	/** Peer MACID is stored
+	 * valid values are from 0 to UINT8_MAX */
+	nveu8_t peer_macid[OSI_ETH_ALEN];
 };
 
 /**
