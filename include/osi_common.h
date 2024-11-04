@@ -68,12 +68,14 @@
 /** @} */
 
 /**
- * @addtogroup FC-Helper Flow control enable/disable macros.
+ * @addtogroup FC-Helper MACROS
+ *
+ * @brief FC-Helper Flow control enable/disable macros.
  * @{
  */
-/** @brief flag to disable pause frames */
+/** flag to disable pause frames */
 #define OSI_PAUSE_FRAMES_DISABLE	0U
-/** @brief flag to enable pause frames */
+/** flag to enable pause frames */
 #define OSI_PAUSE_FRAMES_ENABLE		1U
 /** @} */
 
@@ -167,8 +169,6 @@
 #ifndef OSI_LLONG_MAX
 #define OSI_LLONG_MAX			(0x7FFFFFFFFFFFFFFF)
 #endif
-
-/** @} */
 
 /**
  * @addtogroup Generic helper MACROS

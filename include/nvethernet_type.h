@@ -23,7 +23,7 @@
 
 #ifndef INCLUDED_NVETHERNET_TYPE_H
 #define INCLUDED_NVETHERNET_TYPE_H
-/*
+/**
  * @addtogroup typedef related info
  *
  * @brief typedefs that indicate size and signness

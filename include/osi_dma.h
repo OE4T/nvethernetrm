@@ -27,7 +27,7 @@
 #include <osi_common.h>
 #include "osi_dma_txrx.h"
 
-/*
+/**
  * @addtogroup Helper Helper MACROS
  *
  * @brief These flags are used for PTP time synchronization
@@ -856,7 +856,7 @@ struct osi_dma_priv_data {
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -898,7 +898,7 @@ nve32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma,
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -934,8 +934,9 @@ nveu32_t osi_get_refill_rx_desc_cnt(const struct osi_dma_priv_data *const osi_dm
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - invalid tail pointer
+ * @retval -1 on failure
+ * - invalid argument
+ * - invalid tail pointer
  */
 #ifndef DOXYGEN_ICD
 /**
@@ -948,7 +949,7 @@ nveu32_t osi_get_refill_rx_desc_cnt(const struct osi_dma_priv_data *const osi_dm
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -979,8 +980,9 @@ nve32_t osi_rx_dma_desc_init(struct osi_dma_priv_data *osi_dma,
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - invalid mtu setting
+ * @retval -1 on failure
+ * - invalid argument
+ * - invalid mtu setting
  */
 #ifndef DOXYGEN_ICD
 /**
@@ -993,7 +995,7 @@ nve32_t osi_rx_dma_desc_init(struct osi_dma_priv_data *osi_dma,
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1037,9 +1039,10 @@ nve32_t osi_set_rx_buf_len(struct osi_dma_priv_data *osi_dma);
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - invalid dma channel number
- * @retval -1 on failure - invalid tx ring
+ * @retval -1 on failure
+ * - invalid argument
+ * - invalid dma channel number
+ * - invalid tx ring
  */
 #ifndef DOXYGEN_ICD
 /**
@@ -1052,7 +1055,7 @@ nve32_t osi_set_rx_buf_len(struct osi_dma_priv_data *osi_dma);
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1088,9 +1091,10 @@ nve32_t osi_hw_transmit(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
  *  - De-initialization: No
  *
  * @retval >=0 Number of descriptors (buffers) processed on success else -1.
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - invalid dma channel number
- * @retval -1 on failure - invalid tx ring
+ * @retval -1 on failure
+ * - invalid argument
+ * - invalid dma channel number
+ * - invalid tx ring
  */
 #ifndef DOXYGEN_ICD
 /**
@@ -1103,7 +1107,7 @@ nve32_t osi_hw_transmit(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1141,9 +1145,10 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
  *  - De-initialization: No
  *
  * @retval >=0 Number of descriptors (buffers) processed on success else -1.
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - invalid dma channel number
- * @retval -1 on failure - invalid rx ring
+ * @retval -1 on failure
+ * - invalid argument
+ * - invalid dma channel number
+ * - invalid rx ring
  */
 #ifndef DOXYGEN_ICD
 /**
@@ -1156,7 +1161,7 @@ nve32_t osi_process_tx_completions(struct osi_dma_priv_data *osi_dma,
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1207,13 +1212,15 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - invalid MAC version
- * @retval -1 on failure - invalid number of DMA channels
- * @retval -1 on failure - invalid DMA channels
+ * @retval -1 on failure
+ * - invalid argument
+ * - invalid MAC version
+ * - invalid number of DMA channels
+ * - invalid DMA channels
  * @retval !=0 on failure - failure to init DMA descriptors
- * @retval <0 on failure - failure to init tx interrupt
- * @retval <0 on failure - failure to init rx interrupt
+ * @retval <0 on failure
+ * - failure to init tx interrupt
+ * - failure to init rx interrupt
  */
 #ifndef DOXYGEN_ICD
 /**
@@ -1226,7 +1233,7 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1256,9 +1263,10 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma);
  *  - De-initialization: Yes
  *
  * @retval 0 on success
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - invalid number of DMA channels
- * @retval -1 on failure - invalid DMA channels
+ * @retval -1 on failure
+ * - invalid argument
+ * - invalid number of DMA channels
+ * - invalid DMA channels
  */
 #ifndef DOXYGEN_ICD
 /**
@@ -1271,7 +1279,7 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma);
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1298,12 +1306,13 @@ nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma);
  *
  *
  * @retval 0 on success
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - invalid MAC HW type
- * @retval -1 on failure - invalid tx ring size
- * @retval -1 on failure - invalid rx ring size
- * @retval -1 on failure - failed to init dma ops
- * @retval -1 on failure - dma ops validation failed
+ * @retval -1 on failure
+ * - invalid argument
+ * - invalid MAC HW type
+ * - invalid tx ring size
+ * - invalid rx ring size
+ * - failed to init dma ops
+ * - dma ops validation failed
  */
 #ifndef DOXYGEN_ICD
 /**
@@ -1316,7 +1325,7 @@ nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma);
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1361,7 +1370,7 @@ nve32_t osi_init_dma_ops(struct osi_dma_priv_data *osi_dma);
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1391,8 +1400,8 @@ nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
  *  - De-initialization: No
  *
  * @retval NVETHERNETCL_PIF$OSI_ENABLE if MAC enabled.
- * @retval NVETHERNETCL_PIF$OSI_DISABLE otherwise.
- * @retval NVETHERNETCL_PIF$OSI_DISABLE on error - invalid argument
+ * @retval NVETHERNETCL_PIF$OSI_DISABLE on error
+ * - invalid argument
  */
 #ifndef DOXYGEN_ICD
 /**
@@ -1405,7 +1414,7 @@ nve32_t osi_dma_get_systime_from_mac(struct osi_dma_priv_data *const osi_dma,
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1448,8 +1457,9 @@ nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma);
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - failed to enable or disable interrupt
+ * @retval -1 on failure
+ * - invalid argument
+ * - failed to enable or disable interrupt
  */
 #ifndef DOXYGEN_ICD
 /**
@@ -1462,7 +1472,7 @@ nveu32_t osi_is_mac_enabled(struct osi_dma_priv_data *const osi_dma);
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1489,8 +1499,9 @@ nve32_t osi_handle_dma_intr(struct osi_dma_priv_data *osi_dma,
 #endif
 /**
  * @retval 0 on success
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - invalid ioctl command within osi data structure
+ * @retval -1 on failure
+ * - invalid argument
+ * - invalid ioctl command within osi data structure
  */
 nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma);
 //#endif /* OSI_DEBUG */
@@ -1547,9 +1558,10 @@ nve32_t osi_clear_tx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
  *  - De-initialization: No
  *
  * @retval 0 on success
- * @retval -1 on failure - invalid argument
- * @retval -1 on failure - invalid slot interval argument
- * @retval -1 on failure - tx ring is full
+ * @retval -1 on failure
+ * - invalid argument
+ * - invalid slot interval argument
+ * - tx ring is full
  */
 nve32_t osi_config_slot_function(struct osi_dma_priv_data *osi_dma,
 				 nveu32_t set);
@@ -1617,7 +1629,7 @@ nve32_t osi_clear_rx_pkt_err_stats(struct osi_dma_priv_data *osi_dma);
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif
@@ -1656,7 +1668,7 @@ nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan);
 /**
  *
  * @dir
- *  - forward
+ *  forward
  *
  */
 #endif

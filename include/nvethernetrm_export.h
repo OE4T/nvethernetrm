@@ -94,8 +94,8 @@
 /* L2 DA filter mode(enable/disable) */
 #define OSI_OPER_EN_L2_DA_INV		OSI_BIT(4)
 #define OSI_OPER_DIS_L2_DA_INV		OSI_BIT(5)
-#endif /* !OSI_STRIPPED_LIB */
 /** @} */
+#endif /* !OSI_STRIPPED_LIB */
 
 #pragma pack(push, 1)
 /**

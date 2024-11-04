@@ -180,6 +180,7 @@ typedef my_lint_64		nvel64_t;
  * @addtogroup PTP PTP related information
  *
  * @brief PTP MAC-to-MAC sync role
+ * @{
  */
 /** @brief PTP MAC to MAC is disabled */
 #define OSI_PTP_M2M_INACTIVE	0U
