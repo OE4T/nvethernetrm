@@ -25,7 +25,8 @@
 
 NV_REPOSITORY_COMPONENTS := \
 	osi/core \
-	osi/dma
+	osi/dma \
+	osi/nvmacsecrm
 
 # Local Variables:
 # indent-tabs-mode: t

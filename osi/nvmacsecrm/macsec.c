@@ -6114,6 +6114,47 @@ exit_func:
 	return ret;
 }
 
+#ifdef NV_VLTEST_BUILD
+static void hsi_nvmacsec_error_inject(struct osi_core_priv_data *const osi_core,
+				nveu32_t error_code)
+{
+	const nveu32_t rx_isr_set[MAX_MACSEC_IP_TYPES] = {
+				MACSEC_RX_ISR_SET,
+				MACSEC_RX_ISR_SET_T26X};
+	const nveu32_t common_isr_set[MAX_MACSEC_IP_TYPES] = {
+				MACSEC_COMMON_ISR_SET,
+				MACSEC_COMMON_ISR_SET_T26X};
+
+	switch (error_code) {
+	case OSI_MACSEC_RX_CRC_ERR:
+		osi_macsec_writela(osi_core, MACSEC_RX_MAC_CRC_ERROR,
+			    (nveu8_t *)osi_core->macsec_base +
+			    rx_isr_set[osi_core->macsec]);
+		break;
+	case OSI_MACSEC_TX_CRC_ERR:
+		osi_macsec_writela(osi_core, MACSEC_TX_MAC_CRC_ERROR,
+			    (nveu8_t *)osi_core->macsec_base +
+			    MACSEC_TX_ISR_SET);
+		break;
+	case OSI_MACSEC_RX_ICV_ERR:
+		osi_macsec_writela(osi_core, MACSEC_RX_ICV_ERROR,
+			    (nveu8_t *)osi_core->macsec_base +
+			    rx_isr_set[osi_core->macsec]);
+		break;
+	case OSI_MACSEC_REG_VIOL_ERR:
+		osi_macsec_writela(osi_core, MACSEC_SECURE_REG_VIOL,
+			    (nveu8_t *)osi_core->macsec_base +
+			    common_isr_set[osi_core->macsec]);
+		break;
+	default:
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "Invalid error code\n", (nveu32_t)error_code);
+		break;
+	}
+	return;
+}
+#endif
+
 /**
  * @brief osi_init_macsec_ops - macsec initialize operations
  *
@@ -6161,5 +6202,9 @@ void macsec_init_ops(void *macsecops)
 	ops->intr_config = macsec_intr_config;
 #endif
 	ops->get_sc_lut_key_index = macsec_get_key_index;
+#ifdef NV_VLTEST_BUILD
+	ops->hsi_macsec_error_inject = hsi_nvmacsec_error_inject;
+#endif
 }
+
 #endif /* MACSEC_SUPPORT */

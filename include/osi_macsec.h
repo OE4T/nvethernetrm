@@ -455,6 +455,10 @@ struct osi_macsec_core_ops {
 	/** macsec interrupts configuration */
 	void (*intr_config)(struct osi_core_priv_data *const osi_core, nveu32_t enable);
 #endif /* DEBUG_MACSEC */
+#ifdef NV_VLTEST_BUILD
+	void (*hsi_macsec_error_inject)(struct osi_core_priv_data *const osi_core,
+			nveu32_t error_code);
+#endif
 };
 
 //////////////////////////////////////////////////////////////////////////
