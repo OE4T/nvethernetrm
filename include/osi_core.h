@@ -2007,6 +2007,8 @@ nve32_t osi_hw_core_init(struct osi_core_priv_data *const osi_core);
 #endif
 nve32_t osi_hw_core_deinit(struct osi_core_priv_data *const osi_core);
 
+
+
 /**
  * @brief
  * Description: Write to a PHY register through MAC over MDIO bus.
@@ -2015,7 +2017,7 @@ nve32_t osi_hw_core_deinit(struct osi_core_priv_data *const osi_core);
  *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
  * @param[in] phyaddr: PHY address (PHY ID) associated with PHY
  *   * Range: 0 to UINT32_MAX
- * @param[in] phyreg: Register which needs to be write to PHY.
+ * @param[in] phyreg: Register which needs to be written to PHY.
  *   * Range: 0 to UINT32_MAX
  * @param[in] phydata: Data to write to a PHY register.
  *   * Range: 0 to UINT32_MAX
@@ -2056,7 +2058,6 @@ nve32_t osi_hw_core_deinit(struct osi_core_priv_data *const osi_core);
 nve32_t osi_write_phy_reg(struct osi_core_priv_data *const osi_core,
 			  const nveu32_t phyaddr, const nveu32_t phyreg,
 			  const nveu16_t phydata);
-
 /**
  * @brief
  * Description: Read from a PHY register through MAC over MDIO bus.
@@ -2265,6 +2266,108 @@ nve32_t osi_handle_ioctl(struct osi_core_priv_data *osi_core,
  */
 #endif
 struct osi_core_priv_data *osi_get_core(void);
+
+#ifdef PHY_PROG
+/**
+ * @brief
+ * Description: Write to a PHY register through MAC over MDIO bus.
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] phyaddr: PHY address (PHY ID) associated with PHY
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] macMdioForAddrReg: Value to be written to MAC's MDIO address register for indirect PHY access
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] macMdioForDataReg: Value to be written to MAC's MDIO data register for indirect PHY access
+ *   * Range: 0 to UINT32_MAX
+ *
+ * @pre MAC should be init and started. see osi_start_mac()
+ *
+ * @return
+ *  - 0 on NVETHERNETRM_PIF#osi_write_phy_reg_dt PHY register write operation success
+ *  - -1 on NVETHERNETRM_PIF#osi_write_phy_reg_dt mdio access timeout
+ *  - -1 on NVETHERNETRM_PIF#osi_write_phy_reg_dt osi_core is NULL
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: Yes
+ */
+#ifndef DOXYGEN_ICD
+/**
+ *
+ * Traceability Details:
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_043
+ */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+nve32_t osi_write_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+				const nveu32_t phyaddr,
+				const nveu32_t macMdioForAddrReg,
+				const nveu32_t macMdioForDataReg);
+
+/**
+ * @brief
+ * Description: Read from a PHY register through MAC over MDIO bus.
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] phyaddr: PHY address (PHY ID) associated with PHY
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] macMdioForAddrReg: Value to be written to MAC's MDIO address register for indirect PHY access
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] macMdioForDataReg: Value to be written to MAC's MDIO data register for indirect PHY access
+ *   * Range: 0 to UINT32_MAX
+ *
+ * @pre MAC should be init and started. see osi_start_mac()
+ *
+ * @return
+ *  - Register value on success
+ *  - -1 on NVETHERNETRM_PIF#osi_read_phy_reg_dt mdio access timeout
+ *  - -1 on NVETHERNETRM_PIF#osi_read_phy_reg_dt osi_core is NULL
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: Yes
+ */
+#ifndef DOXYGEN_ICD
+/**
+ *
+ * Traceability Details:
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_044
+ */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+nve32_t osi_read_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+				const nveu32_t phyaddr,
+				const nveu32_t macMdioForAddrReg,
+				const nveu32_t macMdioForDataReg);
+#endif /* PHY_PROG */
 
 #ifdef FSI_EQOS_SUPPORT
 /**

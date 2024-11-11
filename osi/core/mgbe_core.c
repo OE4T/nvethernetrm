@@ -4560,10 +4560,120 @@ static nve32_t mgbe_read_phy_reg(struct osi_core_priv_data *const osi_core,
 			 osi_core->base + MGBE_MDIO_SCCD);
 
 	data = (reg & MGBE_MDIO_SCCD_SDATA_MASK);
+
 	ret = (nve32_t)data;
 fail:
 	return ret;
 }
+
+#ifdef PHY_PROG
+/**
+ * @brief mgbe_write_phy_reg_dt - Write to a PHY register over MDIO bus using DT values.
+ *
+ * Algorithm: Write into a PHY register through MGBE MDIO bus using MAC MDIO address
+ * and data register values from device tree.
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] phyaddr: PHY address (PHY ID) associated with PHY.
+ * @param[in] macMdioForAddrReg: MAC MDIO address register value from DT.
+ * @param[in] macMdioForDataReg: MAC MDIO data register value from DT.
+ *
+ * @note MAC should be init and started. see osi_start_mac()
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+static nve32_t mgbe_write_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+				const nveu32_t phyaddr,
+				const nveu32_t macMdioForAddrReg,
+				const nveu32_t macMdioForDataReg)
+{
+	nve32_t ret = 0;
+	nveu32_t valSCCA = macMdioForAddrReg;
+	nveu32_t valSCCD = macMdioForDataReg;
+
+	valSCCA |= (phyaddr << MGBE_MDIO_SCCA_PA_SHIFT) |
+				(valSCCA & MGBE_MDIO_SCCA_RA_MASK);
+
+	/* Wait for any previous MII read/write operation to complete */
+	ret = mgbe_mdio_busy_wait(osi_core);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd,
+			OSI_LOG_ARG_HW_FAIL,
+			"MII operation timed out\n",
+			0ULL);
+		goto fail;
+	}
+
+	osi_writela(osi_core, valSCCA, (nveu8_t *)
+				osi_core->base + MGBE_MDIO_SCCA);
+	osi_writela(osi_core, valSCCD, (nveu8_t *)
+				osi_core->base + MGBE_MDIO_SCCD);
+
+	/* wait for MII write operation to complete */
+	ret = mgbe_mdio_busy_wait(osi_core);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd,
+			OSI_LOG_ARG_HW_FAIL,
+			"MII operation timed out\n",
+			0ULL);
+	}
+fail:
+	return ret;
+}
+
+/**
+ * @brief mgbe_read_phy_reg_dt - Read from a PHY register over MDIO bus using DT values.
+ *
+ * Algorithm: Read from a PHY register through MGBE MDIO bus using MAC MDIO address
+ * and data register values from device tree.
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[in] phyaddr: PHY address (PHY ID) associated with PHY.
+ * @param[in] macMdioForAddrReg: MAC MDIO address register value from DT.
+ * @param[in] macMdioForDataReg: MAC MDIO data register value from DT.
+ *
+ * @note MAC should be init and started. see osi_start_mac()
+ *
+ * @retval PHY register value on success
+ * @retval -1 on failure.
+ */
+static nve32_t mgbe_read_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+				const nveu32_t phyaddr,
+				const nveu32_t macMdioForAddrReg,
+				const nveu32_t macMdioForDataReg)
+{
+	nve32_t ret = 0;
+	nveu32_t data;
+	nveu32_t valSCCA = macMdioForAddrReg;
+	nveu32_t valSCCD = macMdioForDataReg;
+
+	valSCCA |= (phyaddr << MGBE_MDIO_SCCA_PA_SHIFT) |
+			(valSCCA & MGBE_MDIO_SCCA_RA_MASK);
+
+	ret = mgbe_mdio_busy_wait(osi_core);
+	if (ret < 0) {
+		OSI_CORE_ERR(osi_core->osd,
+			OSI_LOG_ARG_HW_FAIL,
+			"MII operation timed out\n",
+			0ULL);
+		goto fail;
+	}
+
+	osi_writela(osi_core, valSCCA, (nveu8_t *)
+			osi_core->base + MGBE_MDIO_SCCA);
+	osi_writela(osi_core, valSCCD, (nveu8_t *)
+			osi_core->base + MGBE_MDIO_SCCD);
+
+	data = osi_readla(osi_core, (nveu8_t *)
+			osi_core->base + MGBE_MDIO_SCCD);
+
+	data = (data & MGBE_MDIO_SCCD_SDATA_MASK);
+	ret = (nve32_t)data;
+fail:
+	return ret;
+}
+#endif /* PHY_PROG */
 
 #ifndef OSI_STRIPPED_LIB
 /**
@@ -5221,6 +5331,10 @@ void mgbe_init_core_ops(struct core_ops *ops)
 	ops->read_mmc = mgbe_read_mmc;
 	ops->write_phy_reg = mgbe_write_phy_reg;
 	ops->read_phy_reg = mgbe_read_phy_reg;
+#ifdef PHY_PROG
+	ops->write_phy_reg_dt = mgbe_write_phy_reg_dt;
+	ops->read_phy_reg_dt = mgbe_read_phy_reg_dt;
+#endif /* PHY_PROG */
 	ops->get_hw_features = mgbe_get_hw_features;
 #ifndef OSI_STRIPPED_LIB
 	ops->read_reg = mgbe_read_reg;

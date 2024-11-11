@@ -203,6 +203,19 @@ static nve32_t osi_hal_write_phy_reg(struct osi_core_priv_data *const osi_core,
 	return l_core->ops_p->write_phy_reg(osi_core, phyaddr, phyreg, phydata);
 }
 
+#ifdef PHY_PROG
+static nve32_t osi_hal_write_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+					const nveu32_t phyaddr,
+					const nveu32_t macMdioForAddrReg,
+					const nveu32_t macMdioForDataReg)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+
+	return l_core->ops_p->write_phy_reg_dt(osi_core, phyaddr,
+                                          macMdioForAddrReg, macMdioForDataReg);
+}
+#endif /* PHY_PROG */
+
 /**
  * @brief osi_hal_read_phy_reg - HW API to Read from a PHY register through MAC
  * over MDIO bus.
@@ -251,6 +264,19 @@ static nve32_t osi_hal_read_phy_reg(struct osi_core_priv_data *const osi_core,
 
 	return l_core->ops_p->read_phy_reg(osi_core, phyaddr, phyreg);
 }
+
+#ifdef PHY_PROG
+static nve32_t osi_hal_read_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+					const nveu32_t phyaddr,
+					const nveu32_t macMdioForAddrReg,
+					const nveu32_t macMdioForDataReg)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+
+	return l_core->ops_p->read_phy_reg_dt(osi_core, phyaddr,
+                                         macMdioForAddrReg, macMdioForDataReg);
+}
+#endif /* PHY_PROG */
 
 static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
 {
@@ -3351,6 +3377,10 @@ void hw_interface_init_core_ops(struct if_core_ops *if_ops_p)
 	if_ops_p->if_core_deinit = osi_hal_hw_core_deinit;
 	if_ops_p->if_write_phy_reg = osi_hal_write_phy_reg;
 	if_ops_p->if_read_phy_reg = osi_hal_read_phy_reg;
+#ifdef PHY_PROG
+	if_ops_p->if_write_phy_reg_dt = osi_hal_write_phy_reg_dt;
+	if_ops_p->if_read_phy_reg_dt = osi_hal_read_phy_reg_dt;
+#endif /* PHY_PROG */
 	if_ops_p->if_init_core_ops = osi_hal_init_core_ops;
 	if_ops_p->if_handle_ioctl = osi_hal_handle_ioctl;
 }
