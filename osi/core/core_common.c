@@ -30,7 +30,7 @@
 nve32_t poll_check(struct osi_core_priv_data *const osi_core, nveu8_t *addr,
 				 nveu32_t bit_check, nveu32_t *value)
 {
-	nveu32_t retry = RETRY_COUNT;
+	nveu32_t retry = OSI_POLL_COUNT;
 	nve32_t cond = COND_NOT_MET;
 	nveu32_t count;
 	nve32_t ret = 0;
@@ -51,8 +51,7 @@ nve32_t poll_check(struct osi_core_priv_data *const osi_core, nveu8_t *addr,
 		if ((*value & bit_check) == OSI_NONE) {
 			cond = COND_MET;
 		} else {
-			osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
-						       OSI_DELAY_1000US + MIN_USLEEP_10US);
+			osi_core->osd_ops.udelay(OSI_DELAY_1US);
 		}
 	}
 fail:
@@ -837,7 +836,7 @@ static inline nve32_t hw_est_read(struct osi_core_priv_data *osi_core,
 	}
 
 	if (((val & MTL_EST_ERR0) == MTL_EST_ERR0) ||
-	    (retry <= 0)) {
+	    (retry <= 0U)) {
 		ret = -1;
 		goto err;
 	}
@@ -1148,7 +1147,7 @@ static nve32_t hw_est_write(struct osi_core_priv_data *osi_core,
 	}
 
 	if (((val & MTL_EST_ERR0) == MTL_EST_ERR0) ||
-	    (retry <= 0)) {
+	    (retry <= 0U)) {
 		ret = -1;
 	}
 

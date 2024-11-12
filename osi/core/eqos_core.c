@@ -2336,7 +2336,7 @@ static inline nve32_t eqos_poll_for_update_ts_complete(
 				struct osi_core_priv_data *const osi_core,
 				nveu32_t *mac_tcr)
 {
-	nveu32_t retry = RETRY_COUNT;
+	nveu32_t retry = OSI_POLL_COUNT;
 	nveu32_t count;
 	nve32_t cond = COND_NOT_MET;
 	nve32_t ret = 0;
@@ -2358,7 +2358,7 @@ static inline nve32_t eqos_poll_for_update_ts_complete(
 		}
 
 		count++;
-		osi_core->osd_ops.usleep_range(OSI_DELAY_1000US, OSI_DELAY_1000US + MIN_USLEEP_10US);
+		osi_core->osd_ops.udelay(OSI_DELAY_1US);
 	}
 fail:
 	return ret;

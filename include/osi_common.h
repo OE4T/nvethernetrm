@@ -158,7 +158,7 @@
 #endif /* !OSI_STRIPPED_LIB */
 
 #define OSI_PTP_REQ_CLK_FREQ		250000000U
-#define OSI_POLL_COUNT			1000U
+#define OSI_POLL_COUNT			10000U
 #ifndef UINT_MAX
 /** Max value of uint */
 #define UINT_MAX			(0xFFFFFFFFU)

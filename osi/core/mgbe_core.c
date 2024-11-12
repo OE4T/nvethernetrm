@@ -4563,8 +4563,7 @@ static inline nve32_t mgbe_poll_for_update_ts_complete(
 		}
 
 		retry++;
-		osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
-					       OSI_DELAY_1000US + MIN_USLEEP_10US);
+		osi_core->osd_ops.udelay(OSI_DELAY_1US);
 	}
 
 	return ret;
