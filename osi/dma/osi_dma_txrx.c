@@ -320,15 +320,16 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 		 * than 1 Rx desc. to place the larger packet and will set the
 		 * LD bit in RDES3 accordingly.
 		 * Restrict such Rx packets (which are longer than currently
-		 * set MTU on DUT), and drop them in driver since HW cannot
-		 * drop them. Also make use of swcx flags so that OSD can skip
-		 * DMA buffer allocation and DMA mapping for those descriptors.
-		 * If data is spread across multiple descriptors, drop packet
+		 * set MTU on DUT), and pass them to driver as invalid packet
+		 * since HW cannot drop them.
 		 */
 		if ((((rx_desc->rdes3 & RDES3_FD) == RDES3_FD) &&
 		     ((rx_desc->rdes3 & RDES3_LD) == RDES3_LD)) ==
 		    BOOLEAN_FALSE) {
-			rx_swcx->flags |= OSI_RX_SWCX_REUSE;
+			rx_pkt_cx->flags &= ~OSI_PKT_CX_VALID;
+			rx_pkt_cx->pkt_len = rx_desc->rdes3 & RDES3_PKT_LEN;
+			osi_dma->osd_ops.receive_packet(osi_dma->osd, rx_ring, chan,
+							osi_dma->rx_buf_len, rx_pkt_cx, rx_swcx);
 			continue;
 		}
 
