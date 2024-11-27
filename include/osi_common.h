@@ -397,7 +397,7 @@ struct osi_pdma_vdma_data {
  * Algorithm:
  *  - Check the pbl range and return allowed pbl value
  *
- * @param[in] pbl: Calculated PBL value
+ * @param[in] pbl_value: Calculated PBL value
  *
  * @note Input parameter should be only nveu32_t type
  *
