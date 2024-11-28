@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -477,42 +477,40 @@ static nve32_t frp_add_proto(struct osi_core_priv_data *const osi_core,
 	nveu8_t proto_entry = OSI_DISABLE;
 	nveu8_t req = 0U;
 	nveu8_t proto_match[FRP_PROTO_LENGTH];
-	nveu8_t proto_lendth;
+	nveu8_t proto_length;
 	nveu8_t proto_offset;
 	nveu8_t match_type = cmd->match_type;
 
 	switch (match_type) {
-#ifndef OSI_STRIPPED_LIB
 	case OSI_FRP_MATCH_L4_S_UPORT:
 		proto_entry = OSI_ENABLE;
 		proto_match[0] = FRP_L4_UDP_MD;
-		proto_lendth = 1U;
+		proto_length = 1U;
 		proto_offset = FRP_L4_IP4_PROTO_OFFSET;
 		break;
 	case OSI_FRP_MATCH_L4_D_UPORT:
 		proto_entry = OSI_ENABLE;
 		proto_match[0] = FRP_L4_UDP_MD;
-		proto_lendth = 1U;
+		proto_length = 1U;
 		proto_offset = FRP_L4_IP4_PROTO_OFFSET;
 		break;
 	case OSI_FRP_MATCH_L4_S_TPORT:
 		proto_entry = OSI_ENABLE;
 		proto_match[0] = FRP_L4_TCP_MD;
-		proto_lendth = 1U;
+		proto_length = 1U;
 		proto_offset = FRP_L4_IP4_PROTO_OFFSET;
 		break;
 	case OSI_FRP_MATCH_L4_D_TPORT:
 		proto_entry = OSI_ENABLE;
 		proto_match[0] = FRP_L4_TCP_MD;
-		proto_lendth = 1U;
+		proto_length = 1U;
 		proto_offset = FRP_L4_IP4_PROTO_OFFSET;
 		break;
-#endif /* !OSI_STRIPPED_LIB */
 	case OSI_FRP_MATCH_VLAN:
 		proto_entry = OSI_ENABLE;
 		proto_match[0] = FRP_L2_VLAN_MD0;
 		proto_match[1] = FRP_L2_VLAN_MD1;
-		proto_lendth = 2U;
+		proto_length = 2U;
 		proto_offset = FRP_L2_VLAN_PROTO_OFFSET;
 		break;
 	case OSI_FRP_MATCH_NORMAL:
@@ -545,7 +543,7 @@ static nve32_t frp_add_proto(struct osi_core_priv_data *const osi_core,
 		proto_oki = (nve32_t)*pos;
 		proto_oki += 1;
 		ret = frp_entry_add(osi_core, cmd->frp_id, *pos,
-				    proto_match, proto_lendth,
+				    proto_match, proto_length,
 				    proto_offset, OSI_FRP_MODE_LINK,
 				    proto_oki, cmd->dma_sel, cmd->dcht,
 				    rchlist_indx);
@@ -590,7 +588,6 @@ static void frp_parse_mtype(struct osi_core_frp_cmd *const cmd)
 	case OSI_FRP_MATCH_L3_DIP:
 		offset = FRP_L3_IP4_DIP_OFFSET;
 		break;
-#ifndef OSI_STRIPPED_LIB
 	case OSI_FRP_MATCH_L4_S_UPORT:
 		offset = FRP_L4_IP4_SPORT_OFFSET;
 		break;
@@ -603,7 +600,6 @@ static void frp_parse_mtype(struct osi_core_frp_cmd *const cmd)
 	case OSI_FRP_MATCH_L4_D_TPORT:
 		offset = FRP_L4_IP4_DPORT_OFFSET;
 		break;
-#endif /* !OSI_STRIPPED_LIB */
 	case OSI_FRP_MATCH_VLAN:
 		offset = FRP_L2_VLAN_TAG_OFFSET;
 		break;
@@ -729,12 +725,10 @@ static nve32_t frp_update(struct osi_core_priv_data *const osi_core,
 	/* Calculate the required FRP entries for Update Command. */
 	req = frp_req_entries(cmd->offset, cmd->match_length);
 	switch (cmd->match_type) {
-#ifndef OSI_STRIPPED_LIB
 	case OSI_FRP_MATCH_L4_S_UPORT:
 	case OSI_FRP_MATCH_L4_D_UPORT:
 	case OSI_FRP_MATCH_L4_S_TPORT:
 	case OSI_FRP_MATCH_L4_D_TPORT:
-#endif /* !OSI_STRIPPED_LIB */
 	case OSI_FRP_MATCH_VLAN:
 		req_16bit = (nveu16_t)((nveu16_t)req + 1U);
 		req = (nveu8_t)(req_16bit & 0xFFU);
