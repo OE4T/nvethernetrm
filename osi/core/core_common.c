@@ -1943,6 +1943,11 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 		osi_core->hsi.report_err = OSI_ENABLE;
 		osi_core->hsi.report_count_err[XPCS_WRITE_FAIL_IDX] = OSI_ENABLE;
 		break;
+	case OSI_MAC_CMN_INTR_ERR:
+		osi_core->hsi.err_code[MAC_CMN_INTR_ERR_IDX] = OSI_MAC_CMN_INTR_ERR;
+		osi_core->hsi.report_err = OSI_ENABLE;
+		osi_core->hsi.report_count_err[MAC_CMN_INTR_ERR_IDX] = OSI_ENABLE;
+		break;
 	case OSI_M2M_TSC_READ_ERR:
 	case OSI_M2M_TIME_CAL_ERR:
 	case OSI_M2M_ADJ_FREQ_ERR:

@@ -659,6 +659,8 @@ typedef my_lint_64		nvel64_t;
 #define MAC2MAC_ERR_IDX		8U
 /** @brief Link training monitor error Index */
 #define PCS_LNK_ERR_IDX		9U
+/** @brief mac common interrupt status monitor error Index */
+#define MAC_CMN_INTR_ERR_IDX		10U
 /** @brief MACSEC RX CRC error Index */
 #define MACSEC_RX_CRC_ERR_IDX	0U
 /** @brief MACSEC TX CRC error Index */
@@ -692,7 +694,7 @@ typedef my_lint_64		nvel64_t;
  * @brief Maximum number of different mac error code
  * HSI_SW_ERR_CODE + Two (Corrected and Uncorrected error code)
  */
-#define OSI_HSI_MAX_MAC_ERROR_CODE		10U
+#define OSI_HSI_MAX_MAC_ERROR_CODE		11U
 
 /**
  * @brief Maximum number of different macsec error code
@@ -743,6 +745,8 @@ typedef my_lint_64		nvel64_t;
 #define OSI_M2M_CONFIG_PTP_ERR		0x12U
 /** @brief pcs link status error code */
 #define OSI_PCS_LNK_ERR			0x13U
+/** @brief MAC common interrupt status error code */
+#define OSI_MAC_CMN_INTR_ERR		0x14U
 
 /** @brief EQOS uncorrectable attribute */
 #define OSI_EQOS_UNCORRECTABLE_ATTR	0x109
@@ -1881,6 +1885,8 @@ struct osi_core_priv_data {
 	/** skip auto neg for usxgmii mode.
 	 * 0(enable AN) and 1(disable AN) are the valid values */
 	nveu32_t skip_usxgmii_an;
+	/** MAC common interrupt received */
+	nveu32_t mac_common_intr_rcvd;
 };
 
 /**

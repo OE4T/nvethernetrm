@@ -548,7 +548,7 @@ static void fill_hsi_attributes(struct osi_core_priv_data *const osi_core)
 	nveu32_t i = 0U;
 	nveu32_t instance = 0U;
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+	if ((osi_core->mac == OSI_MAC_HW_MGBE) || (osi_core->mac == OSI_MAC_HW_MGBE_T26X)) {
 		/* Update MGBE instance */
 		instance = osi_core->instance_id + 1U;
 	} else {
