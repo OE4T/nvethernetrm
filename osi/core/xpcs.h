@@ -297,8 +297,7 @@ static inline nve32_t xpcs_write_safety(struct osi_core_priv_data *osi_core,
 				 */
 				once = 1U;
 			} else {
-				osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
-							       MIN_USLEEP_10US + MIN_USLEEP_10US);
+				osi_core->osd_ops.usleep(MIN_USLEEP_10US);
 			}
 		}
 	}

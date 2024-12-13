@@ -1297,8 +1297,8 @@ struct osd_core_ops {
 			nveul64_t loga);
 	/** udelay callback for sleep < 7usec as this is busy wait in most OSes */
 	void (*udelay)(nveu64_t usec);
-	/** usleep range callback for longer sleep duration */
-	void (*usleep_range)(nveu64_t umin, nveu64_t umax);
+	/** usleep callback for longer sleep duration */
+	void (*usleep)(nveu64_t usec);
 	/** ivcsend callback*/
 	nve32_t (*ivc_send)(void *priv, struct ivc_msg_common *ivc,
 			    nveu32_t len);

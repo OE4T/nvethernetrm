@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -138,7 +138,7 @@ static nve32_t eqos_config_flow_control(
  *  - Refer to EQOS column of <<RM_13, (sequence diagram)>> for API details.
  *  - TraceID:ETHERNET_NVETHERNETRM_013
  *
- * @param[in] osi_core: OSI core private data structure. Used param is base, osd_ops.usleep_range.
+ * @param[in] osi_core: OSI core private data structure. Used param is base, osd_ops.usleep.
  *
  * @pre
  *  - MAC should out of reset and clocks enabled.
@@ -180,8 +180,8 @@ static nve32_t eqos_pad_calibrate(struct osi_core_priv_data *const osi_core)
 	value |= EQOS_PAD_CRTL_E_INPUT_OR_E_PWRD;
 	osi_writela(osi_core, value, (nveu8_t *)ioaddr + EQOS_PAD_CRTL);
 
-	/* 2. delay for 1 to 3 usec */
-	osi_core->osd_ops.usleep_range(1, 3);
+	/* 2. delay for 1 usec */
+	osi_core->osd_ops.udelay(OSI_DELAY_1US);
 
 	/* 3. Set AUTO_CAL_ENABLE and AUTO_CAL_START in
 	 * reg ETHER_QOS_AUTO_CAL_CONFIG_0.
@@ -208,7 +208,7 @@ static nve32_t eqos_pad_calibrate(struct osi_core_priv_data *const osi_core)
 			goto calibration_failed;
 		}
 		count++;
-		osi_core->osd_ops.usleep_range(10, 12);
+		osi_core->osd_ops.usleep(OSI_DELAY_10US);
 		value = osi_readla(osi_core, (nveu8_t *)ioaddr +
 				   EQOS_PAD_AUTO_CAL_STAT);
 		/* calibration done when CAL_STAT_ACTIVE is zero */
@@ -2593,7 +2593,7 @@ static inline nve32_t poll_for_mii_idle(struct osi_core_priv_data *osi_core)
 			cond = COND_MET;
 		} else {
 			/* wait on GMII Busy set */
-			osi_core->osd_ops.usleep_range(OSI_DELAY_10US, OSI_DELAY_10US + MIN_USLEEP_10US);
+			osi_core->osd_ops.usleep(OSI_DELAY_10US);
 		}
 	}
 fail:
@@ -3889,7 +3889,7 @@ static inline nve32_t poll_for_mac_tx_rx_idle(struct osi_core_priv_data *osi_cor
 			break;
 		}
 		/* wait */
-		osi_core->osd_ops.usleep_range(OSI_DELAY_COUNT, OSI_DELAY_COUNT + MIN_USLEEP_10US);
+		osi_core->osd_ops.usleep(OSI_DELAY_COUNT);
 		retry++;
 	}
 	if (retry >= OSI_TXRX_IDLE_RETRY) {

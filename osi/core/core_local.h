@@ -636,7 +636,7 @@ static inline nve32_t osi_readl_poll_timeout(void *addr, struct osi_core_priv_da
 			once = 1U;
 			elapsed_delay += 1U;
 		} else {
-			osi_core->osd_ops.usleep_range(min_delay, min_delay + MIN_USLEEP_10US);
+			osi_core->osd_ops.usleep(min_delay);
 			elapsed_delay &= (nveu32_t)INT_MAX;
 			elapsed_delay += min_delay;
 		}

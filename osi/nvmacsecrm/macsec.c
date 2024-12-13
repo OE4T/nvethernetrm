@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -109,8 +109,7 @@ static nve32_t poll_for_dbg_buf_update(struct osi_core_priv_data *const osi_core
 			 */
 			once = 1U;
 		} else {
-			osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
-						       MIN_USLEEP_10US + MIN_USLEEP_10US);
+			osi_core->osd_ops.usleep(MIN_USLEEP_10US);
 		}
 	}
 err:
@@ -981,8 +980,7 @@ static inline nve32_t poll_for_kt_update(struct osi_core_priv_data *osi_core)
 				 */
 				once = 1U;
 			} else {
-				osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
-							       MIN_USLEEP_10US + MIN_USLEEP_10US);
+				osi_core->osd_ops.usleep(MIN_USLEEP_10US);
 			}
 		}
 	}
@@ -1200,8 +1198,7 @@ static inline nve32_t poll_for_lut_update(struct osi_core_priv_data *osi_core)
 				 */
 				once = 1U;
 			} else {
-				osi_core->osd_ops.usleep_range(MIN_USLEEP_10US,
-							       MIN_USLEEP_10US + MIN_USLEEP_10US);
+				osi_core->osd_ops.usleep(MIN_USLEEP_10US);
 			}
 		}
 	}

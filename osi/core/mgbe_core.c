@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -61,8 +61,7 @@ static nve32_t mgbe_poll_for_mac_acrtl(struct osi_core_priv_data *osi_core)
 		}
 
 		/* wait for 10 usec for OB clear and retry */
-		osi_core->osd_ops.usleep_range(MGBE_MAC_INDIR_AC_OB_WAIT,
-					       MGBE_MAC_INDIR_AC_OB_WAIT + MIN_USLEEP_10US);
+		osi_core->osd_ops.usleep(MGBE_MAC_INDIR_AC_OB_WAIT);
 		count++;
 	}
 
@@ -853,8 +852,7 @@ static nve32_t mgbe_poll_for_l3l4crtl(struct osi_core_priv_data *osi_core)
 			cond = 0;
 		} else {
 			/* wait for 10 usec for XB clear */
-			osi_core->osd_ops.usleep_range(MGBE_MAC_XB_WAIT,
-						       MGBE_MAC_XB_WAIT + MIN_USLEEP_10US);
+			osi_core->osd_ops.usleep(MGBE_MAC_XB_WAIT);
 		}
 	}
 fail:
@@ -1846,8 +1844,7 @@ static nve32_t mgbe_rss_write_reg(struct osi_core_priv_data *osi_core,
 		if ((value & MGBE_MAC_RSS_ADDR_OB) == OSI_NONE) {
 			cond = 0;
 		} else {
-			osi_core->osd_ops.usleep_range(OSI_DELAY_100US,
-						       OSI_DELAY_100US + MIN_USLEEP_10US);
+			osi_core->osd_ops.usleep(OSI_DELAY_100US);
 		}
 	}
 
@@ -4044,7 +4041,7 @@ static nve32_t mgbe_mdio_busy_wait(struct osi_core_priv_data *const osi_core)
 		if ((mac_gmiiar & MGBE_MDIO_SCCD_SBUSY) == 0U) {
 			cond = 0;
 		} else {
-			osi_core->osd_ops.usleep_range(OSI_DELAY_10US, OSI_DELAY_10US + MIN_USLEEP_10US);
+			osi_core->osd_ops.usleep(OSI_DELAY_10US);
 		}
 	}
 fail:

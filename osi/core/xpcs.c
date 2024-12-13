@@ -74,8 +74,7 @@ static inline nve32_t xpcs_poll_for_an_complete(struct osi_core_priv_data *osi_c
 		status = xpcs_read(xpcs_base, XPCS_VR_MII_AN_INTR_STS);
 		if ((status & XPCS_VR_MII_AN_INTR_STS_CL37_ANCMPLT_INTR) == 0U) {
 			/* autoneg not completed - poll */
-			osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
-						       OSI_DELAY_1000US + MIN_USLEEP_10US);
+			osi_core->osd_ops.usleep(OSI_DELAY_1000US);
 		} else {
 			/* 15. clear interrupt */
 			status &= ~XPCS_VR_MII_AN_INTR_STS_CL37_ANCMPLT_INTR;
@@ -167,8 +166,7 @@ static nve32_t xpcs_poll_flt_rx_link(struct osi_core_priv_data *osi_core)
 				osi_core->osd_ops.udelay(OSI_DELAY_1US);
 				once = 1U;
 			} else {
-				osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
-							       OSI_DELAY_1000US + MIN_USLEEP_10US);
+				osi_core->osd_ops.usleep(OSI_DELAY_1000US);
 			}
 		}
 	}
@@ -191,14 +189,13 @@ static nve32_t xpcs_poll_flt_rx_link(struct osi_core_priv_data *osi_core)
 			if ((ctrl & XPCS_SR_XS_PCS_STS1_FLT) == 0U) {
 				cond = COND_MET;
 			} else {
-				/* Maximum wait delay as 1s */
-				osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
-							       OSI_DELAY_1000US + MIN_USLEEP_10US);
+				/* Maximum wait delay as 1ms */
+				osi_core->osd_ops.usleep(OSI_DELAY_1000US);
 			}
 		}
 	}
 	/* delay 10ms to wait the staus propagate to MAC block */
-	osi_core->osd_ops.usleep_range(OSI_DELAY_10000US, OSI_DELAY_10000US + MIN_USLEEP_10US);
+	osi_core->osd_ops.usleep(OSI_DELAY_10000US);
 
 fail:
 	return ret;
@@ -301,8 +298,7 @@ nve32_t xpcs_start(struct osi_core_priv_data *osi_core)
 			if ((ctrl & XPCS_VR_XS_PCS_DIG_CTRL1_USRA_RST) == 0U) {
 				cond = COND_MET;
 			} else {
-				osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
-							       OSI_DELAY_1000US + MIN_USLEEP_10US);
+				osi_core->osd_ops.usleep(OSI_DELAY_1000US);
 			}
 		}
 	}
@@ -524,8 +520,7 @@ static nve32_t xpcs_check_pcs_lock_status(struct osi_core_priv_data *osi_core)
 			count++;
 
 			/* Maximum wait delay as per HW team is 1msec. */
-			osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
-						       OSI_DELAY_1000US + MIN_USLEEP_10US);
+			osi_core->osd_ops.usleep(OSI_DELAY_1000US);
 		}
 	}
 
@@ -659,7 +654,7 @@ nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
 				 * around 14usec to satisy the condition.
 				 * Use 200US to yield CPU for other users.
 				 */
-				osi_core->osd_ops.usleep_range(OSI_DELAY_200US, OSI_DELAY_200US + MIN_USLEEP_10US);
+				osi_core->osd_ops.usleep(OSI_DELAY_200US);
 			}
 		}
 
@@ -706,7 +701,7 @@ step10:
 		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
 			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
 		/* Step14: wait for 30ms */
-		osi_core->osd_ops.usleep_range(OSI_DELAY_30000US, OSI_DELAY_30000US + MIN_USLEEP_10US);
+		osi_core->osd_ops.usleep(OSI_DELAY_30000US);
 
 		/* Step15 RX_CDR_RESET */
 		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
@@ -716,7 +711,7 @@ step10:
 			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
 
 		/* Step16: wait for 30ms */
-		osi_core->osd_ops.usleep_range(OSI_DELAY_30000US, OSI_DELAY_30000US + MIN_USLEEP_10US);
+		osi_core->osd_ops.usleep(OSI_DELAY_30000US);
 	}
 
 	if (xpcs_check_pcs_lock_status(osi_core) < 0) {
@@ -773,8 +768,7 @@ static nve32_t vendor_specifc_sw_rst_usxgmii_an_en(struct osi_core_priv_data *os
 		if ((ctrl & XPCS_VR_XS_PCS_DIG_CTRL1_VR_RST) == 0U) {
 			cond = 0;
 		} else {
-			osi_core->osd_ops.usleep_range(OSI_DELAY_1000US,
-						       OSI_DELAY_1000US + MIN_USLEEP_10US);
+			osi_core->osd_ops.usleep(OSI_DELAY_1000US);
 		}
 	}
 
