@@ -33,7 +33,6 @@
  * @brief XPCS register offsets
  * @{
  */
-#define XPCS_ADDRESS				0x03FC
 #define XPCS_SR_XS_PCS_STS1			0xC0004
 #define XPCS_SR_XS_PCS_CTRL2			0xC001C
 #define XPCS_VR_XS_PCS_DIG_CTRL1		0xE0000
@@ -41,7 +40,6 @@
 #define XPCS_SR_AN_CTRL				0x1C0000
 #define XPCS_SR_PMA_KR_FEC_CTRL			0x402ac
 #define XPCS_SR_MII_CTRL			0x7C0000
-#define XPCS_SR_MII_STS_0			0x7C0004
 #define XPCS_VR_MII_AN_INTR_STS			0x7E0008
 #define XPCS_VS_MII_MMD_VR_MII_AN_CTRL_0	0x7E0004
 #define XPCS_WRAP_UPHY_HW_INIT_CTRL		0x8020
@@ -139,21 +137,6 @@
 #define EQOS_XPCS_WRAP_UPHY_INTERRUPT_STATUS	0x8070
 /** @} */
 
-#ifndef OSI_STRIPPED_LIB
-#define XPCS_VR_XS_PCS_EEE_MCTRL0		0xE0018
-#define XPCS_VR_XS_PCS_EEE_MCTRL1		0xE002C
-#define XLGPCS_VR_PCS_EEE_MCTRL			0xe0018
-#define XLGPCS_VR_PCS_DIG_STS			0xe0040
-
-#define XPCS_VR_XS_PCS_EEE_MCTRL1_TRN_LPI	OSI_BIT(0)
-#define XPCS_VR_XS_PCS_EEE_MCTRL0_LTX_EN	OSI_BIT(0)
-#define XPCS_VR_XS_PCS_EEE_MCTRL0_LRX_EN	OSI_BIT(1)
-#define XLGPCS_VR_PCS_DIG_STSLTXRX_STATE	(OSI_BIT(15) | OSI_BIT(14) | \
-						OSI_BIT(13) | OSI_BIT(12) | \
-						OSI_BIT(11) | OSI_BIT(10))
-
-#endif /* !OSI_STRIPPED_LIB */
-
 /**
  * @addtogroup XPCS-BIT Register bit fileds
  *
@@ -173,8 +156,6 @@
 #define XPCS_SR_AN_CTRL_AN_EN			OSI_BIT(12)
 #define XPCS_SR_MII_CTRL_RESTART_AN		OSI_BIT(9)
 #define XPCS_SR_MII_CTRL_AN_ENABLE		OSI_BIT(12)
-#define XPCS_SR_MII_CTRL_RST			OSI_BIT(15)
-#define XPCS_SR_MII_STS_0_LINK_STS		OSI_BIT(2)
 #define XPCS_VR_MII_AN_INTR_STS_CL37_ANCMPLT_INTR OSI_BIT(0)
 #define EQOS_XPCS_VR_MII_AN_INTR_STS_LINK_UP	OSI_BIT(4)
 #define XPCS_SR_MII_CTRL_SS5			OSI_BIT(5)
@@ -188,9 +169,6 @@
 #define XPCS_USXG_AN_STS_SPEED_2500		0x1000U
 #define XPCS_USXG_AN_STS_SPEED_5000		0x1400U
 #define XPCS_USXG_AN_STS_SPEED_10000		0xC00U
-#define XPCS_REG_ADDR_SHIFT			10U
-#define XPCS_REG_ADDR_MASK			0x1FFFU
-#define XPCS_REG_VALUE_MASK			0x3FFU
 #define XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_MASK	(OSI_BIT(12) | \
 						 OSI_BIT(11) | \
 						 OSI_BIT(10))
@@ -234,10 +212,8 @@ nve32_t xpcs_start(struct osi_core_priv_data *osi_core);
 nve32_t xlgpcs_init(struct osi_core_priv_data *osi_core);
 nve32_t xlgpcs_start(struct osi_core_priv_data *osi_core);
 #ifndef OSI_STRIPPED_LIB
-nve32_t xpcs_eee(struct osi_core_priv_data *osi_core, nveu32_t en_dis);
 nve32_t xlgpcs_eee(struct osi_core_priv_data *osi_core, nveu32_t en_dis);
 #endif /* !OSI_STRIPPED_LIB */
-nve32_t eqos_xpcs_init(struct osi_core_priv_data *osi_core);
 
 /**
  * @brief xpcs_read - read from xpcs.

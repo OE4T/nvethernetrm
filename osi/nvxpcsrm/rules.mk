@@ -1,6 +1,6 @@
-################################### tell Emacs this is a -*- makefile-gmake -*-
+###################################
 #
-# Copyright (c) 2019-2025, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, NVIDIA CORPORATION. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -20,17 +20,29 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
-# Repository umbrella makefile fragment for nvethernetrm
 ###############################################################################
 
-NV_REPOSITORY_COMPONENTS := \
-	osi/core \
-	osi/dma \
-	osi/nvxpcsrm \
-	osi/nvmacsecrm
+LOCAL_DIR := $(GET_LOCAL_DIR)
 
-# Local Variables:
-# indent-tabs-mode: t
-# tab-width: 8
-# End:
-# vi: set tabstop=8 noexpandtab:
+MODULE := $(LOCAL_DIR)
+
+ifeq ($(NV_L4T_BUILD),1)
+NVETHERNETRM := $(TEGRA_TOP)/kernel/nvethernetrm
+else
+NVETHERNETRM := $(TEGRA_TOP)/nvethernetrm
+endif
+
+include $(NVETHERNETRM)/include/config.tmk
+
+GLOBAL_INCLUDES += \
+	$(NVETHERNETRM)/ \
+	$(NVETHERNETRM)/include/ \
+
+MODULE_SRCS += \
+	$(NVETHERNETRM)/osi/nvxpcsrm/nvxpcs.c
+
+MODULE_COMPILEFLAGS += -Wno-format
+MODULE_COMPILEFLAGS += -mgeneral-regs-only
+#MODULE_COMPILEFLAGS += -DOSI_STRIPPED_LIB
+#MODULE_COMPILEFLAGS += -DLOG_OSI
+include make/module.mk

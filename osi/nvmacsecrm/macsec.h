@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -544,10 +544,7 @@
  * @{
  */
 #define RETRY_COUNT     1000U
-#define COND_MET        0
-#define COND_NOT_MET    1
 #define RETRY_DELAY     1U
-#define MIN_USLEEP_10US 10U
 /** @} */
 
 /**

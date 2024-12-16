@@ -100,69 +100,6 @@ fail:
 }
 
 /**
- * @brief eqos_xpcs_poll_for_an_complete - Polling for AN complete.
- *
- * Algorithm: This routine poll for AN completion status from
- *		EQOS XPCS IP.
- *
- * @param[in] osi_core: OSI core data structure.
- * @param[out] an_status: AN status from XPCS
- *
- * @retval 0 on success
- * @retval -1 on failure.
- */
-#if 0  // FIXME: Not used for SLT EQOS bring up
-static inline nve32_t eqos_xpcs_poll_for_an_complete(
-				struct osi_core_priv_data *osi_core,
-				nveu32_t *an_status)
-{
-	void *xpcs_base = osi_core->xpcs_base;
-	nveu32_t status = 0;
-	nveu32_t retry = 1000;
-	nveu32_t count;
-	nve32_t cond = 1;
-	nve32_t ret = 0;
-
-	/* Poll for AN complete */
-	cond = 1;
-	count = 0;
-	while (cond == 1) {
-		if (count > retry) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-				     "EQOS XPCS AN completion timed out\n", 0ULL);
-			ret = -1;
-			goto fail;
-		}
-
-		count++;
-		status = xpcs_read(xpcs_base, XPCS_VR_MII_AN_INTR_STS);
-		if ((status & XPCS_VR_MII_AN_INTR_STS_CL37_ANCMPLT_INTR) == 0U) {
-			/* autoneg not completed - poll */
-			osi_core->osd_ops.udelay(1000U);
-		} else {
-			/* Clear interrupt */
-			status &= ~XPCS_VR_MII_AN_INTR_STS_CL37_ANCMPLT_INTR;
-			ret = xpcs_write_safety(osi_core, XPCS_VR_MII_AN_INTR_STS, status);
-			if (ret != 0) {
-				goto fail;
-			}
-			cond = 0;
-		}
-	}
-
-	if ((status & EQOS_XPCS_VR_MII_AN_INTR_STS_LINK_UP) == 0U) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "EQOS XPCS AN completed but link is down\n", 0ULL);
-		ret = -1;
-		goto fail;
-	}
-	*an_status = status;
-fail:
-	return ret;
-}
-#endif
-
-/**
  * @brief xpcs_set_speed - Set speed at XPCS
  *
  * Algorithm: This routine program XPCS speed based on AN status.
@@ -610,7 +547,7 @@ fail:
  * @retval 0 on success
  * @retval -1 on failure.
  */
-static nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
+nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nveu32_t retry = 7U;
@@ -793,126 +730,6 @@ step10:
 			      ("PCS block lock SUCCESS\n"), (0ULL));
 		l_core->lane_status = OSI_ENABLE;
 	}
-fail:
-	return ret;
-}
-
-/**
- * @brief eqos_xpcs_init - EQOS XPCS initialization
- *
- * Algorithm: This routine initialize XPCS in SGMII mode.
- *
- * @param[in] osi_core: OSI core data structure.
- *
- * @retval 0 on success
- * @retval -1 on failure.
- */
-nve32_t eqos_xpcs_init(struct osi_core_priv_data *osi_core)
-{
-	void *xpcs_base = osi_core->xpcs_base;
-//	nveu32_t an_status = 0;
-	nveu32_t retry = 1000;
-	nveu32_t count;
-	nveu32_t ctrl = 0;
-	nve32_t cond = 1;
-	nve32_t ret = 0;
-
-	if (osi_core->xpcs_base == OSI_NULL) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "XPCS base is NULL", 0ULL);
-		ret = -1;
-		goto fail;
-	}
-
-	if (osi_core->pre_sil == 0x1U) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "Pre-silicon, skipping lane bring up", 0ULL);
-	} else {
-		if (xpcs_lane_bring_up(osi_core) < 0) {
-			ret = -1;
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-				     "XPCS bring up failed", 0ULL);
-			goto fail;
-		}
-	}
-
-	/* Init XPCS controller based on
-	 * DWC XPCS programming guideline 7.1
-	 */
-
-	/* 1. NA, Switch on power supply */
-	/* 2. NA, Wait as per PHY requirements */
-	/* 3. NA, De-assert reset */
-	/* 4. NA, Configure multi-protocol */
-	/* 5. Read SR_MII_CTRL register and wait for 15 bit read as 0 */
-	cond = 1;
-	count = 0;
-	while (cond == 1) {
-		if (count > retry) {
-			ret = -1;
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-				     "XPCS timeout!!", 0ULL);
-			goto fail;
-		}
-
-		count++;
-		ctrl = xpcs_read(xpcs_base, XPCS_SR_MII_CTRL);
-		if ((ctrl & XPCS_SR_MII_CTRL_RST) == 0U) {
-			cond = 0;
-		} else {
-			osi_core->osd_ops.udelay(100U);
-		}
-	}
-
-#if 0 // FIXME: Re-visit below steps, not required for SLT EQOS
-	ctrl = xpcs_read(xpcs_base, XPCS_VS_MII_MMD_VR_MII_AN_CTRL_0);
-	ctrl |= (XPCS_VS_MII_MMD_VR_MII_AN_CTRL_AN_INTR_EN |
-		 XPCS_VS_MII_MMD_VR_MII_AN_CTRL_PCS_MODE);
-	ret = xpcs_write_safety(osi_core, XPCS_VS_MII_MMD_VR_MII_AN_CTRL_0, ctrl);
-	if (ret != 0) {
-		goto fail;
-	}
-
-	ctrl = xpcs_read(xpcs_base, XPCS_SR_MII_CTRL);
-	ctrl |= XPCS_SR_MII_CTRL_RESTART_AN;
-	xpcs_write_safety(osi_core, XPCS_SR_MII_CTRL, ctrl);
-	osi_core->osd_ops.udelay(1000*100U);
-
-	ret = eqos_xpcs_poll_for_an_complete(osi_core, &an_status);
-	if (ret < 0) {
-		goto fail;
-	}
-	OSI_CORE_INFO(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-				     "EQOS XPCS AN Status", an_status);
-	ret = eqos_xpcs_set_speed(osi_core, an_status);
-	if (ret != 0) {
-		goto fail;
-	}
-#endif
-
-	/* 7. NA */
-	/* 8. NA */
-	/* 9. Wait for LINK_STS of SR_MII_STS Register bit to become 1 */
-	cond = 1;
-	count = 0;
-	while (cond == 1) {
-		if (count > retry) {
-			ret = -1;
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-				     "XPCS LINK_STS timeout!!", 0ULL);
-			goto fail;
-		}
-
-		count++;
-		ctrl = xpcs_read(xpcs_base, XPCS_SR_MII_STS_0);
-		if ((ctrl & XPCS_SR_MII_STS_0_LINK_STS) ==
-		    XPCS_SR_MII_STS_0_LINK_STS) {
-			cond = 0;
-		} else {
-			osi_core->osd_ops.udelay(100U);
-		}
-	}
-
 fail:
 	return ret;
 }
@@ -1283,69 +1100,6 @@ fail:
 }
 
 #ifndef OSI_STRIPPED_LIB
-/**
- * @brief xpcs_eee - XPCS enable/disable EEE
- *
- * Algorithm: This routine update register related to EEE
- * for XPCS.
- *
- * @param[in] osi_core: OSI core data structure.
- * @param[in] en_dis: enable - 1 or disable - 0
- *
- * @retval 0 on success
- * @retval -1 on failure.
- */
-nve32_t xpcs_eee(struct osi_core_priv_data *osi_core, nveu32_t en_dis)
-{
-	void *xpcs_base = osi_core->xpcs_base;
-	nveu32_t val = 0x0U;
-	nve32_t ret = 0;
-
-	if ((en_dis != OSI_ENABLE) && (en_dis != OSI_DISABLE)) {
-		ret = -1;
-		goto fail;
-	}
-
-	if (xpcs_base == OSI_NULL) {
-		ret = -1;
-		goto fail;
-	}
-
-	if (en_dis == OSI_DISABLE) {
-		val = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_EEE_MCTRL0);
-		val &= ~XPCS_VR_XS_PCS_EEE_MCTRL0_LTX_EN;
-		val &= ~XPCS_VR_XS_PCS_EEE_MCTRL0_LRX_EN;
-		ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_EEE_MCTRL0, val);
-	} else {
-
-		/* 1. Check if DWC_xpcs supports the EEE feature by
-		 * reading the SR_XS_PCS_EEE_ABL register
-		 * 1000BASEX-Only is different config then else so can (skip)
-		 */
-
-		/* 2. Program various timers used in the EEE mode depending on the
-		 * clk_eee_i clock frequency. default times are same as IEEE std
-		 * clk_eee_i() is 102MHz. MULT_FACT_100NS = 9 because 9.8ns*10 = 98
-		 * which is between 80 and 120  this leads to default setting match
-		 */
-
-		val = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_EEE_MCTRL0);
-		/* 3. If FEC is enabled in the KR mode (skip in FPGA)*/
-		/* 4. enable the EEE feature on the Tx path and Rx path */
-		val |= (XPCS_VR_XS_PCS_EEE_MCTRL0_LTX_EN |
-				XPCS_VR_XS_PCS_EEE_MCTRL0_LRX_EN);
-		ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_EEE_MCTRL0, val);
-		if (ret != 0) {
-			goto fail;
-		}
-		/* Transparent Tx LPI Mode Enable */
-		val = xpcs_read(xpcs_base, XPCS_VR_XS_PCS_EEE_MCTRL1);
-		val |= XPCS_VR_XS_PCS_EEE_MCTRL1_TRN_LPI;
-		ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_EEE_MCTRL1, val);
-	}
-fail:
-	return ret;
-}
 
 /**
  * @brief xlgpcs_eee - XLGPCS enable/disable EEE

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -145,6 +145,40 @@ typedef my_lint_64		nvel64_t;
 
 #endif /* !OSI_STRIPPED_LIB */
 
+/**
+ * @addtogroup XPCS related defines
+ * @{
+ */
+#define XPCS_REG_ADDR_SHIFT	10U
+#define XPCS_REG_ADDR_MASK	0x1FFFU
+#define XPCS_ADDRESS		0x03FC
+#define XPCS_REG_VALUE_MASK	0x3FFU
+#ifndef OSI_STRIPPED_LIB
+#define XPCS_VR_XS_PCS_EEE_MCTRL0		0xE0018
+#define XPCS_VR_XS_PCS_EEE_MCTRL1		0xE002C
+#define XLGPCS_VR_PCS_EEE_MCTRL			0xe0018
+#define XLGPCS_VR_PCS_DIG_STS			0xe0040
+
+#define XPCS_VR_XS_PCS_EEE_MCTRL1_TRN_LPI	OSI_BIT(0)
+#define XPCS_VR_XS_PCS_EEE_MCTRL0_LTX_EN	OSI_BIT(0)
+#define XPCS_VR_XS_PCS_EEE_MCTRL0_LRX_EN	OSI_BIT(1)
+#define XLGPCS_VR_PCS_DIG_STSLTXRX_STATE	(OSI_BIT(15) | OSI_BIT(14) | \
+						OSI_BIT(13) | OSI_BIT(12) | \
+						OSI_BIT(11) | OSI_BIT(10))
+
+#endif /* !OSI_STRIPPED_LIB */
+/** @} */
+
+/**
+ * @addtogroup Status readback related defines
+ * @{
+ */
+#define COND_MET	0
+#define COND_NOT_MET	1
+#define RETRY_ONCE	1U
+/* 7usec is minimum to use usleep, anything less should use udelay, set to 10us */
+#define MIN_USLEEP_10US		10U
+/** @} */
 
 #ifdef MACSEC_SUPPORT
 /**
@@ -2213,5 +2247,88 @@ struct osi_core_priv_data *osi_get_core(void);
  */
 nve32_t osi_release_core(struct osi_core_priv_data *osi_core);
 #endif
+
+/**
+ * @brief
+ * Description: Initialiation of EQoS XPCS IP.
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ *     * Refer NVETHERNETRM_PIF$osi_core_priv_data
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: No
+ *  - De-initialization: No
+ *
+ * @return
+ * 0 on success
+ * -1 on failure
+ *
+ */
+nve32_t eqos_xpcs_init(struct osi_core_priv_data *osi_core);
+
+#ifndef OSI_STRIPPED_LIB
+/**
+ * @brief xpcs_eee - XPCS enable/disable EEE
+ *
+ * Algorithm: This routine update register related to EEE
+ * for XPCS.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ * @param[in] en_dis: enable - 1 or disable - 0
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+nve32_t xpcs_eee(struct osi_core_priv_data *osi_core, nveu32_t en_dis);
+#endif
+
+/**
+ * @brief mixed_bank_reg_prog - programs the mixed bank registers in non-Tegra chips
+ *
+ * Algorithm: This routine update the mixed bank registers
+ * for XPCS.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+nve32_t mixed_bank_reg_prog(struct osi_core_priv_data *osi_core);
+
+/**
+ * @brief
+ * Description: Lane bringup of XPCS IP.
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ *     * Refer NVETHERNETRM_PIF$osi_core_priv_data
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: No
+ *  - De-initialization: No
+ *
+ * @return
+ * 0 on success
+ * -1 on failure
+ *
+ */
+nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core);
 
 #endif /* INCLUDED_OSI_CORE_H */

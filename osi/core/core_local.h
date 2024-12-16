@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -579,9 +579,6 @@ static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,
  * atleast 1 iteration.
  */
 #define RETRY_COUNT	1000U
-#define RETRY_ONCE	1U
-#define COND_MET	0
-#define COND_NOT_MET	1
 #define RETRY_DELAY	1U
 #define OSI_DELAY_4US		4U
 #define OSI_DELAY_10US		10U
@@ -592,8 +589,6 @@ static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,
 #define OSI_DELAY_1000US	1000U
 #define OSI_DELAY_10000US	10000U
 #define OSI_DELAY_30000US	30000U
-/* 7usec is minimum to use usleep, anything less should use udelay, set to 10us */
-#define MIN_USLEEP_10US		10U
 
 /** @} */
 

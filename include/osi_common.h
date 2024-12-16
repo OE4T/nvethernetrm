@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -349,7 +349,7 @@ static inline void osi_memset(void *s, nveu8_t c, nveu64_t count)
 #define OSI_UNUSED  __attribute__((__unused__))
 
 /** @brief macro for 1 micro second delay */
-#define OSI_DELAY_1US			1U
+#define OSI_DELAY_1US                  1U
 
 /**
  * @addtogroup MGBE PBL settings.
