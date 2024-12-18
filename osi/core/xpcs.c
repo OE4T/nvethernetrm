@@ -458,17 +458,23 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 		T26X_XPCS_WRAP_UPHY_HW_INIT_CTRL
 	};
 
-	if ((osi_core->mac == OSI_MAC_HW_MGBE_T26X) || (osi_core->mac_ver == OSI_EQOS_MAC_5_40)) {
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		/* Delay added as per HW team suggestion which is
+		 * of 100msec if equalizer is enabled for every
+		 * iteration of a lane bring sequence. So 100 * 1000
+		 * gives us a delay of 100msec for each retry of lane
+		 * bringup */
 		retry = 1000U;
-		if (osi_core->uphy_gbe_mode == OSI_GBE_MODE_25G) {
-			/* Delay added as per HW team suggestion which is
-			 * of 100msec if equalizer is enabled for every
-			 * iteration of a lane bring sequence. So 100 * 1000
-			 * gives us a delay of 100msec for each retry of lane
-			 * bringup
-			 */
-			retry_delay = 100U;
-		}
+		retry_delay = 100U;
+	} else if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+		/* Delay added as per HW team suggestion which is
+		 * of 10msec for eqos lane bring up. So 10 * 1000
+		 * gives us a delay of 10msec for each retry of lane
+		 * bringup */
+		retry = 1000U;
+		retry_delay = 10U;
+	} else {
+		/* do nothing */
 	}
 
 	val = osi_readla(osi_core,
@@ -884,6 +890,7 @@ fail:
 nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 {
 	void *xpcs_base = osi_core->xpcs_base;
+	nveu32_t value = 0;
 	nveu32_t ctrl = 0;
 	nve32_t ret = 0;
 
@@ -897,6 +904,38 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				     "xpcs_base_r_fec failed", 0ULL);
 			goto fail;
+		}
+		if ((osi_core->mac == OSI_MAC_HW_MGBE_T26X) &&
+		    (osi_core->uphy_gbe_mode == OSI_GBE_MODE_10G)) {
+			/* Added below programming sequence from hw scripts */
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
+					   T26X_XPCS_WRAP_CONFIG_0);
+			value &= ~OSI_BIT(0);
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_CONFIG_0);
+			osi_writela(osi_core, XPCS_10G_WRAP_UPHY_RX_CTRL_2_SLEEP_CAL_EN_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_2);
+			osi_writela(osi_core, XPCS_10G_WRAP_UPHY_RX_CTRL_2_SLEEP_CAL_EN_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_2);
+			osi_writela(osi_core, XPCS_10G_WRAP_UPHY_TX_CTRL_3_DATAREADY_DATAEN_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_TX_CTRL_3);
+			osi_writela(osi_core, XPCS_10G_WRAP_UPHY_RX_CTRL_3_CAL_DONE_DATA_EN_DLY,
+				    (nveu8_t *)osi_core->xpcs_base +
+				    T26X_XPCS_WRAP_UPHY_RX_CTRL_3);
+			osi_writela(osi_core,
+				XLGPCS_WRAP_UPHY_TO_CTRL2_EQ_DONE_TOV,
+				(nveu8_t *)osi_core->xpcs_base +
+				T26X_XPCS_WRAP_UPHY_T0_CTRL_2_0);
+			value = osi_readla(osi_core,
+				(nveu8_t *)osi_core->xpcs_base +
+				T26X_XPCS_WRAP_UPHY_RX_CTRL_5_0);
+			value |= XLGPCS_WRAP_UPHY_RX_CTRL5_RX_EQ_ENABLE;
+			osi_writela(osi_core, value,
+				(nveu8_t *)osi_core->xpcs_base +
+				T26X_XPCS_WRAP_UPHY_RX_CTRL_5_0);
 		}
 
 		if (xpcs_lane_bring_up(osi_core) < 0) {
