@@ -293,8 +293,13 @@ static inline nve32_t add_vlan_id(struct osi_core_priv_data *osi_core,
 		return allow_all_vid_tags(osi_core->base, OSI_ENABLE);
 	}
 
-	osi_core->vf_bitmap |= OSI_BIT(vid_idx);
+	osi_core->vf_bitmap |= OSI_BIT_64(vid_idx);
 	osi_core->vid[vid_idx] = vlan_id;
+	if (osi_core->vlan_filter_cnt >= VLAN_NUM_VID) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"Reached Max number of VLAN flters\n", 0ULL);
+		return -1;
+	}
 	osi_core->vlan_filter_cnt++;
 
 	if (osi_core->vlan_filter_cnt > 0U) {
@@ -381,7 +386,7 @@ static inline nve32_t dequeue_vid_to_add_filter_reg(
 		return 0;
 	}
 
-	osi_core->vf_bitmap |= OSI_BIT(vid_idx);
+	osi_core->vf_bitmap |= OSI_BIT_64(vid_idx);
 	osi_core->vid[vid_idx] = vlan_id;
 
 	val = osi_readl((nveu8_t *)osi_core->base + MAC_VLAN_TAG_DATA);
@@ -394,6 +399,8 @@ static inline nve32_t dequeue_vid_to_add_filter_reg(
 	}
 
 	for (i = VLAN_HW_FILTER_FULL_IDX; i <=  osi_core->vlan_filter_cnt; i++) {
+		// Fixed CERT ARR30-C by limiting the i to array max index
+		i %= (VLAN_NUM_VID - 1U);
 		osi_core->vid[i] = osi_core->vid[i + 1U];
 	}
 
@@ -433,7 +440,7 @@ static inline nve32_t del_vlan_id(struct osi_core_priv_data *osi_core,
 		return dequeue_vlan_id(osi_core, idx);
 	}
 
-	osi_core->vf_bitmap &= ~OSI_BIT(vid_idx);
+	osi_core->vf_bitmap &= ~OSI_BIT_64(vid_idx);
 	osi_core->vid[vid_idx] = VLAN_ID_INVALID;
 
 	ret = update_vlan_filters(osi_core, vid_idx, val);
@@ -441,6 +448,11 @@ static inline nve32_t del_vlan_id(struct osi_core_priv_data *osi_core,
 		return -1;
 	}
 
+	if (osi_core->vlan_filter_cnt == 0U) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"Number of vlan filters is invalid\n", 0ULL);
+		return -1;
+	}
 	osi_core->vlan_filter_cnt--;
 
 	if (osi_core->vlan_filter_cnt == 0U) {

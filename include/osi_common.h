@@ -275,7 +275,7 @@
 #define OSI_H_ENABLE		(~OSI_H_DISABLE)
 
 #define OSI_BIT(nr)             ((nveu32_t)1 << (((nveu32_t)nr) & 0x1FU))
-#define OSI_BIT_64(nr)          ((nveu64_t)1 << (nr))
+#define OSI_BIT_64(nr)          ((nveu64_t)1 << (((nveu32_t)nr) & 0x3FU))
 
 #ifndef OSI_STRIPPED_LIB
 #define OSI_MGBE_MAC_3_00	0x30U

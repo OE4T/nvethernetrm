@@ -255,7 +255,8 @@ static nve32_t mgbe_filter_args_validate(struct osi_core_priv_data *const osi_co
 	}
 
 	/* check for DMA channel index */
-	if ((dma_chan > (l_core->num_max_chans - 0x1U)) &&
+	if ((l_core->num_max_chans > 0x0U) &&
+	    (dma_chan > (l_core->num_max_chans - 0x1U)) &&
 	    (dma_chan != OSI_CHAN_ANY)) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_OUTOFBOUND,
 			"invalid dma channel\n",
@@ -340,6 +341,12 @@ static nve32_t check_mac_addr(nveu8_t const *mac_addr, nveu8_t *rch_addr)
  */
 static void mgbe_free_rchlist_index(struct osi_core_priv_data *osi_core,
 				    const nve32_t rch_idx)  {
+
+	if ((rch_idx < 0) || (rch_idx >= (nve32_t)RCHLIST_SIZE)) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+			"Invalid rch_idx\n", rch_idx);
+		return ;
+	}
 	osi_core->rch_index[rch_idx].in_use = OSI_NONE;
 	osi_core->rch_index[rch_idx].dch = 0;
 	osi_memset(&osi_core->rch_index[rch_idx].mac_address, 0, OSI_ETH_ALEN);
@@ -654,6 +661,8 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 		goto fail;
 	}
 
+	// To make sure idx is not more than max to address CERT INT30-C
+	idx = idx % OSI_MGBE_MAX_MAC_ADDRESS_FILTER_T26X;
 	value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
 			   MGBE_MAC_ADDRH((idx)));
 
@@ -756,7 +765,7 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 		if (osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
 			/* Write XDCS configuration into MAC_DChSel_IndReg(x) */
 			/* Append DCS DMA channel to XDCS hot bit selection */
-			xdcs_dds |= (OSI_BIT(dma_chan) | dma_chansel);
+			xdcs_dds |= (OSI_BIT_64(dma_chan) | dma_chansel);
 			ret = mgbe_mac_indir_addr_write(osi_core, MGBE_MAC_DCHSEL,
 							idx, xdcs_dds);
 		} else {
@@ -782,7 +791,9 @@ static nve32_t mgbe_update_mac_addr_low_high_reg(
 						 MGBE_MAC_ADDRH_SA);
 				}
 
-				value |= ((rch_idx << MGBE_MAC_ADDRH_DCS_SHIFT) & MGBE_MAC_ADDRH_DCS);
+				// Restricting rch_idx to RCHLIST_SIZE to avoid CERT INT32-C
+				rch_idx %= RCHLIST_SIZE;
+				value |= (((nveu32_t)rch_idx << MGBE_MAC_ADDRH_DCS_SHIFT) & MGBE_MAC_ADDRH_DCS);
 				osi_writela(osi_core,
 					    ((nveu32_t)addr[4] | ((nveu32_t)addr[5] << 8) |
 					    MGBE_MAC_ADDRH_AE | value),
@@ -2462,9 +2473,8 @@ static nve32_t mgbe_configure_pdma(struct osi_core_priv_data *osi_core)
 				osi_core->num_of_pdma);
 	const nveu32_t rx_owrq = (MGBE_DMA_CHX_RX_CNTRL2_OWRQ_MCHAN /
 				osi_core->num_of_pdma);
-	const nveu32_t tx_pbl =
-		((((MGBE_TXQ_SIZE / OSI_MGBE_MAX_NUM_QUEUES) -
-		   osi_core->mtu) / (MGBE_AXI_DATAWIDTH / 8U)) - 5U);
+	nveu32_t tx_pbl = 0U, max_txq_size = 0U, adjusted_txq_size = 0U;
+	nveu32_t divided_txq_size = 0U;
 	/* Total Rx Queue size is 256KB */
 	const nveu32_t rx_pbl[OSI_MGBE_MAX_NUM_QUEUES] = {
 		Q_SZ_DEPTH(224U) / 2U, Q_SZ_DEPTH(2U) / 2U, Q_SZ_DEPTH(2U) / 2U,
@@ -2472,9 +2482,7 @@ static nve32_t mgbe_configure_pdma(struct osi_core_priv_data *osi_core)
 		Q_SZ_DEPTH(2U) / 2U, Q_SZ_DEPTH(2U) / 2U, Q_SZ_DEPTH(2U) / 2U,
 		Q_SZ_DEPTH(16U) / 2U
 	};
-	const nveu32_t tx_pbl_ufpga =
-		((((MGBE_TXQ_SIZE_UFPGA / OSI_MGBE_MAX_NUM_QUEUES) -
-		   osi_core->mtu) / (MGBE_AXI_DATAWIDTH / 8U)) - 5U);
+	nveu32_t tx_pbl_ufpga = 0U;
 	/* uFPGA Rx Queue size is 64KB */
 	const nveu32_t rx_pbl_ufpga[OSI_MGBE_MAX_NUM_QUEUES] = {
 		Q_SZ_DEPTH(40U)/2U, Q_SZ_DEPTH(2U)/2U, Q_SZ_DEPTH(2U)/2U,
@@ -2498,9 +2506,49 @@ static nve32_t mgbe_configure_pdma(struct osi_core_priv_data *osi_core)
 		 * calculation by using above formula
 		 */
 		if (osi_core->pre_sil == OSI_ENABLE) {
+			max_txq_size = MGBE_TXQ_SIZE_UFPGA / OSI_MGBE_MAX_NUM_QUEUES;
+			if (osi_core->mtu > max_txq_size) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					     "Invalid MTU related to Q size received in pre-sil case\n",
+					     osi_core->mtu);
+				ret = -1;
+				goto done;
+			}
+			adjusted_txq_size = max_txq_size - osi_core->mtu;
+			divided_txq_size = adjusted_txq_size / (MGBE_AXI_DATAWIDTH / 8U);
+			if (divided_txq_size < 5U) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					     "Invalid MTU received in pre-sil case\n",
+					     osi_core->mtu);
+				ret = -1;
+				goto done;
+			}
+			tx_pbl_ufpga =
+				((((MGBE_TXQ_SIZE_UFPGA / OSI_MGBE_MAX_NUM_QUEUES) -
+				   osi_core->mtu) / (MGBE_AXI_DATAWIDTH / 8U)) - 5U);
 			pbl = osi_valid_pbl_value(tx_pbl_ufpga);
 			value |= (pbl << MGBE_PDMA_CHX_EXTCFG_PBL_SHIFT);
 		} else {
+			max_txq_size = MGBE_TXQ_SIZE / OSI_MGBE_MAX_NUM_QUEUES;
+			if (osi_core->mtu > max_txq_size) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					     "Invalid MTU related to Q size received in silicon case\n",
+					     osi_core->mtu);
+				ret = -1;
+				goto done;
+			}
+			adjusted_txq_size = max_txq_size - osi_core->mtu;
+			divided_txq_size = adjusted_txq_size / (MGBE_AXI_DATAWIDTH / 8U);
+			if (divided_txq_size < 5U) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					     "Invalid MTU received in silicon case\n",
+					     osi_core->mtu);
+				ret = -1;
+				goto done;
+			}
+			tx_pbl =
+				((((MGBE_TXQ_SIZE / OSI_MGBE_MAX_NUM_QUEUES) -
+				   osi_core->mtu) / (MGBE_AXI_DATAWIDTH / 8U)) - 5U);
 			pbl = osi_valid_pbl_value(tx_pbl);
 			value |= (pbl << MGBE_PDMA_CHX_EXTCFG_PBL_SHIFT);
 		}
