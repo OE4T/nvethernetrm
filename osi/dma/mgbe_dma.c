@@ -44,25 +44,26 @@ static void mgbe_config_slot(struct osi_dma_priv_data *osi_dma,
 			     OSI_UNUSED unsigned int interval)
 {
 	unsigned int value;
+	unsigned int local_chan = chan % OSI_MGBE_MAX_NUM_CHANS;
 #if 0
 	MGBE_CHECK_CHAN_BOUND(chan);
 #endif
 	if (set == OSI_ENABLE) {
 		/* Program SLOT CTRL register SIV and set ESC bit */
 		value = osi_dma_readl((unsigned char *)osi_dma->base +
-				      MGBE_DMA_CHX_SLOT_CTRL(chan));
+				      MGBE_DMA_CHX_SLOT_CTRL(local_chan));
 		/* Set ESC bit */
 		value |= MGBE_DMA_CHX_SLOT_ESC;
 		osi_dma_writel(value, (unsigned char *)osi_dma->base +
-			       MGBE_DMA_CHX_SLOT_CTRL(chan));
+			       MGBE_DMA_CHX_SLOT_CTRL(local_chan));
 
 	} else {
 		/* Clear ESC bit of SLOT CTRL register */
 		value = osi_dma_readl((unsigned char *)osi_dma->base +
-				      MGBE_DMA_CHX_SLOT_CTRL(chan));
+				      MGBE_DMA_CHX_SLOT_CTRL(local_chan));
 		value &= ~MGBE_DMA_CHX_SLOT_ESC;
 		osi_dma_writel(value, (unsigned char *)osi_dma->base +
-			       MGBE_DMA_CHX_SLOT_CTRL(chan));
+			       MGBE_DMA_CHX_SLOT_CTRL(local_chan));
 	}
 }
 

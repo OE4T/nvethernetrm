@@ -59,6 +59,7 @@
 #define MGBE_DMA_CHX_RDTLP(x)		((0x0080U * (x)) + 0x312CU)
 #define MGBE_DMA_CHX_RX_DESC_WR_RNG_OFFSET(x)	((0x0080U * (x)) + 0x317CU)
 
+#define MAX_REG_OFFSET			0xFFFFU
 /** @} */
 
 /** @} */

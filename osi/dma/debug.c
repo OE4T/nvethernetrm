@@ -67,7 +67,7 @@ static void dump_struct(struct osi_dma_priv_data *osi_dma,
  */
 void structs_dump(struct osi_dma_priv_data *osi_dma)
 {
-	struct dma_local *l_dma = (struct dma_local *)osi_dma;
+	struct dma_local *l_dma = (struct dma_local *)((void *)osi_dma);
 	nveu32_t i = 0;
 
 	osi_dma->osd_ops.printf(osi_dma, OSI_DEBUG_TYPE_STRUCTS,
@@ -114,7 +114,7 @@ void structs_dump(struct osi_dma_priv_data *osi_dma)
  */
 void reg_dump(struct osi_dma_priv_data *osi_dma)
 {
-	struct dma_local *l_dma = (struct dma_local *)osi_dma;
+	struct dma_local *l_dma = (struct dma_local *)((void *)osi_dma);
 	unsigned int max_addr;
 	unsigned int addr;
 	unsigned int reg_val;
@@ -164,12 +164,22 @@ static void rx_desc_dump(struct osi_dma_priv_data *osi_dma, unsigned int idx,
 	struct osi_rx_desc *rx_desc = rx_ring->rx_desc + idx;
 	struct osd_dma_ops *ops = &osi_dma->osd_ops;
 
+	if ((rx_ring->rx_desc_phy_addr) >
+	    ((OSI_ULLONG_MAX) - (idx * sizeof(struct osi_rx_desc)))) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "Invalid rx addr !!!\n", 0ULL);
+		goto exit_func;
+	}
+
 	ops->printf(osi_dma, OSI_DEBUG_TYPE_DESC,
 		    "N [%02d %4p %04d %lx R_D] = %#x:%#x:%#x:%#x\n",
 		    chan, rx_desc, idx,
 		    (rx_ring->rx_desc_phy_addr + (idx * sizeof(struct osi_rx_desc))),
 		    rx_desc->rdes3, rx_desc->rdes2,
 		    rx_desc->rdes1, rx_desc->rdes0);
+
+exit_func:
+	return;
 
 }
 
@@ -191,10 +201,21 @@ static void tx_desc_dump(struct osi_dma_priv_data *osi_dma, unsigned int f_idx,
 	struct osd_dma_ops *ops = &osi_dma->osd_ops;
 	unsigned int ctxt = 0, i = 0;
 
+	if (osi_dma->tx_ring_sz == 0U) {
+		ops->printf(osi_dma, OSI_DEBUG_TYPE_DESC,
+			    "In Valid tx_ring_sz\n");
+		goto exit_func;
+	}
 	if (f_idx == l_idx) {
 		tx_desc = tx_ring->tx_desc + f_idx;
 		ctxt = tx_desc->tdes3 & TDES3_CTXT;
 
+			if ((tx_ring->tx_desc_phy_addr) >
+			    ((OSI_ULLONG_MAX) - (f_idx * sizeof(struct osi_tx_desc)))) {
+				OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+					    "Invalid addr !!!\n", 0ULL);
+				goto exit_func;
+			}
 		ops->printf(osi_dma, OSI_DEBUG_TYPE_DESC,
 			    "%s [%02d %4p %04d %lx %s] = %#x:%#x:%#x:%#x\n",
 			    (ctxt  == TDES3_CTXT) ? "C" : "N",
@@ -207,6 +228,12 @@ static void tx_desc_dump(struct osi_dma_priv_data *osi_dma, unsigned int f_idx,
 		int cnt;
 
 		if (f_idx > l_idx) {
+			if ((l_idx > (UINT_MAX - osi_dma->tx_ring_sz)) ||
+			    ((l_idx + osi_dma->tx_ring_sz) < f_idx)) {
+				OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+					    "Invalid idx !!!\n", 0ULL);
+				goto exit_func;
+			}
 			cnt = (int)(l_idx + osi_dma->tx_ring_sz - f_idx);
 		} else {
 			cnt = (int)(l_idx - f_idx);
@@ -216,6 +243,12 @@ static void tx_desc_dump(struct osi_dma_priv_data *osi_dma, unsigned int f_idx,
 			tx_desc = tx_ring->tx_desc + i;
 			ctxt = tx_desc->tdes3 & TDES3_CTXT;
 
+			if ((tx_ring->tx_desc_phy_addr) >
+			    ((OSI_ULLONG_MAX) - (i * sizeof(struct osi_tx_desc)))) {
+				OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+					    "Invalid addr !!!\n", 0ULL);
+				break;
+			}
 			ops->printf(osi_dma, OSI_DEBUG_TYPE_DESC,
 				    "%s [%02d %4p %04d %lx %s] = %#x:%#x:%#x:%#x\n",
 				    (ctxt  == TDES3_CTXT) ? "C" : "N",
@@ -228,6 +261,9 @@ static void tx_desc_dump(struct osi_dma_priv_data *osi_dma, unsigned int f_idx,
 			INCR_TX_DESC_INDEX(i, osi_dma->tx_ring_sz);
 		}
 	}
+
+exit_func:
+	return;
 }
 
 /**
@@ -243,6 +279,13 @@ static void tx_desc_dump(struct osi_dma_priv_data *osi_dma, unsigned int f_idx,
 void desc_dump(struct osi_dma_priv_data *osi_dma, unsigned int f_idx,
 	       unsigned int l_idx, unsigned int flag, unsigned int chan)
 {
+
+	if ((osi_dma->tx_ring_sz == 0U) || (osi_dma->rx_ring_sz == 0U)) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "Invalid Tx/Rx ring size\n", 0ULL);
+		goto exit_func;
+	}
+
 	switch (flag & TXRX_DESC_DUMP_MASK) {
 	case TX_DESC_DUMP:
 		tx_desc_dump(osi_dma, f_idx, l_idx,
@@ -256,5 +299,8 @@ void desc_dump(struct osi_dma_priv_data *osi_dma, unsigned int f_idx,
 			    "Invalid desc dump flag\n", 0ULL);
 		break;
 	}
+
+exit_func:
+	return;
 }
 #endif /* OSI_DEBUG */

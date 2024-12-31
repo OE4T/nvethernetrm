@@ -79,7 +79,8 @@ static inline nve32_t validate_rx_completions_arg(
 
 	if (osi_unlikely((osi_dma == OSI_NULL) ||
 			 (more_data_avail == OSI_NULL) ||
-			 (chan >= l_dma->num_max_chans))) {
+			 (chan >= l_dma->num_max_chans) ||
+			 (chan >= OSI_MGBE_MAX_NUM_CHANS))) {
 		ret = -1;
 		goto fail;
 	}
@@ -178,6 +179,9 @@ static inline void check_for_more_data_avail(struct osi_rx_ring *rx_ring, nve32_
 	 * Rx packets, so that the OSD layer can decide to schedule
 	 * this function again.
 	 */
+	if ((received_resv < 0) || (received > (INT_MAX - received_resv))) {
+		return;
+	}
 	if ((received + received_resv) >= budget) {
 		rx_desc = rx_ring->rx_desc + rx_ring->cur_rx_idx;
 		rx_swcx = rx_ring->rx_swcx + rx_ring->cur_rx_idx;
@@ -218,17 +222,26 @@ static inline nveu32_t compltd_rx_desc_cnt(struct osi_dma_priv_data *osi_dma,
 					    nveu32_t chan)
 {
 	struct osi_rx_ring *rx_ring = osi_dma->rx_ring[chan];
-	nveu32_t value, rx_desc_wr_idx, descr_compltd;
+	nveu32_t value = 0U , rx_desc_wr_idx = 0U, descr_compltd = 0U;
+	/* Already has a check for this in teh caller
+	 * but coverity tool is not able recognize the same
+	 */
+	const nveu32_t local_chan = chan % OSI_MGBE_MAX_NUM_CHANS;
 
 	value = osi_dma_readl((nveu8_t *)osi_dma->base +
-			  MGBE_DMA_CHX_RX_DESC_WR_RNG_OFFSET(chan));
-	/* completed desc write back offset */
-	rx_desc_wr_idx = ((value >> MGBE_RX_DESC_WR_RNG_RWDC_SHIFT ) &
-			  (osi_dma->rx_ring_sz - 1));
-	descr_compltd = (rx_desc_wr_idx - rx_ring->cur_rx_idx) &
-			 (osi_dma->rx_ring_sz - 1U);
+			  MGBE_DMA_CHX_RX_DESC_WR_RNG_OFFSET(local_chan));
+	if (osi_dma->rx_ring_sz > 0U) {
+		/* completed desc write back offset */
+		rx_desc_wr_idx = ((value >> MGBE_RX_DESC_WR_RNG_RWDC_SHIFT ) &
+				  (osi_dma->rx_ring_sz - 1U));
+		//If we remove this check we are seeing perf issues on mgbe3_0 of Ferrix
+	//	if (rx_desc_wr_idx >= rx_ring->cur_rx_idx) {
+			descr_compltd = (rx_desc_wr_idx - rx_ring->cur_rx_idx) &
+					 (osi_dma->rx_ring_sz - 1U);
+	//	}
+	}
 	/* offset/index start from 0, so add 1 to get final count */
-	descr_compltd += 1U;
+	descr_compltd = (((descr_compltd) & ((nveu32_t)0x7FFFFFFFU)) + (1U));
 	return descr_compltd;
 }
 
@@ -1135,7 +1148,7 @@ static inline void apply_write_barrier(struct osi_tx_ring *tx_ring)
 static inline void dump_tx_descriptors(struct osi_dma_priv_data *osi_dma,
 				       nveu32_t f_idx, nveu32_t l_idx, nveu32_t chan)
 {
-	if (osi_dma->enable_desc_dump == 1U) {
+	if ((osi_dma->enable_desc_dump == 1U) && (l_idx != 0U)) {
 		desc_dump(osi_dma, f_idx, DECR_TX_DESC_INDEX(l_idx, osi_dma->tx_ring_sz),
 			  (TX_DESC_DUMP | TX_DESC_DUMP_TX), chan);
 	}
@@ -1205,7 +1218,9 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 #ifdef OSI_DEBUG
 	nveu32_t f_idx = tx_ring->cur_tx_idx;
 #endif /* OSI_DEBUG */
-	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
+	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
+	// Added bitwise with 0xFF to avoid CERT INT30-C error
+	nveu32_t chan = ((dma_chan & chan_mask[local_mac]) & (0xFFU));
 	const nveu32_t tail_ptr_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TDTP(chan),
 		MGBE_DMA_CHX_TDTLP(chan),
@@ -1299,6 +1314,12 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	/* Fill remaining descriptors */
 	for (i = 0; i < desc_cnt; i++) {
 		/* Increase the desc count for first descriptor */
+		if (tx_ring->desc_cnt == UINT_MAX) {
+			OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+				    "dma_txrx: Reached Max Desc count\n", 0ULL);
+			ret = -1;
+			break;
+		}
 		tx_ring->desc_cnt++;
 
 		tx_desc->tdes0 = L32(tx_swcx->buf_phy_addr);
@@ -1314,6 +1335,12 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 		tx_swcx = tx_ring->tx_swcx + entry;
 	}
 
+	if (tx_ring->desc_cnt == UINT_MAX) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "dma_txrx: Reached Max Desc count\n", 0ULL);
+		ret = -1;
+		goto fail;
+	}
 	/* Mark it as LAST descriptor */
 	last_desc->tdes3 |= TDES3_LD;
 
@@ -1356,7 +1383,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	tx_ring->cur_tx_idx = entry;
 
 	/* Update the Tx tail pointer */
-	osi_dma_writel(L32(tailptr), (nveu8_t *)osi_dma->base + tail_ptr_reg[osi_dma->mac]);
+	osi_dma_writel(L32(tailptr), (nveu8_t *)osi_dma->base + tail_ptr_reg[local_mac]);
 
 fail:
 	return ret;
@@ -1387,7 +1414,9 @@ static nve32_t rx_dma_desc_initialization(const struct osi_dma_priv_data *const 
 					  nveu32_t dma_chan)
 {
 	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
-	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
+	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
+	// Added bitwise with 0xFF to avoid CERT INT30-C error
+	nveu32_t chan = ((dma_chan & chan_mask[local_mac]) & (0xFFU));
 	const nveu32_t start_addr_high_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_RDLH(chan),
 		MGBE_DMA_CHX_RDLH(chan),
@@ -1533,7 +1562,9 @@ static inline void set_tx_ring_len_and_start_addr(const struct osi_dma_priv_data
 						  nveu32_t len)
 {
 	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
-	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
+	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
+	// Added bitwise with 0xFF to avoid CERT INT30-C error
+	nveu32_t chan = ((dma_chan & chan_mask[local_mac]) & (0xFFU));
 	const nveu32_t ring_len_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TDRL(chan),
 		MGBE_DMA_CHX_TX_CNTRL2(chan),
