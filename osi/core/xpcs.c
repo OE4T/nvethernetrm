@@ -715,9 +715,11 @@ step10:
 	}
 
 	if (xpcs_check_pcs_lock_status(osi_core) < 0) {
+		if (l_core->lane_status == OSI_ENABLE) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				     "Failed to get PCS block lock\n", 0ULL);
-		l_core->lane_status = OSI_DISABLE;
+			l_core->lane_status = OSI_DISABLE;
+		}
 		ret = -1;
 		goto fail;
 	} else {
