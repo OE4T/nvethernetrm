@@ -1888,6 +1888,26 @@ struct osi_core_priv_data {
  *  - -1 on NVETHERNETRM_PIF#osi_hw_core_init/osi_core core deinitialization operation fail
  *  - -1 on NVETHERNETRM_PIF#osi_hw_core_init/osi_core is NULL
  *
+ * @note
+ * - This API also indirectly programs Tx PBL. It must be made sure that
+ *   the Tx FIFO is deep enough to store a complete packet before that packet
+ *   is transferred to the MAC transmitter. The reason being that when space
+ *   is not available to accept the programmed burst length of data, then the
+ *   MTL Tx FIFO starts reading to avoid dead-lock. In such a case, the COE
+ *   fails as the start of the packet header is read out before the payload
+ *   checksum can be calculated and inserted.It must enable checksum insertion
+ *   only in the packets that are less than the number of bytes, given by the
+ *   following equation:
+ *
+ *   Packet size < TxQSize - (PBL + N)*(DATAWIDTH/8),
+ *
+ *   where, if Datawidth = 32, N = 7, elseif Datawidth != 32, N = 5
+ *   and Packet size is determined by the osi_core->mtu.
+ *
+ *   The above is applicable only for Thor as PBL setting is per core PDMA.
+ *   osi_core->mtu is same as the Platforma-max-MTU. Care must be taken that
+ *   the platform-max-MTU is not greater than MTL Tx Qsize.
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt handler: No

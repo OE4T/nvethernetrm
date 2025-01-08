@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES.
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -1211,6 +1211,24 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
  *  - osi_dma->rx_riwt  ===> Actual value read from DT
  *  - osi_dma->use_rx_frames  ==> NVETHERNETCL_PIF$OSI_DISABLE/NVETHERNETCL_PIF$OSI_ENABLE
  *  - osi_dma->rx_frames ===> Actual value read from DT
+ *
+ * @note
+ * - This API also indirectly programs Tx PBL. It must be made sure that
+ *   the Tx FIFO is deep enough to store a complete packet before that packet
+ *   is transferred to the MAC transmitter. The reason being that when space
+ *   is not available to accept the programmed burst length of data, then the
+ *   MTL Tx FIFO starts reading to avoid dead-lock. In such a case, the COE
+ *   fails as the start of the packet header is read out before the payload
+ *   checksum can be calculated and inserted.It must enable checksum insertion
+ *   only in the packets that are less than the number of bytes, given by the
+ *   following equation:
+ *
+ *   Packet size < TxQSize - (PBL + N)*(DATAWIDTH/8),
+ *
+ *   where, if Datawidth = 32, N = 7, elseif Datawidth != 32, N = 5
+ *   and Packet size is determined by the osi_dma->mtu.
+ *
+ *   The above is applicable only for Orin as PBL setting is per DMA channel.
  *
  * @usage
  * - Allowed context for the API call
