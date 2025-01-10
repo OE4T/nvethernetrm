@@ -45,10 +45,6 @@ NV_COMPONENT_SOURCES           := \
 NV_COMPONENT_INCLUDES          := \
 	$(NV_SOURCE)/nvethernetrm/include \
 
-NV_COMPONENT_NEEDED_STATIC_INTERFACE_DIRS += \
-	$(NV_SOURCE)/nvethernetrm/osi/nvmacsecrm \
-	$(NV_SOURCE)/nvethernetrm/osi/nvxpcsrm
-
 ifeq ($(EN_OSI_RM_FTRACE),1)
 # Enable below for function trace logs
 #NV_COMPONENT_CFLAGS            += -DOSI_RM_FTRACE
