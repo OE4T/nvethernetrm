@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LicenseRef-NvidiaProprietary
- * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -197,6 +197,7 @@
 #define XPCS_VR_XS_PCS_KR_CTRL_USXG_MODE_5G	OSI_BIT(10)
 #define XPCS_WRAP_UPHY_HW_INIT_CTRL_TX_EN	OSI_BIT(0)
 #define XPCS_WRAP_UPHY_HW_INIT_CTRL_RX_EN	OSI_BIT(2)
+#define XPCS_WRAP_UPHY_HW_INIT_CTRL_RX_P_DN	OSI_BIT(3)
 #define XPCS_WRAP_IRQ_STATUS_PCS_LINK_STS	OSI_BIT(6)
 #define XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_DATA_EN	OSI_BIT(0)
 #define XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_IDDQ		OSI_BIT(4)

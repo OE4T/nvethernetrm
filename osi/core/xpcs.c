@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -632,6 +632,14 @@ static nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
 					    XPCS_WRAP_UPHY_HW_INIT_CTRL_RX_EN) < 0) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 					"UPHY RX lane bring-up failed\n", 0ULL);
+			/* Peform UPHY Rx lane power down on Lane bring up failure path.
+			 * FIXME: Discuss with HW team further whether this is necessary step or not
+			 */
+			if (xpcs_uphy_lane_bring_up(osi_core,
+						    XPCS_WRAP_UPHY_HW_INIT_CTRL_RX_P_DN) < 0) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					     "UPHY Rx lane power down failed\n", 0ULL);
+			}
 			ret = -1;
 			goto fail;
 		}
