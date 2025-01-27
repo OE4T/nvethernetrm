@@ -435,7 +435,7 @@ static inline nveu32_t osi_valid_pbl_value(nveu32_t pbl_value)
 }
 
 /**
- * @addtogroup PTP PPS related information
+ * @addtogroup PPS related information
  *
  * @brief PPS frequency configuration
  * @{
