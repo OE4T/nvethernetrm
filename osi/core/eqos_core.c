@@ -694,6 +694,7 @@ static nve32_t eqos_hsi_configure(struct osi_core_priv_data *const osi_core,
 			       const nveu32_t enable)
 {
 	nveu32_t value;
+	nve32_t ret = 0;
 
 	if (enable == OSI_ENABLE) {
 		osi_core->hsi.enabled = OSI_ENABLE;
@@ -706,7 +707,7 @@ static nve32_t eqos_hsi_configure(struct osi_core_priv_data *const osi_core,
 
 		/*  T23X-EQOS_HSIv2-1: Enabling of Memory ECC */
 		value = osi_readla(osi_core,
-				   (nveu8_t *)osi_core->base + EQOS_MTL_ECC_CONTROL);
+				  (nveu8_t *)osi_core->base + EQOS_MTL_ECC_CONTROL);
 		value |= EQOS_MTL_ECC_MTXEE;
 		value |= EQOS_MTL_ECC_MRXEE;
 		value |= EQOS_MTL_ECC_MESTEE;
@@ -714,7 +715,58 @@ static nve32_t eqos_hsi_configure(struct osi_core_priv_data *const osi_core,
 		value |= EQOS_MTL_ECC_TSOEE;
 		value |= EQOS_MTL_ECC_DSCEE;
 		osi_writela(osi_core, value,
-			    (nveu8_t *)osi_core->base + EQOS_MTL_ECC_CONTROL);
+			   (nveu8_t *)osi_core->base + EQOS_MTL_ECC_CONTROL);
+
+		/* T23X-EQOS_HSIv2-2: Enabling of Bus Parity */
+		value = osi_readla(osi_core,
+				   (nveu8_t *)osi_core->base + EQOS_MTL_DPP_CONTROL);
+		value |= EQOS_EDPP | EQOS_OPE;
+		osi_writela(osi_core, value,
+			    (nveu8_t *)osi_core->base + EQOS_MTL_DPP_CONTROL);
+
+		/* For T26x CE/UCE are not handled by SW driver,since they are directly
+		 * reported to FSI through HSM , so not enabling it
+		 */
+		if (osi_core->mac_ver < OSI_EQOS_MAC_5_40) {
+			/* Enable Interrupts */
+			/*  T23X-EQOS_HSIv2-1: Enabling of Memory ECC */
+			value = osi_readla(osi_core,
+					   (nveu8_t *)osi_core->base + EQOS_MTL_ECC_INTERRUPT_ENABLE);
+			value |= EQOS_MTL_TXCEIE;
+			value |= EQOS_MTL_RXCEIE;
+			value |= EQOS_MTL_ECEIE;
+			value |= EQOS_MTL_RPCEIE;
+			osi_writela(osi_core, value,
+				    (nveu8_t *)osi_core->base + EQOS_MTL_ECC_INTERRUPT_ENABLE);
+
+			value = osi_readla(osi_core,
+					   (nveu8_t *)osi_core->base + EQOS_DMA_ECC_INTERRUPT_ENABLE);
+			value |= EQOS_DMA_TCEIE;
+			value |= EQOS_DMA_DCEIE;
+			osi_writela(osi_core, value,
+				    (nveu8_t *)osi_core->base + EQOS_DMA_ECC_INTERRUPT_ENABLE);
+
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+					   EQOS_WRAP_COMMON_INTR_ENABLE);
+			value |= EQOS_REGISTER_PARITY_ERR;
+			value |= EQOS_CORE_CORRECTABLE_ERR;
+			value |= EQOS_CORE_UNCORRECTABLE_ERR;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+				    EQOS_WRAP_COMMON_INTR_ENABLE);
+		}
+
+		/* Below 2 are applicable only for THOR EQOS */
+		/* T264-EQOS_HSIv2-34: Initialization of Transaction Timeout in PCS */
+		/* T264-EQOS_HSIv2-35: Initialization of Watchdog Timer for PCS FSM States */
+		if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+			value = (0xCBU << XPCS_SFTY_1US_MULT_SHIFT) & XPCS_SFTY_1US_MULT_MASK;
+			value |= ((nveu32_t)0x01U << XPCS_FSM_TO_SEL_SHIFT) & XPCS_FSM_TO_SEL_MASK;
+			value |= EQOS_PCS_SFTY_TMR_CTRL_RXFPEI;
+			ret = xpcs_write_safety(osi_core, EQOS_PCS_SFTY_TMR_CTRL, value);
+			if (ret != 0) {
+				goto fail;
+			}
+		}
 
 		/* T23X-EQOS_HSIv2-5: Enabling and Initialization of Transaction Timeout */
 		value = (0x198U << EQOS_TMR_SHIFT) & EQOS_TMR_MASK;
@@ -728,39 +780,6 @@ static nve32_t eqos_hsi_configure(struct osi_core_priv_data *const osi_core,
 		value = EQOS_PRTYEN | EQOS_TMOUTEN;
 		osi_writela(osi_core, value,
 			    (nveu8_t *)osi_core->base + EQOS_MAC_FSM_CONTROL);
-
-		/* T23X-EQOS_HSIv2-2: Enabling of Bus Parity */
-		value = osi_readla(osi_core,
-				   (nveu8_t *)osi_core->base + EQOS_MTL_DPP_CONTROL);
-		value |= EQOS_EDPP | EQOS_OPE;
-		osi_writela(osi_core, value,
-			    (nveu8_t *)osi_core->base + EQOS_MTL_DPP_CONTROL);
-
-		/* Enable Interrupts */
-		/*  T23X-EQOS_HSIv2-1: Enabling of Memory ECC */
-		value = osi_readla(osi_core,
-				   (nveu8_t *)osi_core->base + EQOS_MTL_ECC_INTERRUPT_ENABLE);
-		value |= EQOS_MTL_TXCEIE;
-		value |= EQOS_MTL_RXCEIE;
-		value |= EQOS_MTL_ECEIE;
-		value |= EQOS_MTL_RPCEIE;
-		osi_writela(osi_core, value,
-			    (nveu8_t *)osi_core->base + EQOS_MTL_ECC_INTERRUPT_ENABLE);
-
-		value = osi_readla(osi_core,
-				   (nveu8_t *)osi_core->base + EQOS_DMA_ECC_INTERRUPT_ENABLE);
-		value |= EQOS_DMA_TCEIE;
-		value |= EQOS_DMA_DCEIE;
-		osi_writela(osi_core, value,
-			    (nveu8_t *)osi_core->base + EQOS_DMA_ECC_INTERRUPT_ENABLE);
-
-		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				   EQOS_WRAP_COMMON_INTR_ENABLE);
-		value |= EQOS_REGISTER_PARITY_ERR;
-		value |= EQOS_CORE_CORRECTABLE_ERR;
-		value |= EQOS_CORE_UNCORRECTABLE_ERR;
-		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-			    EQOS_WRAP_COMMON_INTR_ENABLE);
 	} else {
 		osi_core->hsi.enabled = OSI_DISABLE;
 
@@ -782,37 +801,67 @@ static nve32_t eqos_hsi_configure(struct osi_core_priv_data *const osi_core,
 		osi_writela(osi_core, value,
 			    (nveu8_t *)osi_core->base + EQOS_MTL_ECC_CONTROL);
 
-		/* T23X-EQOS_HSIv2-5: Denitialization of Transaction Timeout */
-		osi_writela(osi_core, 0,
-			    (nveu8_t *)osi_core->base + EQOS_MAC_FSM_ACT_TIMER);
-
-		/* T23X-EQOS_HSIv2-4: Disable of Consistency Monitor for FSM States */
-		osi_writela(osi_core, 0,
-			    (nveu8_t *)osi_core->base + EQOS_MAC_FSM_CONTROL);
-
 		/* T23X-EQOS_HSIv2-2: Disable of Bus Parity */
 		value = osi_readla(osi_core,
 				   (nveu8_t *)osi_core->base + EQOS_MTL_DPP_CONTROL);
 		value &= ~EQOS_EDPP;
 		osi_writela(osi_core, value,
-			    (nveu8_t *)osi_core->base + EQOS_MTL_DPP_CONTROL);
+			   (nveu8_t *)osi_core->base + EQOS_MTL_DPP_CONTROL);
 
-		/* Disable Interrupts */
+		if (osi_core->mac_ver < OSI_EQOS_MAC_5_40) {
+			/* Disable Interrupts */
+			value = osi_readla(osi_core,
+					   (nveu8_t *)osi_core->base + EQOS_MTL_ECC_INTERRUPT_ENABLE);
+			value &= ~EQOS_MTL_TXCEIE;
+			value &= ~EQOS_MTL_RXCEIE;
+			value &= ~EQOS_MTL_ECEIE;
+			value &= ~EQOS_MTL_RPCEIE;
+			osi_writela(osi_core, value,
+				    (nveu8_t *)osi_core->base + EQOS_MTL_ECC_INTERRUPT_ENABLE);
+
+			value = osi_readla(osi_core,
+					   (nveu8_t *)osi_core->base + EQOS_DMA_ECC_INTERRUPT_ENABLE);
+			value &= ~EQOS_DMA_TCEIE;
+			value &= ~EQOS_DMA_DCEIE;
+			osi_writela(osi_core, value,
+				    (nveu8_t *)osi_core->base + EQOS_DMA_ECC_INTERRUPT_ENABLE);
+
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
+					   EQOS_WRAP_COMMON_INTR_ENABLE);
+			value &= ~EQOS_REGISTER_PARITY_ERR;
+			value &= ~EQOS_CORE_CORRECTABLE_ERR;
+			value &= ~EQOS_CORE_UNCORRECTABLE_ERR;
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
+				    EQOS_WRAP_COMMON_INTR_ENABLE);
+		}
+
+		/* Deinitialization of Watchdog Timer */
+		if (osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+			value &= ~(XPCS_SFTY_1US_MULT_MASK | XPCS_FSM_TO_SEL_MASK |
+				   EQOS_PCS_SFTY_TMR_CTRL_RXFPEI);
+			ret = xpcs_write_safety(osi_core, EQOS_PCS_SFTY_TMR_CTRL, value);
+			if (ret != 0) {
+				goto fail;
+			}
+		}
+
+		/* T23X-EQOS_HSIv2-5: Denitialization of Transaction Timeout */
+		value = osi_readla(osi_core,
+				   (nveu8_t *)osi_core->base + EQOS_MAC_FSM_ACT_TIMER);
+		value &= ~(EQOS_TMR_MASK | EQOS_LTMRMD_MASK | EQOS_NTMRMD_MASK);
+		osi_writela(osi_core, value,
+			    (nveu8_t *)osi_core->base + EQOS_MAC_FSM_ACT_TIMER);
+
+		/* T23X-EQOS_HSIv2-4: Disable of Consistency Monitor for FSM States */
+		value = osi_readla(osi_core,
+				   (nveu8_t *)osi_core->base + EQOS_MAC_FSM_CONTROL);
+		value &= ~EQOS_PRTYEN;
+		value &= ~EQOS_TMOUTEN;
 		osi_writela(osi_core, 0,
-			    (nveu8_t *)osi_core->base + EQOS_MTL_ECC_INTERRUPT_ENABLE);
-
-		osi_writela(osi_core, 0,
-			    (nveu8_t *)osi_core->base + EQOS_DMA_ECC_INTERRUPT_ENABLE);
-
-		value = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-				   EQOS_WRAP_COMMON_INTR_ENABLE);
-		value &= ~EQOS_REGISTER_PARITY_ERR;
-		value &= ~EQOS_CORE_CORRECTABLE_ERR;
-		value &= ~EQOS_CORE_UNCORRECTABLE_ERR;
-		osi_writela(osi_core, value, (nveu8_t *)osi_core->base +
-			    EQOS_WRAP_COMMON_INTR_ENABLE);
+			    (nveu8_t *)osi_core->base + EQOS_MAC_FSM_CONTROL);
 	}
-	return 0;
+fail:
+	return ret;
 }
 
 #ifdef NV_VLTEST_BUILD
@@ -1771,7 +1820,8 @@ static void eqos_handle_common_intr(struct osi_core_priv_data *const osi_core)
 		osi_writela(osi_core, EQOS_MAC_SBD_INTR, (nveu8_t *)osi_core->base +
 			    EQOS_WRAP_COMMON_INTR_STATUS);
 #ifdef HSI_SUPPORT
-		if (osi_core->hsi.enabled == OSI_ENABLE) {
+		if ((osi_core->hsi.enabled == OSI_ENABLE) &&
+		    (osi_core->mac_ver < OSI_EQOS_MAC_5_40)) {
 			eqos_handle_hsi_intr(osi_core);
 		}
 #endif

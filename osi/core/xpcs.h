@@ -207,6 +207,8 @@
 #define XPCS_SFTY_1US_MULT_SHIFT			0U
 #define XPCS_FSM_TO_SEL_SHIFT				10U
 #define XPCS_FSM_TO_SEL_MASK				0xC00U
+#define EQOS_PCS_SFTY_TMR_CTRL				0x7E03D4
+#define EQOS_PCS_SFTY_TMR_CTRL_RXFPEI			OSI_BIT(8)
 #endif
 /** @} */
 

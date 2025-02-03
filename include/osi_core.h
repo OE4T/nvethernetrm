@@ -657,6 +657,8 @@ typedef my_lint_64		nvel64_t;
 #define PHY_WRITE_VERIFY_FAIL_IDX	7U
 /** @brief MAC to MAC error Index */
 #define MAC2MAC_ERR_IDX		8U
+/** @brief Link training monitor error Index */
+#define PCS_LNK_ERR_IDX		9U
 /** @brief MACSEC RX CRC error Index */
 #define MACSEC_RX_CRC_ERR_IDX	0U
 /** @brief MACSEC TX CRC error Index */
@@ -690,7 +692,7 @@ typedef my_lint_64		nvel64_t;
  * @brief Maximum number of different mac error code
  * HSI_SW_ERR_CODE + Two (Corrected and Uncorrected error code)
  */
-#define OSI_HSI_MAX_MAC_ERROR_CODE		9U
+#define OSI_HSI_MAX_MAC_ERROR_CODE		10U
 
 /**
  * @brief Maximum number of different macsec error code
@@ -739,6 +741,8 @@ typedef my_lint_64		nvel64_t;
 #define OSI_M2M_SET_TIME_ERR		0x11U
 /** @brief M2M config PTP error code */
 #define OSI_M2M_CONFIG_PTP_ERR		0x12U
+/** @brief pcs link status error code */
+#define OSI_PCS_LNK_ERR			0x13U
 
 /** @brief EQOS uncorrectable attribute */
 #define OSI_EQOS_UNCORRECTABLE_ATTR	0x109

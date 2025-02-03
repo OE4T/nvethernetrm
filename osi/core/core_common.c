@@ -1933,6 +1933,11 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 		osi_core->hsi.report_err = OSI_ENABLE;
 		osi_core->hsi.report_count_err[AUTONEG_ERR_IDX] = OSI_ENABLE;
 		break;
+	case OSI_PCS_LNK_ERR:
+		osi_core->hsi.err_code[PCS_LNK_ERR_IDX] = OSI_PCS_LNK_ERR;
+		osi_core->hsi.report_err = OSI_ENABLE;
+		osi_core->hsi.report_count_err[PCS_LNK_ERR_IDX] = OSI_ENABLE;
+		break;
 	case OSI_XPCS_WRITE_FAIL_ERR:
 		osi_core->hsi.err_code[XPCS_WRITE_FAIL_IDX] = OSI_XPCS_WRITE_FAIL_ERR;
 		osi_core->hsi.report_err = OSI_ENABLE;
