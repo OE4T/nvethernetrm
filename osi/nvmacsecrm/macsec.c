@@ -5302,6 +5302,7 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 	}
 
 	osi_core->macsec_initialized = OSI_ENABLE;
+	return ret;
 
 upd_byp_sci_lut:
 	ret = upd_byp_rx_lut_with_vf_mac(osi_core, macsec_vf_mac);
