@@ -1435,14 +1435,49 @@ done:
 	return ret;
 }
 
+static nveu32_t speed_index(nve32_t speed)
+{
+	nveu32_t ret;
+
+	switch (speed) {
+	case OSI_SPEED_10:
+		ret = OSI_SPEED_10_INX;
+		break;
+	case OSI_SPEED_100:
+		ret =  OSI_SPEED_100_INX;
+		break;
+	case OSI_SPEED_1000:
+		ret = OSI_SPEED_1000_INX;
+		break;
+	case OSI_SPEED_2500:
+		ret = OSI_SPEED_2500_INX;
+		break;
+	case OSI_SPEED_5000:
+		ret = OSI_SPEED_5000_INX;
+		break;
+	case OSI_SPEED_10000:
+		ret = OSI_SPEED_10000_INX;
+		break;
+	case OSI_SPEED_25000:
+		ret = OSI_SPEED_25000_INX;
+		break;
+	default:
+		ret = OSI_SPEED_10000_INX;
+		break;
+	}
+
+	return ret;
+}
 static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_core,
 					struct osi_fpe_config *const fpe)
 {
 	nveu32_t i = 0U;
+	nveu32_t index = 0;
 	nveu32_t val = 0U;
 	nveu32_t temp = 0U, temp1 = 0U;
 	nveu32_t temp_shift = 0U;
 	nve32_t ret = 0;
+
 	const nveu32_t MTL_FPE_CTS[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_CTS,
 						MGBE_MTL_FPE_CTS,
 						MGBE_MTL_FPE_CTS};
@@ -1464,6 +1499,9 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 	const nveu32_t MTL_FPE_ADV[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_ADV,
 						MGBE_MTL_FPE_ADV,
 						MGBE_MTL_FPE_ADV};
+	const nveu32_t MTL_FPE_HADV_VAL[OSI_SPEED_MAX_INX] = {FPE_1G_HADV, FPE_1G_HADV,
+						FPE_1G_HADV, FPE_10G_HADV, FPE_10G_HADV,
+						FPE_10G_HADV, FPE_25G_HADV};
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + MTL_FPE_CTS[osi_core->mac]);
 	val &= ~MTL_FPE_CTS_PEC;
@@ -1513,8 +1551,8 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + (MTL_FPE_ADV[osi_core->mac]));
 	val &= ~MTL_FPE_ADV_HADV_MASK;
-	//(minimum_fragment_size +IPG/EIPG + Preamble) *.8 ~98ns for10G
-	val |= MTL_FPE_ADV_HADV_VAL;
+	index = speed_index(osi_core->speed);
+	val |= MTL_FPE_HADV_VAL[index];
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + (MTL_FPE_ADV[osi_core->mac]));
 
 	if (osi_core->mac == OSI_MAC_HW_MGBE) {

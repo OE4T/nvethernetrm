@@ -129,6 +129,32 @@
 #define MAC_RX_FLW_CTRL			0x0090
 #define MAC_RX_FLW_CTRL_RFE		OSI_BIT(0)
 
+/**
+ * @addtogroup FPE HADV register value
+ *
+ * @brief Defines the supported speeds
+ * and the corresponding HADV value for
+ * hardware according to the ASIC recommendations.
+ * The HADV value is a speed-dependent parameter.
+ * The speed index is used to map the HADV
+ * for hardware during initialization.
+ *
+ * @{
+ */
+#define OSI_SPEED_10_INX	0U
+#define OSI_SPEED_100_INX	1U
+#define OSI_SPEED_1000_INX	2U
+#define OSI_SPEED_2500_INX	3U
+#define OSI_SPEED_5000_INX	4U
+#define OSI_SPEED_10000_INX	5U
+#define OSI_SPEED_25000_INX	6U
+#define OSI_SPEED_MAX_INX	7U
+
+#define FPE_1G_HADV			0x380U
+#define FPE_10G_HADV		0x59U
+#define FPE_25G_HADV		0x23U
+/** @} */
+
 #ifdef HSI_SUPPORT
 /**
  * @addtogroup MMC HW register offsets
