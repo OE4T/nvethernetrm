@@ -417,6 +417,7 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 	nveu32_t count;
 	nve32_t ret = 0;
 	nveu32_t once = 0;
+	nveu64_t retry_delay = OSI_DELAY_1US;
 	const nveu32_t uphy_status_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_XPCS_WRAP_UPHY_STATUS,
 		XPCS_WRAP_UPHY_STATUS,
@@ -430,6 +431,15 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 
 	if ((osi_core->mac == OSI_MAC_HW_MGBE_T26X) || (osi_core->mac_ver == OSI_EQOS_MAC_5_40)) {
 		retry = 1000U;
+		if (osi_core->uphy_gbe_mode == OSI_GBE_MODE_25G) {
+			/* Delay added as per HW team suggestion which is
+			 * of 100msec if equalizer is enabled for every
+			 * iteration of a lane bring sequence. So 100 * 1000
+			 * gives us a delay of 100msec for each retry of lane
+			 * bringup
+			 */
+			retry_delay = 100U;
+		}
 	}
 
 	val = osi_readla(osi_core,
@@ -466,10 +476,10 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 				 * but added an extra count of 4 for safer side
 				 */
 				if (once == 0U) {
-					osi_core->osd_ops.udelay(OSI_DELAY_1US);
+					osi_core->osd_ops.udelay(retry_delay);
 					once = 1U;
 				} else {
-					osi_core->osd_ops.udelay(OSI_DELAY_4US);
+					osi_core->osd_ops.udelay(retry_delay);
 				}
 			}
 		}
