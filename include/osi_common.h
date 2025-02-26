@@ -354,6 +354,7 @@ struct osi_mgbe_coe_pib {
 #endif /* OSI_DEBUG */
 /** @} */
 
+/** \cond DO_NOT_DOCUMENT */
 /**
  * @brief osi_memset - osi memset
  *
@@ -376,6 +377,7 @@ static inline void osi_memset(void *s, nveu8_t c, nveu64_t count)
 		xs[i] = c;
 	}
 }
+/** \endcond */
 
 /**
  * @brief unused function attribute
@@ -425,6 +427,7 @@ struct osi_pdma_vdma_data {
 	nveu32_t vdma_chans[OSI_MGBE_MAX_NUM_CHANS];
 };
 
+/** \cond DO_NOT_DOCUMENT */
 /**
  * @brief osi_valid_pbl_value - returns the allowed pbl value.
  * @note
@@ -465,6 +468,7 @@ static inline nveu32_t osi_valid_pbl_value(nveu32_t pbl_value)
 
 	return allowed_pbl;
 }
+/** \endcond */
 
 /**
  * @addtogroup PPS related information

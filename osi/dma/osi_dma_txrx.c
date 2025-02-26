@@ -232,6 +232,60 @@ static inline nveu32_t compltd_rx_desc_cnt(struct osi_dma_priv_data *osi_dma,
 	return descr_compltd;
 }
 
+static inline nve32_t is_data_ready_to_process(struct osi_rx_ring *rx_ring,
+					       nveu8_t *base, nveu32_t chan_num)
+{
+	const nveu32_t dma_debug_shift[OSI_EQOS_MAX_NUM_CHANS] = {
+		EQOS_DMA_DEBUG_STATUS_0_RPS0_SHIFT,
+		EQOS_DMA_DEBUG_STATUS_0_RPS1_SHIFT,
+		EQOS_DMA_DEBUG_STATUS_0_RPS2_SHIFT,
+		EQOS_DMA_DEBUG_STATUS_1_RPS3_SHIFT,
+		EQOS_DMA_DEBUG_STATUS_1_RPS4_SHIFT,
+		EQOS_DMA_DEBUG_STATUS_1_RPS5_SHIFT,
+		EQOS_DMA_DEBUG_STATUS_1_RPS6_SHIFT,
+		EQOS_DMA_DEBUG_STATUS_2_RPS7_SHIFT
+	};
+	const nveu32_t dma_debug_status[OSI_EQOS_MAX_NUM_CHANS] = {
+		EQOS_DMA_DEBUG_STATUS_0,
+		EQOS_DMA_DEBUG_STATUS_0,
+		EQOS_DMA_DEBUG_STATUS_0,
+		EQOS_DMA_DEBUG_STATUS_1,
+		EQOS_DMA_DEBUG_STATUS_1,
+		EQOS_DMA_DEBUG_STATUS_1,
+		EQOS_DMA_DEBUG_STATUS_1,
+		EQOS_DMA_DEBUG_STATUS_2
+	};
+	nveu64_t sw_cur_rx_desc_phy_addr = 0UL;
+	nveu64_t hw_cur_rx_desc_phy_addr = 0UL;
+	nveu32_t chan = chan_num & 0xFU;
+	nveu32_t debug_status = 0U;
+	nve32_t ret = 0;
+
+	/* Get current software descriptor phyical address */
+	sw_cur_rx_desc_phy_addr = rx_ring->rx_desc_phy_addr +
+				  (sizeof(struct osi_rx_desc) * rx_ring->cur_rx_idx);
+	sw_cur_rx_desc_phy_addr = L32(sw_cur_rx_desc_phy_addr);
+	/* Get current hardware descriptor phyical address */
+	hw_cur_rx_desc_phy_addr = osi_dma_readl(base + EQOS_DMA_CHX_CARD(chan));
+
+	/* Compare HW processing address with software processing addresss */
+	if (hw_cur_rx_desc_phy_addr == sw_cur_rx_desc_phy_addr) {
+		/* there may be chances that data buffer might not committed memory
+		 * check for DMA state - only process the pkts if DMA is idle
+		 */
+		debug_status = osi_dma_readl(base + dma_debug_status[chan]);
+		debug_status = debug_status >> (dma_debug_shift[chan] & 0x1FU);
+
+		if ((debug_status & EQOS_DMA_DEBUG_STATUS_RPSX_MASK) >=
+		    EQOS_DMA_DEBUG_STATUS_RPSX_RUN_CRD) {
+			/* DMA is not idle - its busy. Don't process the data */
+			ret = -1;
+		}
+	}
+
+	return ret;
+}
+
 nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 				   nveu32_t chan, nve32_t budget,
 				   nveu32_t *more_data_avail)
@@ -284,6 +338,16 @@ nve32_t osi_process_rx_completions(struct osi_dma_priv_data *osi_dma,
 		if ((rx_desc->rdes3 & RDES3_OWN) == RDES3_OWN) {
 			break;
 		}
+
+		if (osi_dma->mac == OSI_MAC_HW_EQOS) {
+			/* check if data is ready to process */
+			if (is_data_ready_to_process(rx_ring, (nveu8_t *)osi_dma->base,
+						     chan) != 0) {
+				/* Data is not ready not process. retry again */
+				continue;
+			}
+		}
+
 		rx_swcx = rx_ring->rx_swcx + rx_ring->cur_rx_idx;
 		*rx_pkt_cx = (struct osi_rx_pkt_cx){0};
 #if defined OSI_DEBUG && !defined OSI_STRIPPED_LIB
