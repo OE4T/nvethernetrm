@@ -246,6 +246,30 @@ static inline nve32_t eqos_xpcs_set_speed(struct osi_core_priv_data *osi_core,
 #endif
 
 /**
+ * @brief update_an_status - update AN status.
+ *
+ * Algorithm: This routine initialize AN status based on
+ *		the USXGMII mode selected. Later this value
+ *		will be overwritten if AN is enabled.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ * @param[out] an_status: Predefined AN status
+ *
+ */
+static inline void update_an_status(const struct osi_core_priv_data *const osi_core,
+				    nveu32_t *an_status)
+{
+	/* initialize an_status based on DT, later overwite if AN is enabled */
+	if (osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G) {
+		*an_status = XPCS_USXG_AN_STS_SPEED_10000;
+	} else if (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G) {
+		*an_status = XPCS_USXG_AN_STS_SPEED_5000;
+	} else {
+		/* do nothing */
+	}
+}
+
+/**
  * @brief xpcs_start - Start XPCS
  *
  * Algorithm: This routine enables AN and set speed based on AN status
@@ -267,15 +291,20 @@ nve32_t xpcs_start(struct osi_core_priv_data *osi_core)
 
 	if ((osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G) ||
 	    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G)) {
-		ctrl = xpcs_read(xpcs_base, XPCS_SR_MII_CTRL);
-		ctrl |= XPCS_SR_MII_CTRL_AN_ENABLE;
-		ret = xpcs_write_safety(osi_core, XPCS_SR_MII_CTRL, ctrl);
-		if (ret != 0) {
-			goto fail;
-		}
-		ret = xpcs_poll_for_an_complete(osi_core, &an_status);
-		if (ret < 0) {
-			goto fail;
+		/* initialize an_status based on DT, later overwite if AN is enabled */
+		update_an_status(osi_core, &an_status);
+		/* Skip AN in USXGMII mode if skip_usxgmii_an is configured in DT */
+		if (osi_core->skip_usxgmii_an == OSI_DISABLE) {
+			ctrl = xpcs_read(xpcs_base, XPCS_SR_MII_CTRL);
+			ctrl |= XPCS_SR_MII_CTRL_AN_ENABLE;
+			ret = xpcs_write_safety(osi_core, XPCS_SR_MII_CTRL, ctrl);
+			if (ret != 0) {
+				goto fail;
+			}
+			ret = xpcs_poll_for_an_complete(osi_core, &an_status);
+			if (ret < 0) {
+				goto fail;
+			}
 		}
 
 		ret = xpcs_set_speed(osi_core, an_status);

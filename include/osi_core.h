@@ -1865,6 +1865,9 @@ struct osi_core_priv_data {
 	nve32_t speed;
 	/** PCS BASE-R FEC enable */
 	nveu32_t pcs_base_r_fec_en;
+	/** skip auto neg for usxgmii mode.
+	 * 0(enable AN) and 1(disable AN) are the valid values */
+	nveu32_t skip_usxgmii_an;
 };
 
 /**
