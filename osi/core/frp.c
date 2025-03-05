@@ -253,6 +253,7 @@ done:
  * @param[in] offset: Actual match data offset position.
  * @param[in] filter_mode: Filter mode from FRP command.
  * @param[in] next_frp_id: FRP ID to link this ID.
+ * @param[in] dma_sel: DMA channel Selection Value.
  * @param[in] dcht: DMA Channel Selection Type.
  * @param[in] rchlist_indx: Receive Channel list index.
  *

@@ -33,6 +33,7 @@
  * @brief mgbe_poll_for_mac_accrtl - Poll for Indirect Access control and status
  * register operations complete.
  *
+ * @note
  * Algorithm: Waits for waits for transfer busy bit to be cleared in
  * MAC Indirect address control register to complete operations.
  *
@@ -71,6 +72,7 @@ static nve32_t mgbe_poll_for_mac_acrtl(struct osi_core_priv_data *osi_core)
 /**
  * @brief mgbe_mac_indir_addr_write - MAC Indirect AC register write.
  *
+ * @note
  * Algorithm: writes MAC Indirect AC register
  *
  * @param[in] osi_core: osi core priv data structure
@@ -140,6 +142,7 @@ static nve32_t mgbe_mac_indir_addr_write(struct osi_core_priv_data *osi_core,
 /**
  * @brief mgbe_mac_indir_addr_read - MAC Indirect AC register read.
  *
+ * @note
  * Algorithm: Reads MAC Indirect AC register
  *
  * @param[in] osi_core: osi core priv data structure
@@ -210,6 +213,7 @@ fail:
 /**
  * @brief mgbe_filter_args_validate - Validates the filter arguments
  *
+ * @note
  * Algorithm: This function just validates all arguments provided by
  * the osi_filter structure variable.
  *
@@ -307,6 +311,7 @@ fail:
 /**
  * @brief check_mac_addr - Compare macaddress with rchannel address
  *
+ * @note
  * Algorithm: This function just validates macaddress with rchannel address.
  *
  * @param[in] mac_addr: Mac address.
@@ -333,6 +338,7 @@ static nve32_t check_mac_addr(nveu8_t const *mac_addr, nveu8_t *rch_addr)
 /**
  * @brief mgbe_free_rchlist_index - Free index.
  *
+ * @note
  * Algorithm: This function just free the Receive channel index.
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -355,6 +361,7 @@ static void mgbe_free_rchlist_index(struct osi_core_priv_data *osi_core,
 /**
  * @brief mgbe_get_rchlist_index - find free index
  *
+ * @note
  * Algorithm: This function gets free index for receive channel list.
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -397,6 +404,7 @@ done:
 /**
  * @brief mgbe_write_rchlist - add/update rchlist index with new value
  *
+ * @note
  * Algorithm: This function will write Receive channel list entry registers into HW.
  * This function should be called 2 times, 1 for 0-31 channel update,
  * 2nd for 32-47 channel update, data filed in 2nd read should be 0 for bit
@@ -405,7 +413,7 @@ done:
  * @param[in] osi_core: OSI core private data structure.
  * @param[in] acc_mode: 1 - continuation, 0 - single acccess
  * @param[in] addr: Rchlist register address.
- * @param[in/out] data: Rchlist register data.
+ * @param[inout] data: Rchlist register data.
  * @param[in] read_write: Rchlist read - 0, write - 1
  *
  * @note MAC should be init and started. see osi_start_mac()
@@ -503,15 +511,17 @@ done:
 }
 
 /**
- * @brief mgbe_rchlist_add_del - Add or delete based on the chnnel
+ * @brief mgbe_rchlist_add_del - Add or delete based on the channel
  *
- * Algorithm: This function will add or delete the receive channel list.
+ * @note
+ * Algorithm:
+ * - This function will add or delete the receive channel list.
  *
  * @param[in] osi_core: OSI core private data structure.
  * @param[in] filter: OSI filter structure.
- * @param[in] add_del: Rchlist add - 1, del - 0
- * @param[in/out] idx: Rchlist index.
- * @param[in/out] rch: rch status
+ * @param[in] add_del: Rchlist add - 1, del - 0.
+ * @param[inout] idx: Rchlist index.
+ * @param[inout] rch: rch status.
  * if rch0_data and rch1_data is zero than rch is zero.
  * if rch0_data and rch1_data is non zero than rch is nozero.
  *
@@ -521,8 +531,8 @@ done:
  * @retval -1 on failure.
  */
 static nve32_t mgbe_rchlist_add_del(struct osi_core_priv_data *osi_core,
-				  const struct osi_filter *filter,
-			          nveu32_t add_del, nve32_t *idx, nveu32_t *rch)
+				    const struct osi_filter *filter,
+				    nveu32_t add_del, nve32_t *idx, nveu32_t *rch)
 {
 	nveu32_t rch0_data = 0x0U;
 	nveu32_t rch1_data = 0x0U;
@@ -617,6 +627,7 @@ fail:
  * @brief mgbe_update_mac_addr_low_high_reg- Update L2 address in filter
  *	  register
  *
+ * @note
  * Algorithm: This routine update MAC address to register for filtering
  *	based on dma_routing_enable, addr_mask and src_dest. Validation of
  *	dma_chan as well as DCS bit enabled in RXQ to DMA mapping register
@@ -826,6 +837,7 @@ fail:
 /**
  * @brief mgbe_poll_for_l3l4crtl - Poll for L3_L4 filter register operations.
  *
+ * @note
  * Algorithm: Waits for waits for transfer busy bit to be cleared in
  * L3_L4 address control register to complete filter register operations.
  *
@@ -873,6 +885,7 @@ fail:
 /**
  * @brief mgbe_l3l4_filter_write - L3_L4 filter register write.
  *
+ * @note
  * Algorithm: writes L3_L4 filter register
  *
  * @param[in] osi_core: osi core priv data structure
@@ -1053,6 +1066,7 @@ exit_func:
 /**
  * @brief mgbe_config_vlan_filter_reg - config vlan filter register
  *
+ * @note
  * Algorithm: This sequence is used to enable/disable VLAN filtering and
  *	also selects VLAN filtering mode- perfect/hash
  *
@@ -1126,6 +1140,7 @@ static nve32_t mgbe_config_vlan_filtering(struct osi_core_priv_data *osi_core,
 /**
  * @brief mgbe_config_ptp_rxq - Config PTP RX packets queue route
  *
+ * @note
  * Algorithm: This function is used to program the PTP RX packets queue.
  *
  * @param[in] osi_core: OSI core private data.
@@ -1246,6 +1261,7 @@ static nve32_t mgbe_config_mac_loopback(struct osi_core_priv_data *const osi_cor
 /**
  * @brief mgbe_config_arp_offload - Enable/Disable ARP offload
  *
+ * @note
  * Algorithm:
  *      1) Read the MAC configuration register
  *      2) If ARP offload is to be enabled, program the IP address in
@@ -1300,6 +1316,7 @@ static nve32_t mgbe_config_arp_offload(struct osi_core_priv_data *const osi_core
 /**
  * @brief mgbe_config_frp - Enable/Disale RX Flexible Receive Parser in HW
  *
+ * @note
  * Algorithm:
  *      1) Read the MTL OP Mode configuration register.
  *      2) Enable/Disable FRPE bit based on the input.
@@ -1382,6 +1399,7 @@ done:
 /**
  * @brief mgbe_frp_write - Write FRP entry into HW
  *
+ * @note
  * Algorithm: This function will write FRP entry registers into HW.
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -1462,6 +1480,7 @@ done:
 /**
  * @brief mgbe_update_frp_entry - Update FRP Instruction Table entry in HW
  *
+ * @note
  * Algorithm:
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -1580,6 +1599,7 @@ done:
 /**
  * @brief mgbe_update_frp_nve - Update FRP NVE into HW
  *
+ * @note
  * Algorithm:
  *
  * @param[in] osi_core: osi core priv data structure
@@ -1614,6 +1634,7 @@ static void  mgbe_update_frp_nve(struct osi_core_priv_data *const osi_core,
 /**
  * @brief mgbe_configure_mtl_queue - Configure MTL Queue
  *
+ * @note
  * Algorithm: This takes care of configuring the  below
  *	parameters for the MTL Queue
  *	1) Mapping MTL Rx queue and DMA Rx channel
@@ -1805,6 +1826,7 @@ fail:
 /**
  * @brief mgbe_rss_write_reg - Write into RSS registers
  *
+ * @note
  * Algorithm: Programes RSS hash table or RSS hash key.
  *
  * @param[in] addr: MAC base address
@@ -1865,6 +1887,7 @@ static nve32_t mgbe_rss_write_reg(struct osi_core_priv_data *osi_core,
 /**
  * @brief mgbe_config_rss - Configure RSS
  *
+ * @note
  * Algorithm: Programes RSS hash table or RSS hash key.
  *
  * @param[in] osi_core: OSI core private data.
@@ -1995,6 +2018,7 @@ static nve32_t mgbe_config_flow_control(struct osi_core_priv_data *const osi_cor
 /**
  * @brief mgbe_hsi_configure - Configure HSI
  *
+ * @note
  * Algorithm: enable LIC interrupt and HSI features
  *
  * @param[in, out] osi_core: OSI core private data structure.
@@ -2197,6 +2221,7 @@ fail:
 /**
  * @brief mgbe_hsi_inject_err - Inject error
  *
+ * @note
  * Algorithm: Use error injection method to induce error
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -2242,6 +2267,7 @@ static nve32_t mgbe_hsi_inject_err(struct osi_core_priv_data *const osi_core,
 /**
  * @brief mgbe_configure_mac - Configure MAC
  *
+ * @note
  * Algorithm: This takes care of configuring the  below
  *	parameters for the MAC
  *	1) Programming the MAC address
@@ -2408,6 +2434,7 @@ static void mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 /**
  * @brief mgbe_dma_ind_config - Configures the DMA indirect registers
  *
+ * @note
  * Algorithm: Write to Indirect DMA registers
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -2452,6 +2479,7 @@ done:
 /**
  * @brief mgbe_configure_pdma - Configure PDMA parameters and TC mapping
  *
+ * @note
  * Algorithm:
  *	1) Program Tx/Rx PDMA PBL, ORR, OWR parameters
  *	2) Program PDMA to TC mapping for Tx and Rx
@@ -2633,6 +2661,7 @@ done:
 /**
  * @brief mgbe_configure_dma - Configure DMA
  *
+ * @note
  * Algorithm: This takes care of configuring the  below
  *	parameters for the DMA
  *	1) Programming different burst length for the DMA
@@ -2767,6 +2796,7 @@ exit:
 /**
  * @brief mgbe_core_init - MGBE MAC, MTL and common DMA Initialization
  *
+ * @note
  * Algorithm: This function will take care of initializing MAC, MTL and
  *	common DMA registers.
  *
@@ -2874,6 +2904,7 @@ fail:
 /**
  * @brief mgbe_handle_mac_fpe_intrs
  *
+ * @note
  * Algorithm: This function takes care of handling the
  *	MAC FPE interrupts.
  *
@@ -3003,6 +3034,7 @@ static void mgbe_handle_link_change_and_fpe_intrs(struct osi_core_priv_data *osi
 /**
  * @brief mgbe_handle_mac_intrs - Handle MAC interrupts
  *
+ * @note
  * Algorithm: This function takes care of handling the
  *	MAC nve32_terrupts which includes speed, mode detection.
  *
@@ -3143,6 +3175,7 @@ done:
 /**
  * @brief mgbe_update_dma_sr_stats - stats for dma_status error
  *
+ * @note
  * Algorithm: increament error stats based on corresponding bit filed.
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -3244,6 +3277,7 @@ done:
 /**
  * @brief mgbe_set_avb_algorithm - Set TxQ/TC avb config
  *
+ * @note
  * Algorithm:
  *	1) Check if queue index is valid
  *	2) Update operation mode of TxQ/TC
@@ -3368,6 +3402,7 @@ done:
 /**
  * @brief mgbe_get_avb_algorithm - Get TxQ/TC avb config
  *
+ * @note
  * Algorithm:
  *	1) Check if queue index is valid
  *	2) read operation mode of TxQ/TC
@@ -3548,6 +3583,7 @@ static void mgbe_handle_cgce_hlbs_hlbf(struct osi_core_priv_data *osi_core, nveu
 /**
  * @brief mgbe_handle_mtl_intrs - Handle MTL interrupts
  *
+ * @note
  * Algorithm: Code to handle interrupt for MTL EST error and status.
  * There are possible 4 errors which can be part of common interrupt in case of
  * MTL_EST_SCH_ERR (sheduling error)- HLBS
@@ -3644,6 +3680,7 @@ done:
 /**
  * @brief mgbe_config_ptp_offload - Enable/Disable PTP offload
  *
+ * @note
  * Algorithm: Based on input argument, update PTO and TSCR registers.
  * Update ptp_filter for TSCR register.
  *
@@ -3819,6 +3856,7 @@ static void mgbe_handle_hsi_wrap_common_intr(struct osi_core_priv_data *osi_core
 /**
  * @brief mgbe_handle_hsi_intr - Handles hsi interrupt.
  *
+ * @note
  * Algorithm:
  * - Read safety interrupt status register and clear it.
  * - Update error code in osi_hsi_data structure
@@ -3895,6 +3933,7 @@ static void mgbe_handle_hsi_intr(struct osi_core_priv_data *osi_core)
 /**
  * @brief mgbe_handle_common_intr - Handles common interrupt.
  *
+ * @note
  * Algorithm: Clear common nve32_terrupt source.
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -4014,6 +4053,7 @@ done:
 /**
  * @brief mgbe_pad_calibrate - PAD calibration
  *
+ * @note
  * Algorithm: Since PAD calibration not applicable for MGBE
  * it returns zero.
  *
@@ -4032,6 +4072,7 @@ static nve32_t mgbe_pad_calibrate(OSI_UNUSED
 /**
  * @brief mgbe_config_mac_tx - Enable/Disable MAC Tx
  *
+ * @note
  * Algorithm: Enable/Disable MAC Transmitter engine
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -4062,6 +4103,7 @@ static void mgbe_config_mac_tx(struct osi_core_priv_data *const osi_core,
 /**
  * @brief mgbe_mdio_busy_wait - MDIO busy wait loop
  *
+ * @note
  * Algorithm: Wait for any previous MII read/write operation to complete
  *
  * @param[in] osi_core: OSI core data struture.
@@ -4099,6 +4141,7 @@ fail:
 /**
  * @brief mgbe_write_phy_reg - Write to a PHY register over MDIO bus.
  *
+ * @note
  * Algorithm: Write into a PHY register through MGBE MDIO bus.
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -4171,6 +4214,7 @@ fail:
 /**
  * @brief mgbe_read_phy_reg - Read from a PHY register over MDIO bus.
  *
+ * @note
  * Algorithm: Write into a PHY register through MGBE MDIO bus.
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -4247,6 +4291,7 @@ fail:
 /**
  * @brief mgbe_disable_tx_lpi - Helper function to disable Tx LPI.
  *
+ * @note
  * Algorithm:
  * Clear the bits to enable Tx LPI, Tx LPI automate, LPI Tx Timer and
  * PHY Link status in the LPI control/status register
@@ -4271,6 +4316,7 @@ static inline void mgbe_disable_tx_lpi(struct osi_core_priv_data *osi_core)
 /**
  * @brief mgbe_configure_eee - Configure the EEE LPI mode
  *
+ * @note
  * Algorithm: This routine configures EEE LPI mode in the MAC.
  * 1) The time (in microsecond) to wait before resuming transmission after
  * exiting from LPI
@@ -4580,6 +4626,7 @@ done:
 /**
  * @brief mgbe_poll_for_update_ts_complete - Poll for update time stamp
  *
+ * @note
  * Algorithm: Read time stamp update value from TCR register until it is
  *	equal to zero.
  *
@@ -4617,6 +4664,7 @@ static inline nve32_t mgbe_poll_for_update_ts_complete(
 /**
  * @brief mgbe_adjust_mactime - Adjust MAC time with system time
  *
+ * @note
  * Algorithm: Update MAC time with system time
  *
  * @param[in] osi_core: OSI core private data structure.

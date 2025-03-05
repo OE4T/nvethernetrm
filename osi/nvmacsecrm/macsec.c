@@ -2194,6 +2194,7 @@ static nve32_t sc_state_lut_config(struct osi_core_priv_data *const osi_core,
  *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
  *  - TraceID: ***********
  *
+ * @param[in] osi_core: OSI core private data structure.
  * @param[in] lut_config: sa_state from lut_config is used. Param used sc_param_out
  * @param[out] lut_data: rx_sc_params are updated to lut_data buffer
  *
@@ -2238,6 +2239,7 @@ static void rx_sc_param_lut_config(
  *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
  *  - TraceID: ***********
  *
+ * @param[in] osi_core: OSI core private data structure.
  * @param[in] lut_config: sa_state from lut_config is used. Param used sc_param_out
  * @param[out] lut_data: tx_sc_params are updated to lut_data buffer
  *
@@ -2780,6 +2782,7 @@ exit:
  *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
  *  - TraceID: ***********
  *
+ * @param[in] osi_core: OSI core private data structure. used param macsec_base
  * @param[in] lut_config: attributes from lut_config is used.
  * @param[out] lut_data: lut_data is updated with attributes from lut_config
  *
@@ -2847,6 +2850,7 @@ exit:
  *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
  *  - TraceID: ***********
  *
+ * @param[in] osi_core: OSI core private data structure. used param macsec_base
  * @param[in] lut_config: attributes from lut_config is used.
  * @param[out] lut_data: lut_data is updated with attributes from lut_config
  *
@@ -3201,6 +3205,7 @@ static inline nve32_t lut_data_write(struct osi_core_priv_data *const osi_core,
  *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
  *  - TraceID: ***********
  *
+ * @param[in] osi_core: OSI core private data structure.
  * @param[in] lut_config: attributes from lut_config is used
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
@@ -6232,7 +6237,7 @@ static void hsi_nvmacsec_error_inject(struct osi_core_priv_data *const osi_core,
  *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
  *  - TraceID: ***********
  *
- * @param[in] osi_core: OSI core private data structure. used param macsec_base
+ * @param[inout] macsecops: OSI macsec core ops
  *
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
