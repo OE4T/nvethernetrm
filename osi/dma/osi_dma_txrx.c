@@ -234,11 +234,13 @@ static inline nveu32_t compltd_rx_desc_cnt(struct osi_dma_priv_data *osi_dma,
 		/* completed desc write back offset */
 		rx_desc_wr_idx = ((value >> MGBE_RX_DESC_WR_RNG_RWDC_SHIFT ) &
 				  (osi_dma->rx_ring_sz - 1U));
-		//If we remove this check we are seeing perf issues on mgbe3_0 of Ferrix
-	//	if (rx_desc_wr_idx >= rx_ring->cur_rx_idx) {
+		if (rx_desc_wr_idx >= rx_ring->cur_rx_idx) {
 			descr_compltd = (rx_desc_wr_idx - rx_ring->cur_rx_idx) &
 					 (osi_dma->rx_ring_sz - 1U);
-	//	}
+		} else {
+			descr_compltd = ((rx_desc_wr_idx + osi_dma->rx_ring_sz) -
+					  rx_ring->cur_rx_idx) & (osi_dma->rx_ring_sz - 1U);
+		}
 	}
 	/* offset/index start from 0, so add 1 to get final count */
 	descr_compltd = (((descr_compltd) & ((nveu32_t)0x7FFFFFFFU)) + (1U));
@@ -1315,10 +1317,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	for (i = 0; i < desc_cnt; i++) {
 		/* Increase the desc count for first descriptor */
 		if (tx_ring->desc_cnt == UINT_MAX) {
-			OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-				    "dma_txrx: Reached Max Desc count\n", 0ULL);
-			ret = -1;
-			break;
+			tx_ring->desc_cnt = 0U;
 		}
 		tx_ring->desc_cnt++;
 
@@ -1336,10 +1335,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	}
 
 	if (tx_ring->desc_cnt == UINT_MAX) {
-		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-			    "dma_txrx: Reached Max Desc count\n", 0ULL);
-		ret = -1;
-		goto fail;
+		tx_ring->desc_cnt = 0U;
 	}
 	/* Mark it as LAST descriptor */
 	last_desc->tdes3 |= TDES3_LD;
