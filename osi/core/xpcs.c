@@ -364,32 +364,36 @@ nve32_t xlgpcs_start(struct osi_core_priv_data *osi_core)
 		ret = -1;
 		goto fail;
 	}
+
 	/* * XLGPCS programming guideline IAS section 7.1.3.2.2.2
 	 */
-	/* 4 Poll SR_PCS_CTRL1 reg RST bit */
-	ctrl = xpcs_read(xpcs_base, XLGPCS_SR_PCS_CTRL1);
-	ctrl |= XLGPCS_SR_PCS_CTRL1_RST;
-	xpcs_write(xpcs_base, XLGPCS_SR_PCS_CTRL1, ctrl);
-
-	count = 0;
-	while (cond == 1) {
-		if (count > retry) {
-			ret = -1;
-			goto fail;
-		}
-		count++;
+	if (osi_core->pcs_base_r_fec_en != OSI_ENABLE) {
+		/* 4 Poll SR_PCS_CTRL1 reg RST bit */
 		ctrl = xpcs_read(xpcs_base, XLGPCS_SR_PCS_CTRL1);
-		if ((ctrl & XLGPCS_SR_PCS_CTRL1_RST) == 0U) {
-			cond = 0;
-		} else {
-			/* Maximum wait delay as per HW team is 10msec.
-			 * So add a loop for 1000 iterations with 1usec delay,
-			 * so that if check get satisfies before 1msec will come
-			 * out of loop and it can save some boot time
-			 */
-			osi_core->osd_ops.udelay(10U);
+		ctrl |= XLGPCS_SR_PCS_CTRL1_RST;
+		xpcs_write(xpcs_base, XLGPCS_SR_PCS_CTRL1, ctrl);
+
+		count = 0;
+		while (cond == 1) {
+			if (count > retry) {
+				ret = -1;
+				goto fail;
+			}
+			count++;
+			ctrl = xpcs_read(xpcs_base, XLGPCS_SR_PCS_CTRL1);
+			if ((ctrl & XLGPCS_SR_PCS_CTRL1_RST) == 0U) {
+				cond = 0;
+			} else {
+				/* Maximum wait delay as per HW team is 10msec.
+				 * So add a loop for 1000 iterations with 1usec delay,
+				 * so that if check get satisfies before 1msec will come
+				 * out of loop and it can save some boot time
+				 */
+				osi_core->osd_ops.udelay(10U);
+			}
 		}
 	}
+
 	/* 5 Program SR_AN_CTRL reg AN_EN bit to disable auto-neg */
 	ctrl = xpcs_read(xpcs_base, XLGPCS_SR_AN_CTRL);
 	ctrl &= ~XLGPCS_SR_AN_CTRL_AN_EN;
@@ -856,6 +860,21 @@ static nve32_t xpcs_base_r_fec(struct osi_core_priv_data *osi_core)
 	nveu32_t ctrl = 0;
 	nve32_t ret = 0;
 
+	if ((osi_core->pcs_base_r_fec_en == OSI_ENABLE) &&
+	    (osi_core->uphy_gbe_mode == OSI_GBE_MODE_25G)) {
+		/* Program SR_AN_CTRL reg AN_EN bit to disable auto-neg */
+		ctrl = xpcs_read(xpcs_base, XLGPCS_SR_AN_CTRL);
+		ctrl &= ~XLGPCS_SR_AN_CTRL_AN_EN;
+		ret = xpcs_write_safety(osi_core, XLGPCS_SR_AN_CTRL, ctrl);
+		if (ret != 0) {
+			goto fail;
+		}
+
+		osi_writela(osi_core, XPCS_WRAP_UPHY_TIMEOUT_CONTROL_0_0_VALUE,
+				(nveu8_t *)osi_core->xpcs_base +
+				T26X_XPCS_WRAP_UPHY_TIMEOUT_CONTROL_0_0);
+	}
+
 	/* Enable/Disable BASE-R FEC */
 	ctrl = xpcs_read(xpcs_base, XPCS_SR_PMA_KR_FEC_CTRL);
 	if (osi_core->pcs_base_r_fec_en == OSI_ENABLE) {
@@ -869,7 +888,7 @@ static nve32_t xpcs_base_r_fec(struct osi_core_priv_data *osi_core)
 	ret = xpcs_write_safety(osi_core, XPCS_SR_PMA_KR_FEC_CTRL, ctrl);
 	if (ret != 0) {
 		goto fail;
-    }
+	}
 
 fail:
 	return ret;
