@@ -5360,8 +5360,12 @@ static struct osi_macsec_sc_info *find_existing_sc(
 					&osi_core->macsec_lut_status[ctlr];
 	struct osi_macsec_sc_info *sc_found = OSI_NULL;
 	nveu32_t i;
+	const nveu32_t max_num_sc[MAX_MACSEC_IP_TYPES] = {
+		OSI_MAX_NUM_SC,
+		OSI_MAX_NUM_SC_T26x
+	};
 
-	for (i = 0; i < OSI_MAX_NUM_SC; i++) {
+	for (i = 0; i < max_num_sc[osi_core->macsec]; i++) {
 		if (osi_macsec_memcmp(lut_status_ptr->sc_info[i].sci, sc->sci,
 			       (nve32_t)OSI_SCI_LEN) == OSI_NONE_SIGNED) {
 			sc_found = &lut_status_ptr->sc_info[i];
@@ -5399,8 +5403,12 @@ static nveu32_t get_avail_sc_idx(const struct osi_core_priv_data *const osi_core
 	const struct osi_macsec_lut_status *lut_status_ptr =
 					&osi_core->macsec_lut_status[ctlr];
 	nveu32_t i;
+	const nveu32_t max_num_sc[MAX_MACSEC_IP_TYPES] = {
+		OSI_MAX_NUM_SC,
+		OSI_MAX_NUM_SC_T26x
+	};
 
-	for (i = 0; i < OSI_MAX_NUM_SC; i++) {
+	for (i = 0; i < max_num_sc[osi_core->macsec]; i++) {
 		if (lut_status_ptr->sc_info[i].an_valid == OSI_NONE) {
 			break;
 		}
@@ -6021,10 +6029,14 @@ static nve32_t add_new_sc(struct osi_core_priv_data *const osi_core,
 	struct osi_macsec_lut_status *lut_status_ptr;
 	nveu32_t avail_sc_idx = 0;
 	struct osi_macsec_sc_info *new_sc = OSI_NULL;
+	const nveu32_t max_num_sc[MAX_MACSEC_IP_TYPES] = {
+		OSI_MAX_NUM_SC,
+		OSI_MAX_NUM_SC_T26x
+	};
 
 	lut_status_ptr = &osi_core->macsec_lut_status[ctlr];
 
-	if (lut_status_ptr->num_of_sc_used >= OSI_MAX_NUM_SC) {
+	if (lut_status_ptr->num_of_sc_used >= max_num_sc[osi_core->macsec]) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 		  "Err: Reached max SC LUT entries!\n", 0ULL);
 		ret = -1;
@@ -6032,7 +6044,7 @@ static nve32_t add_new_sc(struct osi_core_priv_data *const osi_core,
 	}
 
 	avail_sc_idx = get_avail_sc_idx(osi_core, ctlr);
-	if (avail_sc_idx == OSI_MAX_NUM_SC) {
+	if (avail_sc_idx == max_num_sc[osi_core->macsec]) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "Err: NO free SC Index\n", 0ULL);
 		ret = -1;
@@ -6234,6 +6246,10 @@ static nve32_t delete_dummy_sc(struct osi_core_priv_data *const osi_core,
 	nveu16_t kt_idx = 0U;
 	const nveu8_t zero_mac[OSI_ETH_ALEN] = {0U};
 	nve32_t ret = 0;
+	const nveu32_t max_num_sc[MAX_MACSEC_IP_TYPES] = {
+		OSI_MAX_NUM_SC,
+		OSI_MAX_NUM_SC_T26x
+	};
 
 	/** Using a dummy parameters used in add_dummy_sc */
 	dummy_sc.sci[6] = 0xFFU;
@@ -6246,7 +6262,7 @@ static nve32_t delete_dummy_sc(struct osi_core_priv_data *const osi_core,
 	dummy_sc.pn_window = 0x10U;
 	dummy_sc.flags = 0U;
 
-	for (i = 0U; i < OSI_MAX_NUM_SC; i++) {
+	for (i = 0U; i < max_num_sc[osi_core->macsec]; i++) {
 		if (osi_macsec_memcmp(&osi_core->macsec_dummy_sc_macids[i][0], sc->sci,
 			       (nve32_t)OSI_ETH_ALEN) == OSI_NONE_SIGNED) {
 			existing_sc = find_existing_sc(osi_core, &dummy_sc,
@@ -6301,6 +6317,10 @@ static nve32_t add_dummy_sc(struct osi_core_priv_data *const osi_core, nveu8_t *
 	nve32_t ret = 0;
 	nveu8_t i = 0;
 	const nveu8_t zero_mac[OSI_ETH_ALEN] = {0U};
+	const nveu32_t max_num_sc[MAX_MACSEC_IP_TYPES] = {
+		OSI_MAX_NUM_SC,
+		OSI_MAX_NUM_SC_T26x
+	};
 
 	/** Using dummy SC parameters to create TX SC entry in LUTs */
 	sc.sci[6] = 0xFFU;
@@ -6319,7 +6339,7 @@ static nve32_t add_dummy_sc(struct osi_core_priv_data *const osi_core, nveu8_t *
 			      "Failed to program dummy sc\n", (nveul64_t)ret);
 		goto exit_func;
 	}
-	for (i = 0U; i < OSI_MAX_NUM_SC; i++) {
+	for (i = 0U; i < max_num_sc[osi_core->macsec]; i++) {
 		if (osi_macsec_memcmp(&osi_core->macsec_dummy_sc_macids[i][0], macsec_vf_mac,
 			       (nve32_t)OSI_ETH_ALEN) == OSI_NONE_SIGNED) {
 			break;

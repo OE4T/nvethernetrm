@@ -195,7 +195,8 @@ static inline nve32_t dma_validate_args(const struct osi_dma_priv_data *const os
 	nve32_t ret = 0;
 
 	if ((osi_dma == OSI_NULL) || (osi_dma->base == OSI_NULL) ||
-	    (l_dma->init_done == OSI_DISABLE)) {
+	    (l_dma->init_done == OSI_DISABLE) ||
+	    (osi_dma->mac >= OSI_MAX_MAC_IP_TYPES)) {
 		ret = -1;
 	}
 
@@ -487,7 +488,9 @@ done:
 static inline void start_dma(const struct osi_dma_priv_data *const osi_dma, nveu32_t dma_chan)
 {
 	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
-	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
+	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
+	// Added bitwise with 0xFF to avoid CERT INT30-C error
+	nveu32_t chan = ((dma_chan & chan_mask[local_mac]) & (0xFFU));
 	const nveu32_t tx_dma_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TX_CTRL(chan),
 		MGBE_DMA_CHX_TX_CTRL(chan),
@@ -501,15 +504,15 @@ static inline void start_dma(const struct osi_dma_priv_data *const osi_dma, nveu
 	nveu32_t val;
 
 	/* Start Tx DMA */
-	val = osi_dma_readl((nveu8_t *)osi_dma->base + tx_dma_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + tx_dma_reg[local_mac]);
 	val |= OSI_BIT(0);
-	osi_dma_writel(val, (nveu8_t *)osi_dma->base + tx_dma_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + tx_dma_reg[local_mac]);
 
 	/* Start Rx DMA */
-	val = osi_dma_readl((nveu8_t *)osi_dma->base + rx_dma_reg[osi_dma->mac]);
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + rx_dma_reg[local_mac]);
 	val |= OSI_BIT(0);
 	val &= ~OSI_BIT(31);
-	osi_dma_writel(val, (nveu8_t *)osi_dma->base + rx_dma_reg[osi_dma->mac]);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + rx_dma_reg[local_mac]);
 }
 
 static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
@@ -518,7 +521,9 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
 	nveu32_t pbl = 0;
 	nveu32_t pdma_chan = 0xFFU;
-	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
+	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
+	// Added bitwise with 0xFF to avoid CERT INT30-C error
+	nveu32_t chan = ((dma_chan & chan_mask[local_mac]) & (0xFFU));
 	nveu32_t riwt = osi_dma->rx_riwt & 0xFFFU;
 	const nveu32_t intr_en_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_INTR_ENA(chan),
@@ -714,7 +719,9 @@ exit_func:
 static nve32_t init_dma(const struct osi_dma_priv_data *osi_dma, nveu32_t channel)
 {
 	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
-	nveu32_t chan = channel & chan_mask[osi_dma->mac];
+	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
+	// Added bitwise with 0xFF to avoid CERT INT30-C error
+	nveu32_t chan = ((channel & chan_mask[local_mac]) & (0xFFU));
 	nve32_t ret = 0;
 
 	/* CERT ARR-30C issue observed without this check */
@@ -830,7 +837,9 @@ static inline void stop_dma(const struct osi_dma_priv_data *const osi_dma,
 			    nveu32_t dma_chan)
 {
 	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
-	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
+	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
+	// Added bitwise with 0xFF to avoid CERT INT30-C error
+	nveu32_t chan = ((dma_chan & chan_mask[local_mac]) & (0xFFU));
 	const nveu32_t dma_tx_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_TX_CTRL(chan),
 		MGBE_DMA_CHX_TX_CTRL(chan),
@@ -859,18 +868,26 @@ static inline void set_rx_riit_dma(
 			const struct osi_dma_priv_data *const osi_dma,
 			nveu32_t chan, nveu32_t riit)
 {
+	const nveu32_t local_chan = chan % OSI_MGBE_MAX_NUM_CHANS;
 	const nveu32_t rx_wdt_reg[OSI_MAX_MAC_IP_TYPES] = {
-		EQOS_DMA_CHX_RX_WDT(chan),
-		MGBE_DMA_CHX_RX_WDT(chan),
-		MGBE_DMA_CHX_RX_WDT(chan)
+		EQOS_DMA_CHX_RX_WDT(local_chan),
+		MGBE_DMA_CHX_RX_WDT(local_chan),
+		MGBE_DMA_CHX_RX_WDT(local_chan)
 	};
 	/* riit is in ns */
-	const nveu32_t itw_val = {
-		(((riit * ((nveu32_t)MGBE_AXI_CLK_FREQ / OSI_ONE_MEGA_HZ)) /
-		 (MGBE_DMA_CHX_RX_WDT_ITCU * OSI_MSEC_PER_SEC))
-		 & MGBE_DMA_CHX_RX_WDT_ITW_MAX)
-	};
+	nveu32_t itw_val = 0U;
+	const nveu32_t freq_mghz = (MGBE_AXI_CLK_FREQ / OSI_ONE_MEGA_HZ);
+	const nveu32_t wdt_msec = (MGBE_DMA_CHX_RX_WDT_ITCU * OSI_MSEC_PER_SEC);
 	nveu32_t val;
+
+	if (riit > (UINT_MAX / freq_mghz)) {
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "Invalid riit received\n", riit);
+		goto exit_func;
+	}
+
+	itw_val = (((riit * freq_mghz) / wdt_msec)
+		   & MGBE_DMA_CHX_RX_WDT_ITW_MAX);
 
 	if (osi_dma->use_riit != OSI_DISABLE &&
 		osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
@@ -882,6 +899,7 @@ static inline void set_rx_riit_dma(
 			rx_wdt_reg[osi_dma->mac]);
 	}
 
+exit_func:
 	return;
 }
 
@@ -967,13 +985,15 @@ nve32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma,
 {
 	const nveu32_t global_dma_status_reg_cnt[OSI_MAX_MAC_IP_TYPES] = {1, 1, 3};
 	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
-	const nveu32_t global_dma_status_reg[OSI_MAX_MAC_IP_TYPES] = {
+	nveu32_t global_dma_status_reg[OSI_MAX_MAC_IP_TYPES] = {
 		HW_GLOBAL_DMA_STATUS,
 		HW_GLOBAL_DMA_STATUS,
 		MGBE_T26X_GLOBAL_DMA_STATUS,
 	};
 	nve32_t ret = 0;
 	nveu32_t i;
+	nveu64_t temp_addr = 0U;
+	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
 
 #ifdef OSI_CL_FTRACE
 	if ((osi_get_global_dma_status_cnt % 1000) == 0)
@@ -984,10 +1004,14 @@ nve32_t osi_get_global_dma_status(struct osi_dma_priv_data *osi_dma,
 		goto fail;
 	}
 
-	for (i = 0U; i < global_dma_status_reg_cnt[osi_dma->mac]; i++) {
+	for (i = 0U; i < global_dma_status_reg_cnt[local_mac]; i++) {
 		if (i < UINT_MAX) {
+			// Added check to avoid CERT INT30-C
+			global_dma_status_reg[local_mac] &= MAX_REG_OFFSET;
+			temp_addr = (nveu64_t)(global_dma_status_reg[local_mac] +
+					       ((nveu64_t)i * 4U));
 			dma_status[i] = osi_dma_readl((nveu8_t *)osi_dma->base +
-				(global_dma_status_reg[osi_dma->mac] + (i * 4U)));
+					(nveu32_t)(temp_addr & (nveu64_t)MAX_REG_OFFSET));
 		}
 	}
 fail:
@@ -1410,7 +1434,7 @@ fail:
 
 nve32_t osi_dma_ioctl(struct osi_dma_priv_data *osi_dma)
 {
-	struct dma_local *l_dma = (struct dma_local *)osi_dma;
+	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
 	struct osi_dma_ioctl_data *data;
 
 #ifdef OSI_CL_FTRACE
@@ -1495,7 +1519,7 @@ static inline nve32_t osi_slot_args_validate(struct osi_dma_priv_data *osi_dma,
 nve32_t osi_config_slot_function(struct osi_dma_priv_data *osi_dma,
 				 nveu32_t set)
 {
-	struct dma_local *l_dma = (struct dma_local *)osi_dma;
+	struct dma_local *l_dma = (struct dma_local *)(void *)osi_dma;
 	nveu32_t i = 0U, chan = 0U, interval = 0U;
 	struct osi_tx_ring *tx_ring = OSI_NULL;
 

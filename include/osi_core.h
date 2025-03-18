@@ -192,6 +192,7 @@ typedef my_lint_64		nvel64_t;
  * @brief Maximum number of Secure Channels
  */
 #define OSI_MAX_NUM_SC                  8U
+#define OSI_MAX_NUM_SC_T26x		48U
 /**
  * @brief MACSEC Secure Channel Identifier length
  */
@@ -1381,7 +1382,7 @@ struct osi_macsec_sc_info {
  */
 struct osi_macsec_lut_status {
 	/** List of max SC's supported */
-	struct osi_macsec_sc_info sc_info[OSI_MAX_NUM_SC];
+	struct osi_macsec_sc_info sc_info[OSI_MAX_NUM_SC_T26x];
 	/** next available BYP LUT index
 	 * valid values are from 0 to NVETHERNETRM_PIF$OSI_BYP_LUT_MAX_INDEX */
 	nveu16_t next_byp_idx;
@@ -1711,7 +1712,7 @@ struct osi_core_priv_data {
 	/** Dummy SCI/SC/SA etc LUTs programmed with dummy parameter when no
 	 * session setup. SCI LUT hit created with VF's MACID
 	 * valid values are from 0 to 0xFF for each array element */
-	nveu8_t macsec_dummy_sc_macids[OSI_MAX_NUM_SC][OSI_ETH_ALEN];
+	nveu8_t macsec_dummy_sc_macids[OSI_MAX_NUM_SC_T26x][OSI_ETH_ALEN];
 	/** MACSEC initialization state
 	 * valid vaues are 0(not initialized) and 1(Initialized) */
 	nveu32_t macsec_initialized;
@@ -1875,6 +1876,9 @@ struct osi_core_priv_data {
 	nve32_t speed;
 	/** PCS BASE-R FEC enable */
 	nveu32_t pcs_base_r_fec_en;
+	/** skip auto neg for usxgmii mode.
+	 * 0(enable AN) and 1(disable AN) are the valid values */
+	nveu32_t skip_usxgmii_an;
 };
 
 /**

@@ -143,7 +143,7 @@ static inline void osi_dma_writel(nveu32_t val, void *addr)
 #define GET_TX_TS_PKTID(idx, c) (((idx) & (PKT_ID_CNT - 1U)) | \
 				 (((c) + 1U) << CHAN_START_POSITION))
 /* T264 has saperate logic to tell vdma number so we can use all 10 bits for pktid */
-#define GET_TX_TS_PKTID_T264(idx) ((++(idx)) & (PKT_ID_CNT_T264 - 1U))
+#define GET_TX_TS_PKTID_T264(idx) ((((idx) & 0x7FFFFFFFU) + 1U) & (PKT_ID_CNT_T264 - 1U))
 /** @} */
 
 /**
@@ -338,8 +338,9 @@ static inline void update_rx_tail_ptr(const struct osi_dma_priv_data *const osi_
 				      nveu64_t tailptr)
 {
 	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
-
-	nveu32_t chan = dma_chan & chan_mask[osi_dma->mac];
+	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
+	// Added bitwise with 0xFF to avoid CERT INT30-C error
+	nveu32_t chan = (dma_chan & chan_mask[local_mac]) & (0xFFU);
 	const nveu32_t tail_ptr_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_RDTP(chan),
 		MGBE_DMA_CHX_RDTLP(chan),

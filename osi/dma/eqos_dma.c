@@ -53,6 +53,7 @@ static void eqos_config_slot(struct osi_dma_priv_data *osi_dma,
 {
 	nveu32_t value;
 	nveu32_t intr;
+	nveu32_t local_chan = chan % OSI_EQOS_MAX_NUM_CHANS;
 
 #if 0
 	CHECK_CHAN_BOUND(chan);
@@ -60,7 +61,7 @@ static void eqos_config_slot(struct osi_dma_priv_data *osi_dma,
 	if (set == OSI_ENABLE) {
 		/* Program SLOT CTRL register SIV and set ESC bit */
 		value = osi_dma_readl((nveu8_t *)osi_dma->base +
-			    	       EQOS_DMA_CHX_SLOT_CTRL(chan));
+				      EQOS_DMA_CHX_SLOT_CTRL(local_chan));
 		value &= ~EQOS_DMA_CHX_SLOT_SIV_MASK;
 		/* remove overflow bits of interval */
 		intr = interval & EQOS_DMA_CHX_SLOT_SIV_MASK;
@@ -68,15 +69,15 @@ static void eqos_config_slot(struct osi_dma_priv_data *osi_dma,
 		/* Set ESC bit */
 		value |= EQOS_DMA_CHX_SLOT_ESC;
 		osi_dma_writel(value, (nveu8_t *)osi_dma->base +
-			       EQOS_DMA_CHX_SLOT_CTRL(chan));
+			       EQOS_DMA_CHX_SLOT_CTRL(local_chan));
 
 	} else {
 		/* Clear ESC bit of SLOT CTRL register */
 		value = osi_dma_readl((nveu8_t *)osi_dma->base +
-				      EQOS_DMA_CHX_SLOT_CTRL(chan));
+				      EQOS_DMA_CHX_SLOT_CTRL(local_chan));
 		value &= ~EQOS_DMA_CHX_SLOT_ESC;
 		osi_dma_writel(value, (nveu8_t *)osi_dma->base +
-			       EQOS_DMA_CHX_SLOT_CTRL(chan));
+			       EQOS_DMA_CHX_SLOT_CTRL(local_chan));
 	}
 }
 

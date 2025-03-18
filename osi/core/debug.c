@@ -67,7 +67,7 @@ static void core_dump_struct(struct osi_core_priv_data *osi_core,
  */
 void core_structs_dump(struct osi_core_priv_data *osi_core)
 {
-	struct core_local *l_core = (struct core_local *)osi_core;
+	struct core_local *l_core = (struct core_local *)((void *)osi_core);
 
 	osi_core->osd_ops.printf(osi_core, OSI_DEBUG_TYPE_STRUCTS,
 				 "CORE struct size = %lu",
