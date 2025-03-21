@@ -3974,11 +3974,33 @@ static nve32_t eqos_get_rchlist_index(struct osi_core_priv_data *osi_core,
  *
  * @retval -1 Always
  */
-static nve32_t eqos_config_rss(struct osi_core_priv_data *osi_core)
+static nve32_t eqos_config_rss(struct osi_core_priv_data *osi_core,
+				const struct osi_core_rss *rss)
 {
 	(void) osi_core;
+	(void) rss;
 	OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 		     "RSS not supported by EQOS\n", 0ULL);
+
+	return -1;
+}
+
+/**
+ * @brief eqos_get_rss - Get RSS
+ *
+ * Algorithm: Get  RSS hash table or RSS hash key.
+ *
+ * @param[out] osi_core: OSI core private data.
+ *
+ * @retval -1 Always
+ */
+static nve32_t eqos_get_rss(struct osi_core_priv_data *const osi_core,
+			    struct osi_core_rss *const rss)
+{
+	(void) osi_core;
+	(void) rss;
+	OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+		     "Get RSS not supported by EQOS\n", 0ULL);
 
 	return -1;
 }
@@ -4112,6 +4134,7 @@ void eqos_init_core_ops(struct core_ops *ops)
 	ops->set_mdc_clk_rate = eqos_set_mdc_clk_rate;
 	ops->config_mac_loopback = eqos_config_mac_loopback;
 	ops->config_rss = eqos_config_rss;
+	ops->get_rss = eqos_get_rss;
 	ops->config_ptp_rxq = eqos_config_ptp_rxq;
 #endif /* !OSI_STRIPPED_LIB */
 #ifdef HSI_SUPPORT

@@ -215,7 +215,9 @@ struct core_ops {
 				struct osi_core_priv_data *const osi_core,
 				const nveu32_t lb_mode);
 	/** Called to configure RSS for MAC */
-	nve32_t (*config_rss)(struct osi_core_priv_data *osi_core);
+	nve32_t (*config_rss)(struct osi_core_priv_data *osi_core, const struct osi_core_rss *rss);
+	/** Called to get RSS parameters from MAC */
+	nve32_t (*get_rss)(struct osi_core_priv_data *osi_core, struct osi_core_rss *rss);
 	/** Called to configure the PTP RX packets Queue */
 	nve32_t (*config_ptp_rxq)(struct osi_core_priv_data *const osi_core,
 				  const nveu32_t rxq_idx,

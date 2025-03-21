@@ -513,6 +513,10 @@ typedef my_lint_64		nvel64_t;
  */
 #define OSI_CMD_READ_HSI_ERR		57U
 #endif /* HSI_SUPPORT */
+/**
+ * @brief Command to GET RSS Configuration
+ */
+#define OSI_CMD_GET_RSS			58U
 /** @} */
 
 #ifdef LOG_OSI
@@ -1543,34 +1547,38 @@ struct osi_ioctl {
 	nveu8_t *arg7_u8_p;
 	/** s64 general argument 8 */
 	nvel64_t arg8_64;
-	/** L2 filter structure */
-	struct osi_filter l2_filter;
-	/** l3_l4 filter structure */
-	struct osi_l3_l4_filter l3l4_filter;
-	/**  HW feature structure */
-	struct osi_hw_features hw_feat;
-	/** AVB structure */
-	struct osi_core_avb_algorithm avb;
+	union {
+		/** L2 filter structure */
+		struct osi_filter l2_filter;
+		/** l3_l4 filter structure */
+		struct osi_l3_l4_filter l3l4_filter;
+		/**  HW feature structure */
+		struct osi_hw_features hw_feat;
+		/** AVB structure */
+		struct osi_core_avb_algorithm avb;
 #ifndef OSI_STRIPPED_LIB
-	/** VLAN filter structure */
-	struct osi_vlan_filter vlan_filter;
-	/** PTP offload config structure*/
-	struct osi_pto_config pto_config;
-	/** RXQ route structure */
-	struct osi_rxq_route rxq_route;
+		/** VLAN filter structure */
+		struct osi_vlan_filter vlan_filter;
+		/** PTP offload config structure*/
+		struct osi_pto_config pto_config;
+		/** RXQ route structure */
+		struct osi_rxq_route rxq_route;
+		/** RSS core structure */
+		struct osi_core_rss rss;
 #endif /* !OSI_STRIPPED_LIB */
-	/** FRP structure */
-	struct osi_core_frp_cmd frp_cmd;
-	/** EST structure */
-	struct osi_est_config est;
-	/** FRP structure */
-	struct osi_fpe_config fpe;
-	/** PTP configuration settings */
-	struct osi_ptp_config ptp_config;
-	/** TX Timestamp structure */
-	struct osi_core_tx_ts tx_ts;
-	/** PTP TSC data */
-	struct osi_core_ptp_tsc_data ptp_tsc;
+		/** FRP structure */
+		struct osi_core_frp_cmd frp_cmd;
+		/** EST structure */
+		struct osi_est_config est;
+		/** FRP structure */
+		struct osi_fpe_config fpe;
+		/** PTP configuration settings */
+		struct osi_ptp_config ptp_config;
+		/** TX Timestamp structure */
+		struct osi_core_tx_ts tx_ts;
+		/** PTP TSC data */
+		struct osi_core_ptp_tsc_data ptp_tsc;
+	}data;
 };
 
 /**
@@ -1782,8 +1790,6 @@ struct osi_core_priv_data {
 	nveu16_t vid[VLAN_NUM_VID];
 	/** Count of number of VLAN filters in vid array */
 	nveu16_t vlan_filter_cnt;
-	/** RSS core structure */
-	struct osi_core_rss rss;
 #endif
 	/** DT entry to enable(1) or disable(0) pause frame support */
 	nveu32_t pause_frames;

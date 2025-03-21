@@ -1845,10 +1845,11 @@ static nve32_t mgbe_rss_write_reg(struct osi_core_priv_data *osi_core,
 				  nveu32_t is_key)
 {
 	nveu8_t *addr = (nveu8_t *)osi_core->base;
-	nveu32_t retry = 100;
-	nveu32_t ctrl = 0;
-	nveu32_t count = 0;
+	nveu32_t retry = 100U;
+	nveu32_t ctrl = 0U;
+	nveu32_t count = 0U;
 	nve32_t cond = 1;
+	nve32_t ret = 0;
 
 	/* data into RSS Lookup Table or RSS Hash Key */
 	osi_writela(osi_core, value, addr + MGBE_MAC_RSS_DATA);
@@ -1868,7 +1869,8 @@ static nve32_t mgbe_rss_write_reg(struct osi_core_priv_data *osi_core,
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				     "Failed to update RSS Hash key or table\n",
 				     0ULL);
-			return -1;
+			ret = -1;
+			goto err;
 		}
 
 		count++;
@@ -1880,8 +1882,147 @@ static nve32_t mgbe_rss_write_reg(struct osi_core_priv_data *osi_core,
 			osi_core->osd_ops.usleep(OSI_DELAY_100US);
 		}
 	}
+err:
+	return ret;
+}
 
-	return 0;
+static nve32_t mgbe_rss_wait_for_completion(struct osi_core_priv_data *const osi_core,
+					    nveu8_t *addr)
+{
+	nveu32_t retry = 100U;
+	nveu32_t count = 0U;
+	nve32_t cond = 1;
+	nveu32_t value = 0U;
+	nve32_t ret = 0;
+
+	/* poll for write operation to complete */
+	while (cond == 1) {
+		if (count > retry) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "Failed to read RSS Hash key or table\n",
+				     0ULL);
+			ret = -1;
+			goto err;
+		}
+
+		count++;
+
+		value = osi_readla(osi_core, addr + MGBE_MAC_RSS_ADDR);
+		if ((value & MGBE_MAC_RSS_ADDR_OB) == OSI_NONE) {
+			cond = 0;
+		} else {
+			osi_core->osd_ops.usleep(OSI_DELAY_100US);
+		}
+	}
+err:
+	return ret;
+}
+
+static nve32_t mgbe_rss_read_key(struct osi_core_priv_data *const osi_core,
+                                nveu8_t *rss_key)
+{
+	nveu8_t *addr = (nveu8_t *)osi_core->base;
+	nveu32_t ctrl = 0U;
+	nveu32_t value = 0U;
+	nveu32_t i = 0U;
+	nveu32_t j = 0U;
+	nve32_t ret = 0;
+
+	/* Read hash key - 4 bytes at a time to match write pattern */
+	for (i = 0U; i < OSI_RSS_HASH_KEY_SIZE; i += 4U) {
+		/* Setup control register for reading hash key */
+		ctrl = MGBE_MAC_RSS_ADDR_ADDRT; /* Set for hash key read */
+		ctrl |= (j << MGBE_MAC_RSS_ADDR_RSSIA_SHIFT);
+		ctrl |= MGBE_MAC_RSS_ADDR_OB;
+		ctrl |= MGBE_MAC_RSS_ADDR_CT; /* Set read bit */
+		osi_writela(osi_core, ctrl, addr + MGBE_MAC_RSS_ADDR);
+
+		/* Wait for read operation to complete */
+		ret = mgbe_rss_wait_for_completion(osi_core, addr);
+		if (ret < 0) {
+			break;
+		}
+
+		/* Read 4 bytes of hash key */
+		value = osi_readla(osi_core, addr + MGBE_MAC_RSS_DATA);
+		rss_key[i] = (nveu8_t)(value & 0xFFU);
+		rss_key[i + 1U] = (nveu8_t)((value >> 8U) & 0xFFU);
+		rss_key[i + 2U] = (nveu8_t)((value >> 16U) & 0xFFU);
+		rss_key[i + 3U] = (nveu8_t)((value >> 24U) & 0xFFU);
+		j++;
+	}
+
+	return ret;
+}
+
+static nve32_t mgbe_rss_read_table(struct osi_core_priv_data *const osi_core,
+                                  nveu32_t *table)
+{
+	nveu8_t *addr = (nveu8_t *)osi_core->base;
+	nveu32_t ctrl = 0U;
+	nveu32_t i;
+	nve32_t ret = 0;
+
+	/* Read hash table */
+	for (i = 0U; i < OSI_RSS_MAX_TABLE_SIZE; i++) {
+		/* Setup control register for reading hash table */
+		ctrl = 0U; /* Clear ADDRT bit for table read */
+		ctrl |= (i << MGBE_MAC_RSS_ADDR_RSSIA_SHIFT);
+		ctrl |= MGBE_MAC_RSS_ADDR_OB;
+		ctrl |= MGBE_MAC_RSS_ADDR_CT; /* Set read bit */
+		osi_writela(osi_core, ctrl, addr + MGBE_MAC_RSS_ADDR);
+
+		/* Wait for read operation to complete */
+		ret = mgbe_rss_wait_for_completion(osi_core, addr);
+		if (ret < 0) {
+			break;
+		}
+
+		/* Read the hash table entry */
+		table[i] = osi_readla(osi_core, addr + MGBE_MAC_RSS_DATA);
+	}
+
+	return ret;
+}
+
+/**
+ * @brief mgbe_get_rss - Get RSS configuration
+ *
+ * Algorithm: get RSS hash table or RSS hash key.
+ *
+ * @param[in] osi_core: OSI core private data.
+ * @param[out] rss: RSS data.
+ *
+ * @note MAC has to be out of reset.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+static nve32_t mgbe_get_rss(struct osi_core_priv_data *osi_core,
+                            struct osi_core_rss *rss)
+{
+	nveu8_t *addr = (nveu8_t *)osi_core->base;
+	nveu32_t value;
+	nve32_t ret = 0;
+
+	/* Read hash key */
+	ret = mgbe_rss_read_key(osi_core, rss->key);
+	if (ret < 0) {
+		goto err;
+	}
+
+	/* Read hash table */
+	ret = mgbe_rss_read_table(osi_core, rss->table);
+	if (ret < 0) {
+		goto err;
+	}
+
+	/* Read RSS enable status */
+	value = osi_readla(osi_core, addr + MGBE_MAC_RSS_CTRL);
+	rss->enable = ((value & MGBE_MAC_RSS_CTRL_RSSE) != 0U) ? OSI_ENABLE : OSI_DISABLE;
+
+err:
+	return ret;
 }
 
 /**
@@ -1891,48 +2032,50 @@ static nve32_t mgbe_rss_write_reg(struct osi_core_priv_data *osi_core,
  * Algorithm: Programes RSS hash table or RSS hash key.
  *
  * @param[in] osi_core: OSI core private data.
+ * @param[in] rss: RSS data.
  *
  * @note MAC has to be out of reset.
  *
  * @retval 0 on success
  * @retval -1 on failure.
  */
-static nve32_t mgbe_config_rss(struct osi_core_priv_data *osi_core)
+static nve32_t mgbe_config_rss(struct osi_core_priv_data *osi_core,
+				const struct osi_core_rss *rss)
 {
 	nveu8_t *addr = (nveu8_t *)osi_core->base;
 	nveu32_t value = 0;
 	nveu32_t i = 0, j = 0;
 	nve32_t ret = 0;
 
-	if (osi_core->rss.enable == OSI_DISABLE) {
+	if (rss->enable == OSI_DISABLE) {
 		/* RSS not supported */
-		return 0;
+		goto exit;
 	}
 
 	/* No need to enable RSS for single Queue */
 	if (osi_core->num_mtl_queues == 1U) {
-		return 0;
+		goto exit;
 	}
 
 	/* Program the hash key */
 	for (i = 0; i < OSI_RSS_HASH_KEY_SIZE; i += 4U) {
-		value = ((nveu32_t)osi_core->rss.key[i] |
-			 ((nveu32_t)osi_core->rss.key[i + 1U] << 8U) |
-			 ((nveu32_t)osi_core->rss.key[i + 2U] << 16U) |
-			 ((nveu32_t)osi_core->rss.key[i + 3U] << 24U));
+		value = ((nveu32_t)rss->key[i] |
+			 ((nveu32_t)rss->key[i + 1U] << 8U) |
+			 ((nveu32_t)rss->key[i + 2U] << 16U) |
+			 ((nveu32_t)rss->key[i + 3U] << 24U));
 		ret = mgbe_rss_write_reg(osi_core, j, value, OSI_ENABLE);
 		if (ret < 0) {
-			return ret;
+			goto exit;
 		}
 		j++;
 	}
 
 	/* Program Hash table */
 	for (i = 0; i < OSI_RSS_MAX_TABLE_SIZE; i++) {
-		ret = mgbe_rss_write_reg(osi_core, i, osi_core->rss.table[i],
+		ret = mgbe_rss_write_reg(osi_core, i, rss->table[i],
 					 OSI_NONE);
 		if (ret < 0) {
-			return ret;
+			goto exit;
 		}
 	}
 
@@ -1941,8 +2084,8 @@ static nve32_t mgbe_config_rss(struct osi_core_priv_data *osi_core)
 	value |= MGBE_MAC_RSS_CTRL_UDP4TE | MGBE_MAC_RSS_CTRL_TCP4TE |
 		 MGBE_MAC_RSS_CTRL_IP2TE | MGBE_MAC_RSS_CTRL_RSSE;
 	osi_writela(osi_core, value, addr + MGBE_MAC_RSS_CTRL);
-
-	return 0;
+exit:
+	return ret;
 }
 
 /**
@@ -2424,11 +2567,6 @@ static void mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 	value &= ~MGBE_MAC_VLANTIRR_CSVL;
 	osi_writela(osi_core, value,
 		    (nveu8_t *)osi_core->base + MGBE_MAC_VLANTIR);
-
-#ifndef OSI_STRIPPED_LIB
-	/* RSS cofiguration */
-	mgbe_config_rss(osi_core);
-#endif /* !OSI_STRIPPED_LIB */
 }
 
 /**
@@ -4981,6 +5119,7 @@ void mgbe_init_core_ops(struct core_ops *ops)
 	ops->set_mdc_clk_rate = mgbe_set_mdc_clk_rate;
 	ops->config_mac_loopback = mgbe_config_mac_loopback;
 	ops->config_rss = mgbe_config_rss;
+	ops->get_rss = mgbe_get_rss;
 	ops->config_ptp_rxq = mgbe_config_ptp_rxq;
 #endif /* !OSI_STRIPPED_LIB */
 #ifdef HSI_SUPPORT
