@@ -1501,8 +1501,7 @@ static nve32_t rx_dma_desc_initialization(const struct osi_dma_priv_data *const 
 	}
 
 	/* Update the HW DMA ring length */
-	val = osi_dma_readl((nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
-	val |= (osi_dma->rx_ring_sz - 1U) & mask[osi_dma->mac];
+	val = (osi_dma->rx_ring_sz - 1U) & mask[osi_dma->mac];
 	osi_dma_writel(val, (nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
 
 	update_rx_tail_ptr(osi_dma, chan, tailptr);
@@ -1584,8 +1583,7 @@ static inline void set_tx_ring_len_and_start_addr(const struct osi_dma_priv_data
 	nveu32_t val;
 
 	/* Program ring length */
-	val = osi_dma_readl((nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
-	val |= len & mask[osi_dma->mac];
+	val = len & mask[osi_dma->mac];
 	osi_dma_writel(val, (nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
 
 	/* Program tx ring start address */
