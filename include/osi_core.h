@@ -1304,6 +1304,8 @@ struct osi_vm_irq_data {
 	 * valid values are from 0 to NVETHERNETRM_PIF$OSI_EQOS_MAX_NUM_CHANS-1 for eqos
 	 * and 0 to NVETHERNETRM_PIF$OSI_MGBE_MAX_NUM_CHANS-1 */
 	nveu32_t vm_chans[OSI_MGBE_MAX_NUM_CHANS];
+	/** If the IRQ is used for Camera Over Ethernet (handled by camera CPU) */
+	nveu8_t is_coe;
 };
 
 /**

@@ -2162,7 +2162,7 @@ static nve32_t mgbe_config_flow_control(struct osi_core_priv_data *const osi_cor
  * @brief pcs_configure_fsm - Configure FSM for XPCS/XLGPCS
  *
  * @note
- * Algorithm: enable/disable the FSM timeout safety feature 
+ * Algorithm: enable/disable the FSM timeout safety feature
  *
  * @param[in, out] osi_core: OSI core private data structure.
  * @param[in] enable: OSI_ENABLE for Enabling FSM timeout safety feature, else disable
@@ -2482,6 +2482,24 @@ static nve32_t mgbe_hsi_inject_err(struct osi_core_priv_data *const osi_core,
 #endif
 #endif
 
+static inline nveu32_t
+mgbe_core_chan_is_coe(const struct osi_core_priv_data * const osi_core,
+		      nveu32_t chan_id)
+{
+	for (nveu32_t irqn = 0U; irqn < osi_core->num_vm_irqs; irqn++) {
+		if (osi_core->irq_data[irqn].is_coe == 0U)
+			continue;
+
+		for (nveu32_t ch = 0U; ch < osi_core->irq_data[irqn].num_vm_chans; ch++) {
+			if (osi_core->irq_data[irqn].vm_chans[ch] == chan_id) {
+				return 1U;
+			}
+		}
+	}
+
+	return 0U;
+}
+
 /**
  * @brief mgbe_configure_mac - Configure MAC
  *
@@ -2555,13 +2573,14 @@ static void mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 			   (nveu8_t *)osi_core->base + MGBE_MAC_RQC1R);
 	value |= MGBE_MAC_RQC1R_MCBCQEN;
 	/* Set MCBCQ to highest enabled RX queue index */
-	for (i = 0; i < osi_core->num_mtl_queues; i++) {
-		if ((max_queue < osi_core->mtl_queues[i]) &&
-		    (osi_core->mtl_queues[i] < OSI_MGBE_MAX_NUM_QUEUES)) {
+	for (i = 0; i < osi_core->num_dma_chans; i++) {
+		if ((max_queue < osi_core->dma_chans[i]) &&
+		    (osi_core->dma_chans[i] < OSI_MGBE_MAX_NUM_QUEUES)) {
 			/* Update max queue number */
-			max_queue = osi_core->mtl_queues[i];
+			max_queue = osi_core->dma_chans[i];
 		}
 	}
+
 	value &= ~(MGBE_MAC_RQC1R_MCBCQ);
 	value |= (max_queue << MGBE_MAC_RQC1R_MCBCQ_SHIFT);
 	osi_writela(osi_core, value,
@@ -3074,15 +3093,20 @@ static nve32_t mgbe_core_init(struct osi_core_priv_data *const osi_core)
 		 * Since this is a local function this will always return sucess,
 		 * so no need to check for return value
 		 */
+		if (mgbe_core_chan_is_coe(osi_core, osi_core->mtl_queues[qinx])) {
+			ret = hw_config_fw_err_pkts(osi_core,
+						    osi_core->mtl_queues[qinx], OSI_DISABLE);
+		} else {
+			ret = hw_config_fw_err_pkts(osi_core,
+						    osi_core->mtl_queues[qinx], OSI_ENABLE);
+		}
 #ifndef OSI_STRIPPED_LIB
-		ret = hw_config_fw_err_pkts(osi_core, osi_core->mtl_queues[qinx], OSI_ENABLE);
 		if (ret < 0) {
 			goto fail;
 		}
 #else
-		(void)hw_config_fw_err_pkts(osi_core, osi_core->mtl_queues[qinx], OSI_ENABLE);
-#endif /* !OSI_STRIPPED_LIB */
-
+		(void)ret;
+#endif
 	}
 
 	/* configure MGBE MAC HW */
