@@ -3802,7 +3802,7 @@ static void mgbe_handle_hsi_wrap_common_intr(struct osi_core_priv_data *osi_core
 	};
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base +
-			intr_en[osi_core->mac]);
+			intr_status[osi_core->mac]);
 	if (((val & MGBE_REGISTER_PARITY_ERR) == MGBE_REGISTER_PARITY_ERR) ||
 	    ((val & MGBE_CORE_UNCORRECTABLE_ERR) == MGBE_CORE_UNCORRECTABLE_ERR)) {
 		osi_core->hsi.err_code[UE_IDX] = OSI_UNCORRECTABLE_ERR;
