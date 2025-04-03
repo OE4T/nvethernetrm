@@ -1279,6 +1279,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 				/* packet ID for Onestep is 0x0 always */
 				pkt_id = OSI_NONE;
 			} else {
+				INC_TX_TS_PKTID(l_dma->pkt_id);
 				if (osi_dma->mac != OSI_MAC_HW_MGBE_T26X) {
 					pkt_id = GET_TX_TS_PKTID(l_dma->pkt_id, chan);
 				} else {

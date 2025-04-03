@@ -143,7 +143,7 @@ static inline void osi_dma_writel(nveu32_t val, void *addr)
 #define GET_TX_TS_PKTID(idx, c) (((idx) & (PKT_ID_CNT - 1U)) | \
 				 (((c) + 1U) << CHAN_START_POSITION))
 /* T264 has saperate logic to tell vdma number so we can use all 10 bits for pktid */
-#define GET_TX_TS_PKTID_T264(idx) ((((idx) & 0x7FFFFFFFU) + 1U) & (PKT_ID_CNT_T264 - 1U))
+#define GET_TX_TS_PKTID_T264(idx) ((idx) & (PKT_ID_CNT_T264 - 1U))
 /** @} */
 
 /**
