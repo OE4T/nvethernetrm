@@ -31,6 +31,7 @@
 #endif /* OSI_DEBUG */
 #include "hw_common.h"
 
+/** \cond DO_NOT_DOCUMENT */
 /**
  * @brief g_dma - DMA local data array.
  */
@@ -1571,4 +1572,4 @@ nve32_t osi_txring_empty(struct osi_dma_priv_data *osi_dma, nveu32_t chan)
 
 	return (tx_ring->clean_idx == tx_ring->cur_tx_idx) ? 1 : 0;
 }
-
+/** \endcond */

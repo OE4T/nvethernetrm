@@ -201,6 +201,7 @@ fail:
 	return ret;
 }
 
+#if 0 //FIXME: Not used for SLT EQOS bringup
 /**
  * @brief eqos_xpcs_set_speed - Set speed at XPCS
  *
@@ -212,7 +213,6 @@ fail:
  * @retval 0 on success
  * @retval -1 on failure
  */
-#if 0 //FIXME: Not used for SLT EQOS bringup
 static inline nve32_t eqos_xpcs_set_speed(struct osi_core_priv_data *osi_core,
 				  nveu32_t status)
 {
