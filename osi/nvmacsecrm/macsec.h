@@ -248,6 +248,7 @@
 #define GET_SCI_LUT_VLAN_IDX(x) ((nveu16_t)(((((x) & 0xFFU) * 2U) + 1U) & 0xFFU))
 /** @} */
 
+#ifdef DUMMY_SC
 /**
  * @addtogroup AES ciphers
  *
@@ -257,6 +258,7 @@
 #define OSI_MACSEC_SC_VALID             0U
 #define OSI_MACSEC_SC_DUMMY             1U
 /** @} */
+#endif
 
 /**
  * @addtogroup MACSEC_CONTROL1 register
