@@ -207,9 +207,6 @@ struct core_ops {
 	void (*configure_eee)(struct osi_core_priv_data *const osi_core,
 			      const nveu32_t tx_lpi_enabled,
 			      const nveu32_t tx_lpi_timer);
-	/** Called to set MDC clock rate for MDIO operation */
-	void (*set_mdc_clk_rate)(struct osi_core_priv_data *const osi_core,
-				 const nveu64_t csr_clk_rate);
 	/** Called to configure MAC in loopback mode */
 	nve32_t (*config_mac_loopback)(
 				struct osi_core_priv_data *const osi_core,

@@ -2792,9 +2792,6 @@ nve32_t OSI_CMD_ADJ_FREQ_count = 0;
  * @note
  * Algorithm:
  *  - Handle runtime commands to OSI
- *  - OSI_CMD_MDC_CONFIG
- *	Derive MDC clock based on provided AXI_CBB clk
- *	arg1_u32 - CSR (AXI CBB) clock rate.
  *  - OSI_CMD_RESTORE_REGISTER
  *	Restore backup of MAC MMIO address space
  *  - OSI_CMD_POLL_FOR_MAC_RST
@@ -2961,11 +2958,6 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 
 	switch (ioctl_data->cmd) {
 #ifndef OSI_STRIPPED_LIB
-	case OSI_CMD_MDC_CONFIG:
-		ops_p->set_mdc_clk_rate(osi_core, ioctl_data->arg5_u64);
-		ret = 0;
-		break;
-
 	case OSI_CMD_MAC_LB:
 		ret = conf_mac_loopback(osi_core, ioctl_data->arg1_u32);
 		break;

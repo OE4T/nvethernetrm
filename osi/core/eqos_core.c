@@ -3590,57 +3590,6 @@ static void eqos_configure_eee(struct osi_core_priv_data *const osi_core,
 }
 
 /**
- * @brief eqos_set_mdc_clk_rate - Derive MDC clock based on provided AXI_CBB clk
- *
- * @note
- * Algorithm:
- *  - MDC clock rate will be populated OSI core private data structure
- *    based on AXI_CBB clock rate.
- *
- * @param[in, out] osi_core: OSI core private data structure.
- * @param[in] csr_clk_rate: CSR (AXI CBB) clock rate.
- *
- * @pre OSD layer needs get the AXI CBB clock rate with OSD clock API
- *   (ex - clk_get_rate())
- *
- * @note
- * API Group:
- * - Initialization: Yes
- * - Run time: No
- * - De-initialization: No
- */
-static void eqos_set_mdc_clk_rate(struct osi_core_priv_data *const osi_core,
-				  const nveu64_t csr_clk_rate)
-{
-	nveu64_t csr_clk_speed = csr_clk_rate / 1000000UL;
-
-	/* store csr clock speed used in programming
-	 * LPI 1us tick timer register
-	 */
-	if (csr_clk_speed <= UINT_MAX) {
-		osi_core->csr_clk_speed = (nveu32_t)csr_clk_speed;
-	}
-	if (csr_clk_speed > 500UL) {
-		osi_core->mdc_cr = EQOS_CSR_500_800M;
-	} else if (csr_clk_speed > 300UL) {
-		osi_core->mdc_cr = EQOS_CSR_300_500M;
-	} else if (csr_clk_speed > 250UL) {
-		osi_core->mdc_cr = EQOS_CSR_250_300M;
-	} else if (csr_clk_speed > 150UL) {
-		osi_core->mdc_cr = EQOS_CSR_150_250M;
-	} else if (csr_clk_speed > 100UL) {
-		osi_core->mdc_cr = EQOS_CSR_100_150M;
-	} else if (csr_clk_speed > 60UL) {
-		osi_core->mdc_cr = EQOS_CSR_60_100M;
-	} else if (csr_clk_speed > 35UL) {
-		osi_core->mdc_cr = EQOS_CSR_35_60M;
-	} else {
-		/* for CSR < 35mhz */
-		osi_core->mdc_cr = EQOS_CSR_20_35M;
-	}
-}
-
-/**
  * @brief eqos_config_mac_loopback - Configure MAC to support loopback
  *
  * @param[in] osi_core: OSI core private data structure.
@@ -4181,7 +4130,6 @@ void eqos_init_core_ops(struct core_ops *ops)
 	ops->config_ptp_offload = eqos_config_ptp_offload;
 	ops->config_vlan_filtering = eqos_config_vlan_filtering;
 	ops->configure_eee = eqos_configure_eee;
-	ops->set_mdc_clk_rate = eqos_set_mdc_clk_rate;
 	ops->config_mac_loopback = eqos_config_mac_loopback;
 	ops->config_rss = eqos_config_rss;
 	ops->get_rss = eqos_get_rss;

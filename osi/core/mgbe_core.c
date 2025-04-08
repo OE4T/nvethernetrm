@@ -4422,14 +4422,12 @@ static nve32_t mgbe_write_phy_reg(struct osi_core_priv_data *const osi_core,
 	      (((nveu32_t)MGBE_MDIO_SCCD_CMD_WR) << MGBE_MDIO_SCCD_CMD_SHIFT) |
 	      MGBE_MDIO_SCCD_SBUSY;
 
-	/**
-	 * On FPGA AXI/APB clock is 13MHz. To achive maximum MDC clock
-	 * of 2.5MHz need to enable CRS and CR to be set to 1.
-	 * On Silicon AXI/APB clock is 408MHz. To achive maximum MDC clock
-	 * of 2.5MHz only CR need to be set to 5.
-	 */
-	reg &= ~MGBE_MDIO_SCCD_CRS;
-	reg |= ((((nveu32_t)0x5U) & MGBE_MDIO_SCCD_CR_MASK) << MGBE_MDIO_SCCD_CR_SHIFT);
+	reg |= (((osi_core->mdc_cr) & MGBE_MDIO_SCCD_CR_MASK) << MGBE_MDIO_SCCD_CR_SHIFT);
+
+	if (osi_core->mdc_cr > 7U) {
+		/* Set clock range select for higher frequencies */
+		reg |= MGBE_MDIO_SCCD_CRS;
+	}
 
 	osi_writela(osi_core, reg, (nveu8_t *)
 		    osi_core->base + MGBE_MDIO_SCCD);
@@ -4492,14 +4490,12 @@ static nve32_t mgbe_read_phy_reg(struct osi_core_priv_data *const osi_core,
 	reg = (((nveu32_t)MGBE_MDIO_SCCD_CMD_RD) << MGBE_MDIO_SCCD_CMD_SHIFT) |
 	       MGBE_MDIO_SCCD_SBUSY;
 
-	 /**
-         * On FPGA AXI/APB clock is 13MHz. To achive maximum MDC clock
-         * of 2.5MHz need to enable CRS and CR to be set to 1.
-         * On Silicon AXI/APB clock is 408MHz. To achive maximum MDC clock
-         * of 2.5MHz only CR need to be set to 5.
-         */
-	reg &= ~MGBE_MDIO_SCCD_CRS;
-	reg |= ((((nveu32_t)0x5U) & MGBE_MDIO_SCCD_CR_MASK) << MGBE_MDIO_SCCD_CR_SHIFT);
+	reg |= ((osi_core->mdc_cr & MGBE_MDIO_SCCD_CR_MASK) << MGBE_MDIO_SCCD_CR_SHIFT);
+
+	if (osi_core->mdc_cr > 7U) {
+		/* Set clock range select for higher frequencies */
+		reg |= MGBE_MDIO_SCCD_CRS;
+	}
 
 	osi_writela(osi_core, reg, (nveu8_t *)
 		    osi_core->base + MGBE_MDIO_SCCD);
@@ -5078,13 +5074,6 @@ static nve32_t mgbe_config_rx_crc_check(OSI_UNUSED
 {
 	return 0;
 }
-
-static void mgbe_set_mdc_clk_rate(OSI_UNUSED
-				  struct osi_core_priv_data *const osi_core,
-				  OSI_UNUSED
-				  const nveu64_t csr_clk_rate)
-{
-}
 #endif /* !OSI_STRIPPED_LIB */
 
 #if defined(MACSEC_SUPPORT)
@@ -5213,7 +5202,6 @@ void mgbe_init_core_ops(struct core_ops *ops)
 	ops->config_ptp_offload = mgbe_config_ptp_offload;
 	ops->config_vlan_filtering = mgbe_config_vlan_filtering;
 	ops->configure_eee = mgbe_configure_eee;
-	ops->set_mdc_clk_rate = mgbe_set_mdc_clk_rate;
 	ops->config_mac_loopback = mgbe_config_mac_loopback;
 	ops->config_rss = mgbe_config_rss;
 	ops->get_rss = mgbe_get_rss;

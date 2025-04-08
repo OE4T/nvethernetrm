@@ -102,7 +102,6 @@ typedef my_lint_64		nvel64_t;
 /** @} */
 
 #define OSI_CMD_RESET_MMC		12U
-#define OSI_CMD_MDC_CONFIG		1U
 #define OSI_CMD_MAC_LB			14U
 #define OSI_CMD_FLOW_CTRL		15U
 #define OSI_CMD_CONFIG_TXSTATUS		27U
@@ -316,6 +315,12 @@ typedef my_lint_64		nvel64_t;
 #define TWO_POWER_32		0x100000000ULL
 /* MDIO clause 45 bit */
 #define OSI_MII_ADDR_C45		OSI_BIT(30)
+/** @brief EQOS default MDC CR value - CSR 300-500 MHz, div=204 */
+#define OSI_EQOS_DEFAULT_MDC_CR		0x6U
+/** @brief MGBE default MDC CR value - CSR 400-500 MHz, div=202 */
+#define OSI_MGBE_DEFAULT_MDC_CR		0x5U
+/** @brief Maximum allowed MDC CR value */
+#define OSI_MAX_MDC_CR			0xFU
 /** @} */
 
 /**
