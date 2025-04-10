@@ -24,6 +24,9 @@
 #include "hw_desc.h"
 #include "mgbe_desc.h"
 
+/** @brief retry count for ptp context descriptor readiness */
+#define PTP_CTX_DESC_RETRY_CNT (10)
+
 #ifndef OSI_STRIPPED_LIB
 /**
  * @brief mgbe_get_rx_vlan - Get Rx VLAN from descriptor
@@ -218,34 +221,43 @@ static nve32_t mgbe_get_rx_hwstamp(const struct osi_dma_priv_data *const osi_dma
 		goto fail;
 	}
 
-	for (retry = 0; retry < 10; retry++) {
+	/* RDES3_CDA is set, hence it is a context descriptor.
+	 * Return always 0 from here on to allow caller to discard context descriptor
+	 */
+	for (retry = 0; retry < PTP_CTX_DESC_RETRY_CNT; retry++) {
 		if ((context_desc->rdes3 & (RDES3_OWN | RDES3_CTXT | RDES3_TSA | RDES3_TSD)) ==
 		    (RDES3_CTXT | RDES3_TSA)) {
 			if ((context_desc->rdes0 == OSI_INVALID_VALUE) &&
 			    (context_desc->rdes1 == OSI_INVALID_VALUE)) {
 				/* Invalid time stamp */
-				ret = -1;
-				goto fail;
+				break;
+			}
+			/* Time Stamp can be read */
+			rx_pkt_cx->ns = context_desc->rdes0 + (OSI_NSEC_PER_SEC * context_desc->rdes1);
+			if (rx_pkt_cx->ns < context_desc->rdes0) {
+				break;
 			}
 			/* Update rx pkt context flags to indicate PTP */
 			rx_pkt_cx->flags |= OSI_PKT_CX_PTP;
-			/* Time Stamp can be read */
 			break;
 		} else {
+			if ((context_desc->rdes3 & (RDES3_OWN | RDES3_CTXT | RDES3_TSD)) ==
+			    (RDES3_CTXT | RDES3_TSD)) {
+				/* Timestamp Dropped by HW, no need to retry */
+				break;
+			}
 			/* TS not available yet, so retrying */
 			osi_dma->osd_ops.udelay(OSI_DELAY_1US);
 		}
 	}
 
-	if (retry == 10) {
+	if (retry == PTP_CTX_DESC_RETRY_CNT) {
 		/* Timed out waiting for Rx timestamp */
 		ret = -1;
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "hwstamp: Context descriptor OWN bit not cleared by HW\n",
+			    (nveul64_t)(context_desc->rdes3));
 		goto fail;
-	}
-
-	rx_pkt_cx->ns = context_desc->rdes0 + (OSI_NSEC_PER_SEC * context_desc->rdes1);
-	if (rx_pkt_cx->ns < context_desc->rdes0) {
-		ret = -1;
 	}
 
 fail:
