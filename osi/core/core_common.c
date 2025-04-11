@@ -207,6 +207,7 @@ fail:
 
 nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t speed)
 {
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nveu32_t  value;
 	nve32_t  ret = 0;
 	void *base = osi_core->base;
@@ -215,6 +216,8 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 				MGBE_MAC_TMCR,
 				MGBE_MAC_TMCR
 			};
+
+	l_core->lane_status = OSI_DISABLE;
 
 	if (((osi_core->mac == OSI_MAC_HW_EQOS) && (speed > OSI_SPEED_2500)) ||
 	    (((osi_core->mac == OSI_MAC_HW_MGBE) ||
@@ -310,6 +313,7 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 		}
 	}
 
+	l_core->lane_status = OSI_ENABLE;
 	osi_core->speed = speed;
 fail:
 	return ret;

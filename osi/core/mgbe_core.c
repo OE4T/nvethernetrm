@@ -3154,6 +3154,7 @@ static inline nveu32_t get_free_ts_idx(struct core_local *l_core)
 static void mgbe_handle_link_change_and_fpe_intrs(struct osi_core_priv_data *osi_core,
 						  nveu32_t mac_isr)
 {
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nveu32_t mac_ier = 0;
 	nveu8_t *base = (nveu8_t *)osi_core->base;
 	nveu32_t value = 0U;
@@ -3179,8 +3180,11 @@ static void mgbe_handle_link_change_and_fpe_intrs(struct osi_core_priv_data *osi
 			value &= ~MGBE_IMR_RGSMIIIE;
 			osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MAC_IER);
 
+			/* Mark that UPHY lane is down */
+			l_core->lane_status = OSI_DISABLE;
 			osi_core->osd_ops.restart_lane_bringup(osi_core->osd, OSI_DISABLE);
-		} else if ((mac_isr & MGBE_MAC_ISR_LS_MASK) == MGBE_MAC_ISR_LS_LINK_OK) {
+		} else if (((mac_isr & MGBE_MAC_ISR_LS_MASK) == MGBE_MAC_ISR_LS_LINK_OK) &&
+			   (l_core->lane_status == OSI_ENABLE)) {
 			osi_core->osd_ops.restart_lane_bringup(osi_core->osd, OSI_ENABLE);
 #ifdef HSI_SUPPORT
 			link_ok = 1;
