@@ -1159,7 +1159,8 @@ static inline void dump_tx_descriptors(struct osi_dma_priv_data *osi_dma,
 
 static inline void set_clear_ioc_for_last_desc(struct osi_dma_priv_data *osi_dma,
 					       struct osi_tx_ring *tx_ring,
-					       struct osi_tx_desc *last_desc)
+					       struct osi_tx_desc *last_desc,
+					       struct osi_tx_pkt_cx *tx_pkt_cx)
 {
 	/* clear IOC bit if tx SW timer based coalescing is enabled */
 	if (osi_dma->use_tx_usecs == OSI_ENABLE) {
@@ -1173,9 +1174,13 @@ static inline void set_clear_ioc_for_last_desc(struct osi_dma_priv_data *osi_dma
 				last_desc->tdes2 |= TDES2_IOC;
 			}
 		} else if (osi_dma->use_tx_descs == OSI_ENABLE) {
+			/* Add unlikely to reduce the branch mispredictions for regular data path pkts. */
 			if (tx_ring->desc_cnt >= osi_dma->intr_desc_count) {
 				last_desc->tdes2 |= TDES2_IOC;
 				tx_ring->desc_cnt = tx_ring->desc_cnt % osi_dma->intr_desc_count;
+			} else if (osi_unlikely((tx_pkt_cx->flags & OSI_PKT_CX_PTP) == OSI_PKT_CX_PTP)) {
+				last_desc->tdes2 |= TDES2_IOC;
+				tx_ring->desc_cnt = 0;
 			}
 		}
 	}
@@ -1349,7 +1354,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	update_frame_cnt(osi_dma, tx_ring);
 	tx_ring->desc_cnt++;
 
-	set_clear_ioc_for_last_desc(osi_dma, tx_ring, last_desc);
+	set_clear_ioc_for_last_desc(osi_dma, tx_ring, last_desc, tx_pkt_cx);
 
 	/* Set OWN bit for first and context descriptors
 	 * at the end to avoid race condition
