@@ -697,7 +697,6 @@ static nve32_t eqos_hsi_configure(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = 0;
 
 	if (enable == OSI_ENABLE) {
-		osi_core->hsi.enabled = OSI_ENABLE;
 
 		/* T23X-EQOS_HSIv2-19: Enabling of Consistency Monitor for TX Frame Errors */
 		value = osi_readla(osi_core,
@@ -766,6 +765,15 @@ static nve32_t eqos_hsi_configure(struct osi_core_priv_data *const osi_core,
 			if (ret != 0) {
 				goto fail;
 			}
+			/* Enable FSM time-out safety mechanism inside PCS */
+			ret = xpcs_write_safety(osi_core, EQOS_PCS_SFTY_DISABLE_0,
+						PCS_FSM_TIMEOUT_ENABLE);
+			if (ret != 0) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					     "eqos fsm timeout enable failed\n", 0ULL);
+				goto fail;
+			}
+
 		}
 
 		/* T23X-EQOS_HSIv2-5: Enabling and Initialization of Transaction Timeout */
@@ -781,7 +789,6 @@ static nve32_t eqos_hsi_configure(struct osi_core_priv_data *const osi_core,
 		osi_writela(osi_core, value,
 			    (nveu8_t *)osi_core->base + EQOS_MAC_FSM_CONTROL);
 	} else {
-		osi_core->hsi.enabled = OSI_DISABLE;
 
 		/* T23X-EQOS_HSIv2-19: Disable of Consistency Monitor for TX Frame Errors */
 		value = osi_readla(osi_core,
@@ -841,6 +848,14 @@ static nve32_t eqos_hsi_configure(struct osi_core_priv_data *const osi_core,
 				   EQOS_PCS_SFTY_TMR_CTRL_RXFPEI);
 			ret = xpcs_write_safety(osi_core, EQOS_PCS_SFTY_TMR_CTRL, value);
 			if (ret != 0) {
+				goto fail;
+			}
+			/* disable FSM time-out safety mechanism inside PCS */
+			ret = xpcs_write_safety(osi_core, EQOS_PCS_SFTY_DISABLE_0,
+						PCS_FSM_TIMEOUT_DISABLE);
+			if (ret != 0) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					     "eqos fsm timeout disable failed\n", 0ULL);
 				goto fail;
 			}
 		}

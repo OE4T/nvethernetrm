@@ -2159,6 +2159,49 @@ static nve32_t mgbe_config_flow_control(struct osi_core_priv_data *const osi_cor
 
 #ifdef HSI_SUPPORT
 /**
+ * @brief pcs_configure_fsm - Configure FSM for XPCS/XLGPCS
+ *
+ * @note
+ * Algorithm: enable/disable the FSM timeout safety feature 
+ *
+ * @param[in, out] osi_core: OSI core private data structure.
+ * @param[in] enable: OSI_ENABLE for Enabling FSM timeout safety feature, else disable
+ *
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
+
+static nve32_t pcs_configure_fsm(struct osi_core_priv_data *const osi_core,
+				  const nveu32_t enable)
+{
+	nve32_t ret = 0;
+	nveu32_t xpcs_sfty_val = (enable == OSI_ENABLE) ?
+				  XPCS_SFTY_ENABLE_VAL : XPCS_SFTY_DISABLE_VAL;
+	nveu32_t xlgpcs_sfty_val = (enable == OSI_ENABLE) ?
+				    XLGPCS_SFTY_ENABLE_VAL : XLGPCS_SFTY_DISABLE_VAL;
+
+	/* Enable/Disable FSM time-out safety mechanism inside XPCS */
+	ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_SFTY_DISABLE_0, xpcs_sfty_val);
+	if (ret != 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "XPCS safety register write failure\n", 0ULL);
+		goto fail;
+	}
+	/* Applicable only for 25G */
+	if (osi_core->uphy_gbe_mode == OSI_GBE_MODE_25G) {
+		/* Enabling/Disabling FT_DIS/FP_DIS/DPP_DIS/ECC_DIS/CSRP_DIS/IFT_DIS in XLGPCS */
+		ret = xpcs_write_safety(osi_core, XLGPCS_VR_XS_PCS_SFTY_DISABLE_0, xlgpcs_sfty_val);
+		if (ret != 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "XLGPCS safety register write failure\n", 0ULL);
+			goto fail;
+		}
+	}
+fail:
+	return ret;
+}
+
+/**
  * @brief mgbe_hsi_configure - Configure HSI
  *
  * @note
@@ -2187,8 +2230,6 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 	};
 
 	if (enable == OSI_ENABLE) {
-		osi_core->hsi.enabled = OSI_ENABLE;
-
 		/* T23X-MGBE_HSIv2-12:Initialization of Transaction Timeout in PCS */
 		/* T23X-MGBE_HSIv2-11:Initialization of Watchdog Timer */
 		value = (0xCCU << XPCS_SFTY_1US_MULT_SHIFT) & XPCS_SFTY_1US_MULT_MASK;
@@ -2309,8 +2350,8 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 		osi_writela(osi_core, value,
 			    (nveu8_t *)osi_core->base + MGBE_MMC_RX_INTR_EN);
 
+		ret = pcs_configure_fsm(osi_core, OSI_ENABLE);
 	} else {
-		osi_core->hsi.enabled = OSI_DISABLE;
 
 		/* T23X-MGBE_HSIv2-11:Deinitialization of Watchdog Timer */
 		ret = xpcs_write_safety(osi_core, XPCS_VR_XS_PCS_SFTY_TMR_CTRL, 0);
@@ -2387,6 +2428,8 @@ static nve32_t mgbe_hsi_configure(struct osi_core_priv_data *const osi_core,
 		value &= ~MGBE_RXCRCERPIE;
 		/* T23X-MGBE_HSIv2-20: Disabling of error reporting for Inbound Bus CRC errors */
 		osi_writela(osi_core, value, (nveu8_t *)osi_core->base + MGBE_MMC_RX_INTR_EN);
+
+		ret = pcs_configure_fsm(osi_core, OSI_DISABLE);
 	}
 fail:
 	return ret;

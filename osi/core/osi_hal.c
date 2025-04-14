@@ -343,7 +343,20 @@ static inline void init_vlan_filters(struct osi_core_priv_data *const osi_core)
 static nve32_t osi_hal_hw_core_deinit(struct osi_core_priv_data *const osi_core)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	nve32_t ret = 0;
 
+#ifdef HSI_SUPPORT
+	if(osi_core->hsi.enabled == OSI_ENABLE) {
+		ret = l_core->ops_p->core_hsi_configure(osi_core, OSI_DISABLE);
+		if (ret == XPCS_WRITE_FAIL_CODE) {
+			osi_core->hsi.err_code[XPCS_WRITE_FAIL_IDX] = OSI_XPCS_WRITE_FAIL_ERR;
+			osi_core->hsi.report_err = OSI_ENABLE;
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				     "XPCS read back failed during deinit\n", 0ULL);
+			goto fail;
+		}
+	}
+#endif
 	/* Stop the MAC */
 	hw_stop_mac(osi_core);
 
@@ -365,8 +378,10 @@ static nve32_t osi_hal_hw_core_deinit(struct osi_core_priv_data *const osi_core)
 	}
 
 	l_core->state = OSI_DISABLE;
-
-	return 0;
+#ifdef HSI_SUPPORT
+fail:
+#endif
+	return ret;
 }
 
 /**
@@ -638,6 +653,17 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 	hw_start_mac(osi_core);
 
 #ifdef HSI_SUPPORT
+	if(osi_core->hsi.enabled == OSI_ENABLE) {
+		ret = l_core->ops_p->core_hsi_configure(osi_core, OSI_ENABLE);
+		if (ret == XPCS_WRITE_FAIL_CODE) {
+			osi_core->hsi.err_code[XPCS_WRITE_FAIL_IDX] = OSI_XPCS_WRITE_FAIL_ERR;
+			osi_core->hsi.report_err = OSI_ENABLE;
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				     "XPCS read back failed during init\n", 0ULL);
+			goto fail;
+		}
+	}
+
 	/* Fill HSI error attributes */
 	fill_hsi_attributes(osi_core);
 #endif
