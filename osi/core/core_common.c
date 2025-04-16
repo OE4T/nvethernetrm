@@ -1507,7 +1507,7 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 		osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MGBE_MAC_RQC4R);
 	}
 	/* initiate SVER for SMD-V and SMD-R */
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + (MTL_FPE_CTS[osi_core->mac]));
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + (MAC_FPE_CTS[osi_core->mac]));
 	val |= MAC_FPE_CTS_SVER;
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + (MAC_FPE_CTS[osi_core->mac]));
 
