@@ -207,6 +207,7 @@ fail:
 
 nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t speed)
 {
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nveu32_t  value;
 	nve32_t  ret = 0;
 	void *base = osi_core->base;
@@ -215,6 +216,8 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 				MGBE_MAC_TMCR,
 				MGBE_MAC_TMCR
 			};
+
+	l_core->lane_status = OSI_DISABLE;
 
 	if (((osi_core->mac == OSI_MAC_HW_EQOS) && (speed > OSI_SPEED_2500)) ||
 	    (((osi_core->mac == OSI_MAC_HW_MGBE) ||
@@ -310,6 +313,7 @@ nve32_t hw_set_speed(struct osi_core_priv_data *const osi_core, const nve32_t sp
 		}
 	}
 
+	l_core->lane_status = OSI_ENABLE;
 	osi_core->speed = speed;
 fail:
 	return ret;
@@ -1431,14 +1435,49 @@ done:
 	return ret;
 }
 
+static nveu32_t speed_index(nve32_t speed)
+{
+	nveu32_t ret;
+
+	switch (speed) {
+	case OSI_SPEED_10:
+		ret = OSI_SPEED_10_INX;
+		break;
+	case OSI_SPEED_100:
+		ret =  OSI_SPEED_100_INX;
+		break;
+	case OSI_SPEED_1000:
+		ret = OSI_SPEED_1000_INX;
+		break;
+	case OSI_SPEED_2500:
+		ret = OSI_SPEED_2500_INX;
+		break;
+	case OSI_SPEED_5000:
+		ret = OSI_SPEED_5000_INX;
+		break;
+	case OSI_SPEED_10000:
+		ret = OSI_SPEED_10000_INX;
+		break;
+	case OSI_SPEED_25000:
+		ret = OSI_SPEED_25000_INX;
+		break;
+	default:
+		ret = OSI_SPEED_10000_INX;
+		break;
+	}
+
+	return ret;
+}
 static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_core,
 					struct osi_fpe_config *const fpe)
 {
 	nveu32_t i = 0U;
+	nveu32_t index = 0;
 	nveu32_t val = 0U;
 	nveu32_t temp = 0U, temp1 = 0U;
 	nveu32_t temp_shift = 0U;
 	nve32_t ret = 0;
+
 	const nveu32_t MTL_FPE_CTS[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_CTS,
 						MGBE_MTL_FPE_CTS,
 						MGBE_MTL_FPE_CTS};
@@ -1460,6 +1499,9 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 	const nveu32_t MTL_FPE_ADV[OSI_MAX_MAC_IP_TYPES] = {EQOS_MTL_FPE_ADV,
 						MGBE_MTL_FPE_ADV,
 						MGBE_MTL_FPE_ADV};
+	const nveu32_t MTL_FPE_HADV_VAL[OSI_SPEED_MAX_INX] = {FPE_1G_HADV, FPE_1G_HADV,
+						FPE_1G_HADV, FPE_10G_HADV, FPE_10G_HADV,
+						FPE_10G_HADV, FPE_25G_HADV};
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + MTL_FPE_CTS[osi_core->mac]);
 	val &= ~MTL_FPE_CTS_PEC;
@@ -1503,14 +1545,14 @@ static nve32_t hw_config_fpe_pec_enable(struct osi_core_priv_data *const osi_cor
 		osi_writela(osi_core, val, (nveu8_t *)osi_core->base + MGBE_MAC_RQC4R);
 	}
 	/* initiate SVER for SMD-V and SMD-R */
-	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + (MTL_FPE_CTS[osi_core->mac]));
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + (MAC_FPE_CTS[osi_core->mac]));
 	val |= MAC_FPE_CTS_SVER;
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + (MAC_FPE_CTS[osi_core->mac]));
 
 	val = osi_readla(osi_core, (nveu8_t *)osi_core->base + (MTL_FPE_ADV[osi_core->mac]));
 	val &= ~MTL_FPE_ADV_HADV_MASK;
-	//(minimum_fragment_size +IPG/EIPG + Preamble) *.8 ~98ns for10G
-	val |= MTL_FPE_ADV_HADV_VAL;
+	index = speed_index(osi_core->speed);
+	val |= MTL_FPE_HADV_VAL[index];
 	osi_writela(osi_core, val, (nveu8_t *)osi_core->base + (MTL_FPE_ADV[osi_core->mac]));
 
 	if (osi_core->mac == OSI_MAC_HW_MGBE) {
@@ -1933,10 +1975,20 @@ nve32_t hsi_common_error_inject(struct osi_core_priv_data *osi_core,
 		osi_core->hsi.report_err = OSI_ENABLE;
 		osi_core->hsi.report_count_err[AUTONEG_ERR_IDX] = OSI_ENABLE;
 		break;
+	case OSI_PCS_LNK_ERR:
+		osi_core->hsi.err_code[PCS_LNK_ERR_IDX] = OSI_PCS_LNK_ERR;
+		osi_core->hsi.report_err = OSI_ENABLE;
+		osi_core->hsi.report_count_err[PCS_LNK_ERR_IDX] = OSI_ENABLE;
+		break;
 	case OSI_XPCS_WRITE_FAIL_ERR:
 		osi_core->hsi.err_code[XPCS_WRITE_FAIL_IDX] = OSI_XPCS_WRITE_FAIL_ERR;
 		osi_core->hsi.report_err = OSI_ENABLE;
 		osi_core->hsi.report_count_err[XPCS_WRITE_FAIL_IDX] = OSI_ENABLE;
+		break;
+	case OSI_MAC_CMN_INTR_ERR:
+		osi_core->hsi.err_code[MAC_CMN_INTR_ERR_IDX] = OSI_MAC_CMN_INTR_ERR;
+		osi_core->hsi.report_err = OSI_ENABLE;
+		osi_core->hsi.report_count_err[MAC_CMN_INTR_ERR_IDX] = OSI_ENABLE;
 		break;
 	case OSI_M2M_TSC_READ_ERR:
 	case OSI_M2M_TIME_CAL_ERR:

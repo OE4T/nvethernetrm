@@ -107,10 +107,22 @@ struct if_core_ops {
 				    const nveu32_t phyaddr,
 				    const nveu32_t phyreg,
 				    const nveu16_t phydata);
-	/** Interface function called to read a PHY reg over MDIO bus */
+	/** Interface function called to read a PHY reg over MDIO bus from DT*/
 	nve32_t (*if_read_phy_reg)(struct osi_core_priv_data *const osi_core,
-				   const nveu32_t phyaddr,
-				   const nveu32_t phyreg);
+					const nveu32_t phyaddr,
+					const nveu32_t phyreg);
+#ifdef PHY_PROG
+	/** Interface function called to program PHY from DTB enteries*/
+	nve32_t (*if_write_phy_reg_dt)(struct osi_core_priv_data *const osi_core,
+					const nveu32_t phyaddr,
+					const nveu32_t macMdioForAddrReg,
+					const nveu32_t macMdioForDataReg);
+	/** Interface function called to program PHY from DTB enteries*/
+	nve32_t (*if_read_phy_reg_dt)(struct osi_core_priv_data *const osi_core,
+					const nveu32_t phyaddr,
+					const nveu32_t macMdioForAddrReg,
+					const nveu32_t macMdioForDataReg);
+#endif /* PHY_PROG */
 	/** Initialize Interface core operations */
 	nve32_t (*if_init_core_ops)(struct osi_core_priv_data *const osi_core);
 	/** Interface function called to handle runtime commands */
@@ -153,6 +165,18 @@ struct core_ops {
 	nve32_t (*read_phy_reg)(struct osi_core_priv_data *const osi_core,
 				const nveu32_t phyaddr,
 				const nveu32_t phyreg);
+#ifdef PHY_PROG
+	/** Called to write into a PHY reg over MDIO bus when read from DT*/
+	nve32_t (*write_phy_reg_dt)(struct osi_core_priv_data *const osi_core,
+				const nveu32_t phyaddr,
+				const nveu32_t macMdioForAddrReg,
+				const nveu32_t macMdioForDataReg);
+	/** Called to read from a PHY reg over MDIO bus when read from DT */
+	nve32_t (*read_phy_reg_dt)(struct osi_core_priv_data *const osi_core,
+				const nveu32_t phyaddr,
+				const nveu32_t macMdioForAddrReg,
+				const nveu32_t macMdioForDataReg);
+#endif /* PHY_PROG */
 	/** Called to get HW features */
 	void (*get_hw_features)(struct osi_core_priv_data *const osi_core,
 				struct osi_hw_features *hw_feat);
@@ -209,15 +233,14 @@ struct core_ops {
 	void (*configure_eee)(struct osi_core_priv_data *const osi_core,
 			      const nveu32_t tx_lpi_enabled,
 			      const nveu32_t tx_lpi_timer);
-	/** Called to set MDC clock rate for MDIO operation */
-	void (*set_mdc_clk_rate)(struct osi_core_priv_data *const osi_core,
-				 const nveu64_t csr_clk_rate);
 	/** Called to configure MAC in loopback mode */
 	nve32_t (*config_mac_loopback)(
 				struct osi_core_priv_data *const osi_core,
 				const nveu32_t lb_mode);
 	/** Called to configure RSS for MAC */
-	nve32_t (*config_rss)(struct osi_core_priv_data *osi_core);
+	nve32_t (*config_rss)(struct osi_core_priv_data *osi_core, const struct osi_core_rss *rss);
+	/** Called to get RSS parameters from MAC */
+	nve32_t (*get_rss)(struct osi_core_priv_data *osi_core, struct osi_core_rss *rss);
 	/** Called to configure the PTP RX packets Queue */
 	nve32_t (*config_ptp_rxq)(struct osi_core_priv_data *const osi_core,
 				  const nveu32_t rxq_idx,

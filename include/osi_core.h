@@ -102,7 +102,6 @@ typedef my_lint_64		nvel64_t;
 /** @} */
 
 #define OSI_CMD_RESET_MMC		12U
-#define OSI_CMD_MDC_CONFIG		1U
 #define OSI_CMD_MAC_LB			14U
 #define OSI_CMD_FLOW_CTRL		15U
 #define OSI_CMD_CONFIG_TXSTATUS		27U
@@ -316,6 +315,12 @@ typedef my_lint_64		nvel64_t;
 #define TWO_POWER_32		0x100000000ULL
 /* MDIO clause 45 bit */
 #define OSI_MII_ADDR_C45		OSI_BIT(30)
+/** @brief EQOS default MDC CR value - CSR 300-500 MHz, div=204 */
+#define OSI_EQOS_DEFAULT_MDC_CR		0x6U
+/** @brief MGBE default MDC CR value - CSR 400-500 MHz, div=202 */
+#define OSI_MGBE_DEFAULT_MDC_CR		0x5U
+/** @brief Maximum allowed MDC CR value */
+#define OSI_MAX_MDC_CR			0xFU
 /** @} */
 
 /**
@@ -514,9 +519,13 @@ typedef my_lint_64		nvel64_t;
 #define OSI_CMD_READ_HSI_ERR		57U
 #endif /* HSI_SUPPORT */
 /**
+ * @brief Command to GET RSS Configuration
+ */
+#define OSI_CMD_GET_RSS			58U
+/**
  * @brief Command to config camera over eth logic
  */
-#define OSI_CMD_GMSL_COE_CONFIG		58U
+#define OSI_CMD_GMSL_COE_CONFIG		59U
 /** @} */
 
 #ifdef LOG_OSI
@@ -657,6 +666,10 @@ typedef my_lint_64		nvel64_t;
 #define PHY_WRITE_VERIFY_FAIL_IDX	7U
 /** @brief MAC to MAC error Index */
 #define MAC2MAC_ERR_IDX		8U
+/** @brief Link training monitor error Index */
+#define PCS_LNK_ERR_IDX		9U
+/** @brief mac common interrupt status monitor error Index */
+#define MAC_CMN_INTR_ERR_IDX		10U
 /** @brief MACSEC RX CRC error Index */
 #define MACSEC_RX_CRC_ERR_IDX	0U
 /** @brief MACSEC TX CRC error Index */
@@ -690,7 +703,7 @@ typedef my_lint_64		nvel64_t;
  * @brief Maximum number of different mac error code
  * HSI_SW_ERR_CODE + Two (Corrected and Uncorrected error code)
  */
-#define OSI_HSI_MAX_MAC_ERROR_CODE		9U
+#define OSI_HSI_MAX_MAC_ERROR_CODE		11U
 
 /**
  * @brief Maximum number of different macsec error code
@@ -739,6 +752,10 @@ typedef my_lint_64		nvel64_t;
 #define OSI_M2M_SET_TIME_ERR		0x11U
 /** @brief M2M config PTP error code */
 #define OSI_M2M_CONFIG_PTP_ERR		0x12U
+/** @brief pcs link status error code */
+#define OSI_PCS_LNK_ERR			0x13U
+/** @brief MAC common interrupt status error code */
+#define OSI_MAC_CMN_INTR_ERR		0x14U
 
 /** @brief EQOS uncorrectable attribute */
 #define OSI_EQOS_UNCORRECTABLE_ATTR	0x109
@@ -1547,36 +1564,40 @@ struct osi_ioctl {
 	nveu8_t *arg7_u8_p;
 	/** s64 general argument 8 */
 	nvel64_t arg8_64;
-	/** L2 filter structure */
-	struct osi_filter l2_filter;
-	/** l3_l4 filter structure */
-	struct osi_l3_l4_filter l3l4_filter;
-	/**  HW feature structure */
-	struct osi_hw_features hw_feat;
-	/** AVB structure */
-	struct osi_core_avb_algorithm avb;
+	union {
+		/** L2 filter structure */
+		struct osi_filter l2_filter;
+		/** l3_l4 filter structure */
+		struct osi_l3_l4_filter l3l4_filter;
+		/**  HW feature structure */
+		struct osi_hw_features hw_feat;
+		/** AVB structure */
+		struct osi_core_avb_algorithm avb;
 #ifndef OSI_STRIPPED_LIB
-	/** VLAN filter structure */
-	struct osi_vlan_filter vlan_filter;
-	/** PTP offload config structure*/
-	struct osi_pto_config pto_config;
-	/** RXQ route structure */
-	struct osi_rxq_route rxq_route;
+		/** VLAN filter structure */
+		struct osi_vlan_filter vlan_filter;
+		/** PTP offload config structure*/
+		struct osi_pto_config pto_config;
+		/** RXQ route structure */
+		struct osi_rxq_route rxq_route;
+		/** RSS core structure */
+		struct osi_core_rss rss;
 #endif /* !OSI_STRIPPED_LIB */
-	/** FRP structure */
-	struct osi_core_frp_cmd frp_cmd;
-	/** EST structure */
-	struct osi_est_config est;
-	/** FRP structure */
-	struct osi_fpe_config fpe;
-	/** PTP configuration settings */
-	struct osi_ptp_config ptp_config;
-	/** TX Timestamp structure */
-	struct osi_core_tx_ts tx_ts;
-	/** PTP TSC data */
-	struct osi_core_ptp_tsc_data ptp_tsc;
-	/** COE config data */
-	struct osi_mgbe_coe mgbe_coe;
+		/** FRP structure */
+		struct osi_core_frp_cmd frp_cmd;
+		/** EST structure */
+		struct osi_est_config est;
+		/** FRP structure */
+		struct osi_fpe_config fpe;
+		/** PTP configuration settings */
+		struct osi_ptp_config ptp_config;
+		/** TX Timestamp structure */
+		struct osi_core_tx_ts tx_ts;
+		/** PTP TSC data */
+		struct osi_core_ptp_tsc_data ptp_tsc;
+        /** COE config data */
+        struct osi_mgbe_coe mgbe_coe;
+	}data;
 };
 
 /**
@@ -1709,10 +1730,12 @@ struct osi_core_priv_data {
 	 * 1- FPE HW configuration initiated to enable
 	 * 0- FPE HW configuration initiated to disable */
 	nveu32_t is_fpe_enabled;
+#ifdef DUMMY_SC
 	/** Dummy SCI/SC/SA etc LUTs programmed with dummy parameter when no
 	 * session setup. SCI LUT hit created with VF's MACID
 	 * valid values are from 0 to 0xFF for each array element */
 	nveu8_t macsec_dummy_sc_macids[OSI_MAX_NUM_SC_T26x][OSI_ETH_ALEN];
+#endif
 	/** MACSEC initialization state
 	 * valid vaues are 0(not initialized) and 1(Initialized) */
 	nveu32_t macsec_initialized;
@@ -1788,8 +1811,6 @@ struct osi_core_priv_data {
 	nveu16_t vid[VLAN_NUM_VID];
 	/** Count of number of VLAN filters in vid array */
 	nveu16_t vlan_filter_cnt;
-	/** RSS core structure */
-	struct osi_core_rss rss;
 #endif
 	/** DT entry to enable(1) or disable(0) pause frame support */
 	nveu32_t pause_frames;
@@ -1849,13 +1870,13 @@ struct osi_core_priv_data {
 	 * (4 for XFI 25G) (5 for USXGMII 25G */
 	nveu32_t phy_iface_mode;
 	/** MGBE MAC instance ID's
-	 * valid values are from 0 to 4 
+	 * valid values are from 0 to 4
 	 * 0 to 3 fo reach MGBE instance and 4 for EQOS */
 	nveu32_t instance_id;
 	/** Ethernet controller MAC to MAC Time sync role
 	 * valid values are NVETHERNETRM_PIF$OSI_PTP_M2M_INACTIVE,
 	 * NVETHERNETRM_PIF$OSI_PTP_M2M_PRIMARY and
-	 * NVETHERNETRM_PIF$OSI_PTP_M2M_SECONDARY 
+	 * NVETHERNETRM_PIF$OSI_PTP_M2M_SECONDARY
 	 */
 	nveu32_t m2m_role;
 	/** control pps output signal
@@ -1879,6 +1900,8 @@ struct osi_core_priv_data {
 	/** skip auto neg for usxgmii mode.
 	 * 0(enable AN) and 1(disable AN) are the valid values */
 	nveu32_t skip_usxgmii_an;
+	/** MAC common interrupt received */
+	nveu32_t mac_common_intr_rcvd;
 };
 
 /**
@@ -1994,6 +2017,8 @@ nve32_t osi_hw_core_init(struct osi_core_priv_data *const osi_core);
 #endif
 nve32_t osi_hw_core_deinit(struct osi_core_priv_data *const osi_core);
 
+
+
 /**
  * @brief
  * Description: Write to a PHY register through MAC over MDIO bus.
@@ -2002,7 +2027,7 @@ nve32_t osi_hw_core_deinit(struct osi_core_priv_data *const osi_core);
  *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
  * @param[in] phyaddr: PHY address (PHY ID) associated with PHY
  *   * Range: 0 to UINT32_MAX
- * @param[in] phyreg: Register which needs to be write to PHY.
+ * @param[in] phyreg: Register which needs to be written to PHY.
  *   * Range: 0 to UINT32_MAX
  * @param[in] phydata: Data to write to a PHY register.
  *   * Range: 0 to UINT32_MAX
@@ -2043,7 +2068,6 @@ nve32_t osi_hw_core_deinit(struct osi_core_priv_data *const osi_core);
 nve32_t osi_write_phy_reg(struct osi_core_priv_data *const osi_core,
 			  const nveu32_t phyaddr, const nveu32_t phyreg,
 			  const nveu16_t phydata);
-
 /**
  * @brief
  * Description: Read from a PHY register through MAC over MDIO bus.
@@ -2252,6 +2276,108 @@ nve32_t osi_handle_ioctl(struct osi_core_priv_data *osi_core,
  */
 #endif
 struct osi_core_priv_data *osi_get_core(void);
+
+#ifdef PHY_PROG
+/**
+ * @brief
+ * Description: Write to a PHY register through MAC over MDIO bus.
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] phyaddr: PHY address (PHY ID) associated with PHY
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] macMdioForAddrReg: Value to be written to MAC's MDIO address register for indirect PHY access
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] macMdioForDataReg: Value to be written to MAC's MDIO data register for indirect PHY access
+ *   * Range: 0 to UINT32_MAX
+ *
+ * @pre MAC should be init and started. see osi_start_mac()
+ *
+ * @return
+ *  - 0 on NVETHERNETRM_PIF#osi_write_phy_reg_dt PHY register write operation success
+ *  - -1 on NVETHERNETRM_PIF#osi_write_phy_reg_dt mdio access timeout
+ *  - -1 on NVETHERNETRM_PIF#osi_write_phy_reg_dt osi_core is NULL
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: Yes
+ */
+#ifndef DOXYGEN_ICD
+/**
+ *
+ * Traceability Details:
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_043
+ */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+nve32_t osi_write_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+				const nveu32_t phyaddr,
+				const nveu32_t macMdioForAddrReg,
+				const nveu32_t macMdioForDataReg);
+
+/**
+ * @brief
+ * Description: Read from a PHY register through MAC over MDIO bus.
+ *
+ * @param[in] osi_core: A pointer to the osi_core_priv_data structure
+ *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
+ * @param[in] phyaddr: PHY address (PHY ID) associated with PHY
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] macMdioForAddrReg: Value to be written to MAC's MDIO address register for indirect PHY access
+ *   * Range: 0 to UINT32_MAX
+ * @param[in] macMdioForDataReg: Value to be written to MAC's MDIO data register for indirect PHY access
+ *   * Range: 0 to UINT32_MAX
+ *
+ * @pre MAC should be init and started. see osi_start_mac()
+ *
+ * @return
+ *  - Register value on success
+ *  - -1 on NVETHERNETRM_PIF#osi_read_phy_reg_dt mdio access timeout
+ *  - -1 on NVETHERNETRM_PIF#osi_read_phy_reg_dt osi_core is NULL
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt handler: No
+ *  - Signal handler: No
+ *  - Thread safe: No
+ *  - Async/Sync: Sync
+ * - Required Privileges: None
+ * - API Group:
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: Yes
+ */
+#ifndef DOXYGEN_ICD
+/**
+ *
+ * Traceability Details:
+ * - SWUD_ID: NET_SWUD_TAG_NVETHERNETRM_044
+ */
+#else
+/**
+ *
+ * @dir
+ *  - forward
+ */
+#endif
+nve32_t osi_read_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+				const nveu32_t phyaddr,
+				const nveu32_t macMdioForAddrReg,
+				const nveu32_t macMdioForDataReg);
+#endif /* PHY_PROG */
 
 #ifdef FSI_EQOS_SUPPORT
 /**

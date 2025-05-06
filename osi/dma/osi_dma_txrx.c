@@ -234,11 +234,13 @@ static inline nveu32_t compltd_rx_desc_cnt(struct osi_dma_priv_data *osi_dma,
 		/* completed desc write back offset */
 		rx_desc_wr_idx = ((value >> MGBE_RX_DESC_WR_RNG_RWDC_SHIFT ) &
 				  (osi_dma->rx_ring_sz - 1U));
-		//If we remove this check we are seeing perf issues on mgbe3_0 of Ferrix
-	//	if (rx_desc_wr_idx >= rx_ring->cur_rx_idx) {
+		if (rx_desc_wr_idx >= rx_ring->cur_rx_idx) {
 			descr_compltd = (rx_desc_wr_idx - rx_ring->cur_rx_idx) &
 					 (osi_dma->rx_ring_sz - 1U);
-	//	}
+		} else {
+			descr_compltd = ((rx_desc_wr_idx + osi_dma->rx_ring_sz) -
+					  rx_ring->cur_rx_idx) & (osi_dma->rx_ring_sz - 1U);
+		}
 	}
 	/* offset/index start from 0, so add 1 to get final count */
 	descr_compltd = (((descr_compltd) & ((nveu32_t)0x7FFFFFFFU)) + (1U));
@@ -1277,6 +1279,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 				/* packet ID for Onestep is 0x0 always */
 				pkt_id = OSI_NONE;
 			} else {
+				INC_TX_TS_PKTID(l_dma->pkt_id);
 				if (osi_dma->mac != OSI_MAC_HW_MGBE_T26X) {
 					pkt_id = GET_TX_TS_PKTID(l_dma->pkt_id, chan);
 				} else {
@@ -1315,10 +1318,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	for (i = 0; i < desc_cnt; i++) {
 		/* Increase the desc count for first descriptor */
 		if (tx_ring->desc_cnt == UINT_MAX) {
-			OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-				    "dma_txrx: Reached Max Desc count\n", 0ULL);
-			ret = -1;
-			break;
+			tx_ring->desc_cnt = 0U;
 		}
 		tx_ring->desc_cnt++;
 
@@ -1336,10 +1336,7 @@ nve32_t hw_transmit(struct osi_dma_priv_data *osi_dma,
 	}
 
 	if (tx_ring->desc_cnt == UINT_MAX) {
-		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
-			    "dma_txrx: Reached Max Desc count\n", 0ULL);
-		ret = -1;
-		goto fail;
+		tx_ring->desc_cnt = 0U;
 	}
 	/* Mark it as LAST descriptor */
 	last_desc->tdes3 |= TDES3_LD;
@@ -1501,8 +1498,7 @@ static nve32_t rx_dma_desc_initialization(const struct osi_dma_priv_data *const 
 	}
 
 	/* Update the HW DMA ring length */
-	val = osi_dma_readl((nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
-	val |= (osi_dma->rx_ring_sz - 1U) & mask[osi_dma->mac];
+	val = (osi_dma->rx_ring_sz - 1U) & mask[osi_dma->mac];
 	osi_dma_writel(val, (nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
 
 	update_rx_tail_ptr(osi_dma, chan, tailptr);
@@ -1584,8 +1580,7 @@ static inline void set_tx_ring_len_and_start_addr(const struct osi_dma_priv_data
 	nveu32_t val;
 
 	/* Program ring length */
-	val = osi_dma_readl((nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
-	val |= len & mask[osi_dma->mac];
+	val = len & mask[osi_dma->mac];
 	osi_dma_writel(val, (nveu8_t *)osi_dma->base + ring_len_reg[osi_dma->mac]);
 
 	/* Program tx ring start address */

@@ -24,6 +24,9 @@
 #include "hw_desc.h"
 #include "mgbe_desc.h"
 
+/** @brief retry count for ptp context descriptor readiness */
+#define PTP_CTX_DESC_RETRY_CNT (10)
+
 #ifndef OSI_STRIPPED_LIB
 /**
  * @brief mgbe_get_rx_vlan - Get Rx VLAN from descriptor
@@ -192,18 +195,33 @@ static void mgbe_get_rx_csum(const struct osi_rx_desc *const rx_desc,
  * @brief mgbe_get_rx_hwstamp - Get Rx HW Time stamp
  *
  * Algorithm:
- *	1) Check for TS availability.
- *	2) call get_tx_tstamp_status if TS is valid or not.
- *	3) If yes, set a bit and update nano seconds in rx_pkt_cx so that OSD
- *	layer can extract the time by checking this bit.
+ *      1) Check if packet has context descriptor available (RDES3_CDA set in rx_desc->rdes3).
+ *      2) Return -1 if context descriptor is not available.
+ *      3) Check for TS availability in context descriptor (RDES3_CTXT/RDES3_TSA both
+ *         should be set and RDES3_OWN/RDES3_TSD both should not be set in context_desc->rdes3).
+ *             1) If yes, check timestamp from context_desc->rdes0 and context_desc->rdes1 is valid.
+ *                (rdes0 and rdes1 should not be equal to OSI_INVALID_VALUE).
+ *             2) Return 0 if timestamp is invalid.
+ *             3) Extract timestamp from context_desc->rdes0 and context_desc->rdes1
+ *                (context_desc->rdes0 + (OSI_NSEC_PER_SEC * context_desc->rdes1)) and store into
+ *                rx_pkt_cx->ns.
+ *             4) Return 0 if rx_pkt_cx->ns is less than context_desc->rdes0.
+ *             5) Set flag OSI_PKT_CX_PTP in rx_pkt_cx->flags.
+ *      3) If context descriptor timestamp dropped bit is set (RDES3_CTXT/RDES3_TSD both set and
+ *         RDES3_OWN bit not set), return 0.
+ *      4) If timestamp descriptor is not yet available, sleep for 1us using
+ *         osi_dma->osd_ops.udelay() and retry checking context descriptor from step3 with max
+ *         rery count of PTP_CTX_DESC_RETRY_CNT.
+ *      5) Return -1 if timestamp descriptor is not yet available even after
+ *         PTP_CTX_DESC_RETRY_CNT retries.
  *
  * @param[in] osi_dma: OSI DMA private data structure.
  * @param[in] rx_desc: Rx descriptor
  * @param[in] context_desc: Rx context descriptor
- * @param[in] rx_pkt_cx: Rx packet context
+ * @param[out] rx_pkt_cx: Rx packet context
  *
  * @retval -1 if TimeStamp is not available
- * @retval 0 if TimeStamp is available.
+ * @retval 0 if TimeStamp is available or dropped.
  */
 static nve32_t mgbe_get_rx_hwstamp(const struct osi_dma_priv_data *const osi_dma,
 				   const struct osi_rx_desc *const rx_desc,
@@ -218,34 +236,43 @@ static nve32_t mgbe_get_rx_hwstamp(const struct osi_dma_priv_data *const osi_dma
 		goto fail;
 	}
 
-	for (retry = 0; retry < 10; retry++) {
+	/* RDES3_CDA is set, hence it is a context descriptor.
+	 * Return always 0 from here on to allow caller to discard context descriptor
+	 */
+	for (retry = 0; retry < PTP_CTX_DESC_RETRY_CNT; retry++) {
 		if ((context_desc->rdes3 & (RDES3_OWN | RDES3_CTXT | RDES3_TSA | RDES3_TSD)) ==
 		    (RDES3_CTXT | RDES3_TSA)) {
 			if ((context_desc->rdes0 == OSI_INVALID_VALUE) &&
 			    (context_desc->rdes1 == OSI_INVALID_VALUE)) {
 				/* Invalid time stamp */
-				ret = -1;
-				goto fail;
+				break;
+			}
+			/* Time Stamp can be read */
+			rx_pkt_cx->ns = context_desc->rdes0 + (OSI_NSEC_PER_SEC * context_desc->rdes1);
+			if (rx_pkt_cx->ns < context_desc->rdes0) {
+				break;
 			}
 			/* Update rx pkt context flags to indicate PTP */
 			rx_pkt_cx->flags |= OSI_PKT_CX_PTP;
-			/* Time Stamp can be read */
 			break;
 		} else {
+			if ((context_desc->rdes3 & (RDES3_OWN | RDES3_CTXT | RDES3_TSD)) ==
+			    (RDES3_CTXT | RDES3_TSD)) {
+				/* Timestamp Dropped by HW, no need to retry */
+				break;
+			}
 			/* TS not available yet, so retrying */
 			osi_dma->osd_ops.udelay(OSI_DELAY_1US);
 		}
 	}
 
-	if (retry == 10) {
+	if (retry == PTP_CTX_DESC_RETRY_CNT) {
 		/* Timed out waiting for Rx timestamp */
 		ret = -1;
+		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+			    "hwstamp: Context descriptor OWN bit not cleared by HW\n",
+			    (nveul64_t)(context_desc->rdes3));
 		goto fail;
-	}
-
-	rx_pkt_cx->ns = context_desc->rdes0 + (OSI_NSEC_PER_SEC * context_desc->rdes1);
-	if (rx_pkt_cx->ns < context_desc->rdes0) {
-		ret = -1;
 	}
 
 fail:

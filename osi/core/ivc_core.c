@@ -56,7 +56,7 @@ static nve32_t ivc_handle_ioctl(struct osi_core_priv_data *osi_core,
 			 sizeof(struct osi_ioctl));
 #ifndef OSI_STRIPPED_LIB
 	if (data->cmd == OSI_CMD_CONFIG_PTP) {
-		(void)osi_memcpy((void *)&msg.data.ioctl_data.ptp_config,
+		(void)osi_memcpy((void *)&msg.data.ioctl_data.data.ptp_config,
 				 (void *)&osi_core->ptp_config,
 				 sizeof(struct osi_ptp_config));
 	}

@@ -109,21 +109,6 @@
 #define EQOS_MAC_RQC1R_PTPQ			(OSI_BIT(6) | OSI_BIT(5) | \
 						 OSI_BIT(4))
 #define EQOS_MAC_RQC1R_PTPQ_SHIFT		4U
-/**
- * @addtogroup EQOS-MDC MDC Clock Selection defines
- *
- * @brief MDC Clock defines
- * @{
- */
-#define EQOS_CSR_60_100M	0x0	/* MDC = clk_csr/42 */
-#define EQOS_CSR_100_150M	0x1	/* MDC = clk_csr/62 */
-#define EQOS_CSR_20_35M		0x2	/* MDC = clk_csr/16 */
-#define EQOS_CSR_35_60M		0x3	/* MDC = clk_csr/26 */
-#define EQOS_CSR_150_250M	0x4	/* MDC = clk_csr/102 */
-#define EQOS_CSR_250_300M	0x5	/* MDC = clk_csr/124 */
-#define EQOS_CSR_300_500M	0x6	/* MDC = clk_csr/204 */
-#define EQOS_CSR_500_800M	0x7	/* MDC = clk_csr/324 */
-/** @} */
 #define EQOS_MAC_LPI_CSR_LPITE			OSI_BIT(20)
 #define EQOS_MAC_LPI_CSR_LPITXA			OSI_BIT(19)
 #define EQOS_MAC_LPI_CSR_PLS			OSI_BIT(17)

@@ -40,10 +40,12 @@
 #define MACSEC_LOG(...)
 #endif
 
+#ifdef DUMMY_SC
 static nve32_t delete_dummy_sc(struct osi_core_priv_data *const osi_core,
 			     struct osi_macsec_sc_info *const sc);
 static nve32_t add_dummy_sc(struct osi_core_priv_data *const osi_core,
 				nveu8_t *const macsec_vf_mac);
+#endif
 
 #ifdef DEBUG_MACSEC
 /**
@@ -5322,12 +5324,14 @@ upd_byp_sci_lut:
 			      "Setting default BYP LUT failed\n", (nveul64_t)ret);
 		goto exit;
 	}
+#ifdef DUMMY_SC
 	ret = add_dummy_sc(osi_core, macsec_vf_mac);
 	if (ret < 0) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			      "Setting dummy SC LUT failed\n", (nveul64_t)ret);
 		goto exit;
 	}
+#endif
 exit:
 	return ret;
 }
@@ -6012,8 +6016,13 @@ static void memcpy_sci_sak_hkey(struct osi_macsec_sc_info *dst_sc,
  * @param[in] sc: Pointer to the sc that need to be added
  * @param[in] ctlr: Controller to be selected
  * @param[out] kt_idx: Key index to be passed to osd
+ */
+#ifdef DUMMY_SC
+/**
  * @param[in] is_sc_valid: Indicates if the SC is a valid SC or not
- *
+ */
+#endif
+/**
  * @pre MACSEC needs to be out of reset and proper clock configured.
  *
  * @note
@@ -6027,8 +6036,11 @@ static void memcpy_sci_sak_hkey(struct osi_macsec_sc_info *dst_sc,
  */
 static nve32_t add_new_sc(struct osi_core_priv_data *const osi_core,
 			  struct osi_macsec_sc_info *const sc,
-			  nveu16_t ctlr, nveu16_t *kt_idx,
-			  nveu8_t is_sc_valid)
+			  nveu16_t ctlr, nveu16_t *kt_idx
+#ifdef DUMMY_SC
+			  , nveu8_t is_sc_valid
+#endif
+			 )
 {
 	nve32_t ret = 0;
 	struct osi_macsec_lut_status *lut_status_ptr;
@@ -6069,9 +6081,13 @@ static nve32_t add_new_sc(struct osi_core_priv_data *const osi_core,
 		new_sc->encrypt = sc->encrypt;
 	}
 	new_sc->sc_idx_start = avail_sc_idx;
+#ifdef DUMMY_SC
 	if (is_sc_valid == OSI_MACSEC_SC_VALID) {
+#endif
 		new_sc->an_valid |= OSI_BIT((((nveu32_t)sc->curr_an) & 0xFU));
+#ifdef DUMMY_SC
 	}
+#endif
 
 	if (add_upd_sc(osi_core, new_sc, ctlr, kt_idx) !=
 		       OSI_NONE_SIGNED) {
@@ -6135,6 +6151,7 @@ static nve32_t macsec_configure(struct osi_core_priv_data *const osi_core,
 	struct osi_macsec_lut_status *lut_status_ptr;
 	nve32_t ret = 0;
 
+#ifdef DUMMY_SC
 	ret = delete_dummy_sc(osi_core, sc);
 	if (ret < OSI_NONE_SIGNED) {
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
@@ -6142,6 +6159,7 @@ static nve32_t macsec_configure(struct osi_core_priv_data *const osi_core,
 		ret = -1;
 		goto exit;
 	}
+#endif
 	lut_status_ptr = &osi_core->macsec_lut_status[ctlr];
 	/* 1. Find if SC is already existing in HW */
 	existing_sc = find_existing_sc(osi_core, sc, ctlr);
@@ -6154,7 +6172,11 @@ static nve32_t macsec_configure(struct osi_core_priv_data *const osi_core,
 			goto exit;
 		} else {
 			MACSEC_LOG("%s: Adding new SC/SA: ctlr: %hu", __func__, ctlr);
-			ret = add_new_sc(osi_core, sc, ctlr, kt_idx, OSI_MACSEC_SC_VALID);
+			ret = add_new_sc(osi_core, sc, ctlr, kt_idx
+#ifdef DUMMY_SC
+					, OSI_MACSEC_SC_VALID
+#endif
+					);
 			goto exit;
 		}
 	} else {
@@ -6219,6 +6241,7 @@ exit:
 	return ret;
 }
 
+#ifdef DUMMY_SC
 /**
  * @brief delete_dummy_sc - Helper function to delete Dummy Tx SC entry
  *
@@ -6360,6 +6383,7 @@ static nve32_t add_dummy_sc(struct osi_core_priv_data *const osi_core, nveu8_t *
 exit_func:
 	return ret;
 }
+#endif
 
 #ifdef NV_VLTEST_BUILD
 static void hsi_nvmacsec_error_inject(struct osi_core_priv_data *const osi_core,

@@ -54,6 +54,14 @@ static inline nve32_t eqos_xpcs_poll_for_an_complete(
 		if (count > retry) {
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				     "EQOS XPCS AN completion timed out\n", 0ULL);
+#ifdef HSI_SUPPORT
+			if (osi_core->hsi.enabled == OSI_ENABLE) {
+				osi_core->hsi.err_code[AUTONEG_ERR_IDX] =
+						OSI_PCS_AUTONEG_ERR;
+				osi_core->hsi.report_err = OSI_ENABLE;
+				osi_core->hsi.report_count_err[AUTONEG_ERR_IDX] = OSI_ENABLE;
+			}
+#endif
 			ret = -1;
 			goto fail;
 		}
@@ -187,9 +195,19 @@ nve32_t eqos_xpcs_init(struct osi_core_priv_data *osi_core)
 	count = 0;
 	while (cond == 1) {
 		if (count > retry) {
-			ret = -1;
 			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 				     "XPCS LINK_STS timeout!!", 0ULL);
+#ifdef HSI_SUPPORT
+			/* T264-EQOS_HSIv2-59	Link Training Status Register
+			 * monitoring during Link Training in EQOS PCS
+			 */
+			if (osi_core->hsi.enabled == OSI_ENABLE) {
+				osi_core->hsi.err_code[PCS_LNK_ERR_IDX] = OSI_PCS_LNK_ERR;
+				osi_core->hsi.report_err = OSI_ENABLE;
+				osi_core->hsi.report_count_err[PCS_LNK_ERR_IDX] = OSI_ENABLE;
+			}
+#endif
+			ret = -1;
 			goto fail;
 		}
 

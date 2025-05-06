@@ -245,6 +245,26 @@ fail:
 	return ret;
 }
 
+#ifdef PHY_PROG
+nve32_t osi_write_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+				const nveu32_t phyaddr,
+				const nveu32_t macMdioForAddrReg,
+				const nveu32_t macMdioForDataReg)
+{
+	nve32_t ret = -1;
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+
+	if (validate_if_args(osi_core, l_core) < 0) {
+		goto fail;
+	}
+
+	ret = l_core->if_ops_p->if_write_phy_reg_dt(osi_core, phyaddr,
+						 macMdioForAddrReg, macMdioForDataReg);
+fail:
+	return ret;
+}
+#endif /* PHY_PROG */
+
 nve32_t osi_read_phy_reg(struct osi_core_priv_data *const osi_core,
 			 const nveu32_t phyaddr, const nveu32_t phyreg)
 {
@@ -265,6 +285,27 @@ nve32_t osi_read_phy_reg(struct osi_core_priv_data *const osi_core,
 fail:
 	return ret;
 }
+
+#ifdef PHY_PROG
+nve32_t osi_read_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+					const nveu32_t phyaddr,
+					const nveu32_t macMdioForAddrReg,
+					const nveu32_t macMdioForDataReg)
+{
+	nve32_t ret = -1;
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+
+	if (validate_if_args(osi_core, l_core) < 0) {
+		goto fail;
+	}
+
+	ret = l_core->if_ops_p->if_read_phy_reg_dt(osi_core, phyaddr,
+						macMdioForAddrReg, macMdioForDataReg);
+
+fail:
+	return ret;
+}
+#endif /* PHY_PROG */
 
 nve32_t osi_hw_core_init(struct osi_core_priv_data *const osi_core)
 {

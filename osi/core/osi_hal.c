@@ -203,6 +203,19 @@ static nve32_t osi_hal_write_phy_reg(struct osi_core_priv_data *const osi_core,
 	return l_core->ops_p->write_phy_reg(osi_core, phyaddr, phyreg, phydata);
 }
 
+#ifdef PHY_PROG
+static nve32_t osi_hal_write_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+					const nveu32_t phyaddr,
+					const nveu32_t macMdioForAddrReg,
+					const nveu32_t macMdioForDataReg)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+
+	return l_core->ops_p->write_phy_reg_dt(osi_core, phyaddr,
+                                          macMdioForAddrReg, macMdioForDataReg);
+}
+#endif /* PHY_PROG */
+
 /**
  * @brief osi_hal_read_phy_reg - HW API to Read from a PHY register through MAC
  * over MDIO bus.
@@ -251,6 +264,19 @@ static nve32_t osi_hal_read_phy_reg(struct osi_core_priv_data *const osi_core,
 
 	return l_core->ops_p->read_phy_reg(osi_core, phyaddr, phyreg);
 }
+
+#ifdef PHY_PROG
+static nve32_t osi_hal_read_phy_reg_dt(struct osi_core_priv_data *const osi_core,
+					const nveu32_t phyaddr,
+					const nveu32_t macMdioForAddrReg,
+					const nveu32_t macMdioForDataReg)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+
+	return l_core->ops_p->read_phy_reg_dt(osi_core, phyaddr,
+                                         macMdioForAddrReg, macMdioForDataReg);
+}
+#endif /* PHY_PROG */
 
 static nve32_t osi_hal_init_core_ops(struct osi_core_priv_data *const osi_core)
 {
@@ -343,7 +369,20 @@ static inline void init_vlan_filters(struct osi_core_priv_data *const osi_core)
 static nve32_t osi_hal_hw_core_deinit(struct osi_core_priv_data *const osi_core)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	nve32_t ret = 0;
 
+#ifdef HSI_SUPPORT
+	if(osi_core->hsi.enabled == OSI_ENABLE) {
+		ret = l_core->ops_p->core_hsi_configure(osi_core, OSI_DISABLE);
+		if (ret == XPCS_WRITE_FAIL_CODE) {
+			osi_core->hsi.err_code[XPCS_WRITE_FAIL_IDX] = OSI_XPCS_WRITE_FAIL_ERR;
+			osi_core->hsi.report_err = OSI_ENABLE;
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				     "XPCS read back failed during deinit\n", 0ULL);
+			goto fail;
+		}
+	}
+#endif
 	/* Stop the MAC */
 	hw_stop_mac(osi_core);
 
@@ -365,8 +404,10 @@ static nve32_t osi_hal_hw_core_deinit(struct osi_core_priv_data *const osi_core)
 	}
 
 	l_core->state = OSI_DISABLE;
-
-	return 0;
+#ifdef HSI_SUPPORT
+fail:
+#endif
+	return ret;
 }
 
 /**
@@ -548,7 +589,7 @@ static void fill_hsi_attributes(struct osi_core_priv_data *const osi_core)
 	nveu32_t i = 0U;
 	nveu32_t instance = 0U;
 
-	if (osi_core->mac == OSI_MAC_HW_MGBE) {
+	if ((osi_core->mac == OSI_MAC_HW_MGBE) || (osi_core->mac == OSI_MAC_HW_MGBE_T26X)) {
 		/* Update MGBE instance */
 		instance = osi_core->instance_id + 1U;
 	} else {
@@ -638,6 +679,17 @@ static nve32_t osi_hal_hw_core_init(struct osi_core_priv_data *const osi_core)
 	hw_start_mac(osi_core);
 
 #ifdef HSI_SUPPORT
+	if(osi_core->hsi.enabled == OSI_ENABLE) {
+		ret = l_core->ops_p->core_hsi_configure(osi_core, OSI_ENABLE);
+		if (ret == XPCS_WRITE_FAIL_CODE) {
+			osi_core->hsi.err_code[XPCS_WRITE_FAIL_IDX] = OSI_XPCS_WRITE_FAIL_ERR;
+			osi_core->hsi.report_err = OSI_ENABLE;
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
+				     "XPCS read back failed during init\n", 0ULL);
+			goto fail;
+		}
+	}
+
 	/* Fill HSI error attributes */
 	fill_hsi_attributes(osi_core);
 #endif
@@ -2421,20 +2473,20 @@ static void store_l2_filter(struct osi_core_priv_data *osi_core,
 }
 
 static nve32_t handle_config_filters(struct osi_core_priv_data *osi_core,
-				     struct osi_ioctl *data)
+				     struct osi_ioctl *ioctl_data)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nve32_t ret;
 
-	if (data->cmd == OSI_CMD_L3L4_FILTER) {
-		ret = configure_l3l4_filter(osi_core, &data->l3l4_filter);
+	if (ioctl_data->cmd == OSI_CMD_L3L4_FILTER) {
+		ret = configure_l3l4_filter(osi_core, &ioctl_data->data.l3l4_filter);
 		if (ret == 0) {
 			l_core->cfg.flags |= DYNAMIC_CFG_L3_L4;
 		}
 	} else {
-		ret = osi_l2_filter(osi_core, &data->l2_filter);
+		ret = osi_l2_filter(osi_core, &ioctl_data->data.l2_filter);
 		if (ret == 0) {
-			store_l2_filter(osi_core, &data->l2_filter);
+			store_l2_filter(osi_core, &ioctl_data->data.l2_filter);
 			l_core->cfg.flags |= DYNAMIC_CFG_L2;
 		}
 	}
@@ -2443,22 +2495,22 @@ static nve32_t handle_config_filters(struct osi_core_priv_data *osi_core,
 }
 
 static nve32_t handle_config_est_fpe_ioctl(struct osi_core_priv_data *osi_core,
-					   struct osi_ioctl *data)
+					   struct osi_ioctl *ioctl_data)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nve32_t ret;
 
-	if (data->cmd == OSI_CMD_CONFIG_EST) {
-		ret = config_est(osi_core, &data->est);
+	if (ioctl_data->cmd == OSI_CMD_CONFIG_EST) {
+		ret = config_est(osi_core, &ioctl_data->data.est);
 		if (ret == 0) {
-			(void)osi_memcpy(&l_core->cfg.est, &data->est,
+			(void)osi_memcpy(&l_core->cfg.est, &ioctl_data->data.est,
 					 sizeof(struct osi_est_config));
 			l_core->cfg.flags |= DYNAMIC_CFG_EST;
 		}
 	} else {
-		ret = config_fpe(osi_core, &data->fpe);
+		ret = config_fpe(osi_core, &ioctl_data->data.fpe);
 		if (ret == 0) {
-			(void)osi_memcpy(&l_core->cfg.fpe, &data->fpe,
+			(void)osi_memcpy(&l_core->cfg.fpe, &ioctl_data->data.fpe,
 					 sizeof(struct osi_fpe_config));
 			l_core->cfg.flags |= DYNAMIC_CFG_FPE;
 		}
@@ -2753,7 +2805,7 @@ exit:
 
 
 static nve32_t handle_set_avb_ioctl(struct osi_core_priv_data *osi_core,
-				    struct osi_ioctl *data)
+				    struct osi_ioctl *ioctl_data)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	const struct core_ops *ops_p;
@@ -2761,18 +2813,18 @@ static nve32_t handle_set_avb_ioctl(struct osi_core_priv_data *osi_core,
 
 	ops_p = l_core->ops_p;
 
-	if (data->avb.algo == OSI_MTL_TXQ_AVALG_CBS) {
-		ret = hw_validate_avb_input(osi_core, &data->avb);
+	if (ioctl_data->data.avb.algo == OSI_MTL_TXQ_AVALG_CBS) {
+		ret = hw_validate_avb_input(osi_core, &ioctl_data->data.avb);
 		if (ret != 0) {
 			goto exit;
 		}
 	}
 
-	ret = ops_p->set_avb_algorithm(osi_core, &data->avb);
+	ret = ops_p->set_avb_algorithm(osi_core, &ioctl_data->data.avb);
 	if (ret == 0) {
-		(void)osi_memcpy(&l_core->cfg.avb[data->avb.qindex].avb_info,
-				&data->avb, sizeof(struct osi_core_avb_algorithm));
-		l_core->cfg.avb[data->avb.qindex].used = OSI_ENABLE;
+		(void)osi_memcpy(&l_core->cfg.avb[ioctl_data->data.avb.qindex].avb_info,
+				&ioctl_data->data.avb, sizeof(struct osi_core_avb_algorithm));
+		l_core->cfg.avb[ioctl_data->data.avb.qindex].used = OSI_ENABLE;
 		l_core->cfg.flags |= DYNAMIC_CFG_AVB;
 	}
 exit:
@@ -2792,9 +2844,6 @@ nve32_t OSI_CMD_ADJ_FREQ_count = 0;
  * @note
  * Algorithm:
  *  - Handle runtime commands to OSI
- *  - OSI_CMD_MDC_CONFIG
- *	Derive MDC clock based on provided AXI_CBB clk
- *	arg1_u32 - CSR (AXI CBB) clock rate.
  *  - OSI_CMD_RESTORE_REGISTER
  *	Restore backup of MAC MMIO address space
  *  - OSI_CMD_POLL_FOR_MAC_RST
@@ -2948,7 +2997,7 @@ nve32_t OSI_CMD_ADJ_FREQ_count = 0;
  * @retval -1 on failure.
  */
 static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
-				    struct osi_ioctl *data)
+				    struct osi_ioctl *ioctl_data)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	const struct core_ops *ops_p;
@@ -2959,39 +3008,34 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #endif
 	ops_p = l_core->ops_p;
 
-	switch (data->cmd) {
+	switch (ioctl_data->cmd) {
 #ifndef OSI_STRIPPED_LIB
-	case OSI_CMD_MDC_CONFIG:
-		ops_p->set_mdc_clk_rate(osi_core, data->arg5_u64);
-		ret = 0;
-		break;
-
 	case OSI_CMD_MAC_LB:
-		ret = conf_mac_loopback(osi_core, data->arg1_u32);
+		ret = conf_mac_loopback(osi_core, ioctl_data->arg1_u32);
 		break;
 
 	case OSI_CMD_FLOW_CTRL:
-		ret = ops_p->config_flow_control(osi_core, data->arg1_u32);
+		ret = ops_p->config_flow_control(osi_core, ioctl_data->arg1_u32);
 		if (ret == 0) {
-			l_core->cfg.flow_ctrl = data->arg1_u32;
+			l_core->cfg.flow_ctrl = ioctl_data->arg1_u32;
 			l_core->cfg.flags |= DYNAMIC_CFG_FC;
 		}
 
 		break;
 
 	case OSI_CMD_CONFIG_RX_CRC_CHECK:
-		ret = ops_p->config_rx_crc_check(osi_core, data->arg1_u32);
+		ret = ops_p->config_rx_crc_check(osi_core, ioctl_data->arg1_u32);
 		break;
 
 	case OSI_CMD_UPDATE_VLAN_ID:
-		ret = vlan_id_update(osi_core, data->arg1_u32);
+		ret = vlan_id_update(osi_core, ioctl_data->arg1_u32);
 		if (ret == 0) {
-			if ((data->arg1_u32 & VLAN_ACTION_MASK) == OSI_VLAN_ACTION_ADD) {
-				l_core->cfg.vlan[data->arg1_u32 & VLAN_VID_MASK].vid =
-					data->arg1_u32 & VLAN_VID_MASK;
-				l_core->cfg.vlan[data->arg1_u32 & VLAN_VID_MASK].used = OSI_ENABLE;
+			if ((ioctl_data->arg1_u32 & VLAN_ACTION_MASK) == OSI_VLAN_ACTION_ADD) {
+				l_core->cfg.vlan[ioctl_data->arg1_u32 & VLAN_VID_MASK].vid =
+					ioctl_data->arg1_u32 & VLAN_VID_MASK;
+				l_core->cfg.vlan[ioctl_data->arg1_u32 & VLAN_VID_MASK].used = OSI_ENABLE;
 			} else {
-				l_core->cfg.vlan[data->arg1_u32 & VLAN_VID_MASK].used = OSI_DISABLE;
+				l_core->cfg.vlan[ioctl_data->arg1_u32 & VLAN_VID_MASK].used = OSI_DISABLE;
 			}
 
 			l_core->cfg.flags |= DYNAMIC_CFG_VLAN;
@@ -3000,33 +3044,33 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_CONFIG_TXSTATUS:
-		ret = ops_p->config_tx_status(osi_core, data->arg1_u32);
+		ret = ops_p->config_tx_status(osi_core, ioctl_data->arg1_u32);
 		break;
 
 
 	case OSI_CMD_ARP_OFFLOAD:
-		ret = conf_arp_offload(osi_core, data->arg1_u32,
-				       data->arg7_u8_p);
+		ret = conf_arp_offload(osi_core, ioctl_data->arg1_u32,
+				       ioctl_data->arg7_u8_p);
 		break;
 
 	case OSI_CMD_VLAN_FILTER:
 		ret = ops_p->config_vlan_filtering(osi_core,
-				data->vlan_filter.filter_enb_dis,
-				data->vlan_filter.perfect_hash,
-				data->vlan_filter.perfect_inverse_match);
+				ioctl_data->data.vlan_filter.filter_enb_dis,
+				ioctl_data->data.vlan_filter.perfect_hash,
+				ioctl_data->data.vlan_filter.perfect_inverse_match);
 		break;
 
 	case OSI_CMD_CONFIG_EEE:
-		ret = conf_eee(osi_core, data->arg1_u32, data->arg2_u32);
+		ret = conf_eee(osi_core, ioctl_data->arg1_u32, ioctl_data->arg2_u32);
 		if (ret == 0) {
-			l_core->cfg.tx_lpi_enabled = data->arg1_u32;
-			l_core->cfg.tx_lpi_timer = data->arg2_u32;
+			l_core->cfg.tx_lpi_enabled = ioctl_data->arg1_u32;
+			l_core->cfg.tx_lpi_timer = ioctl_data->arg2_u32;
 			l_core->cfg.flags |= DYNAMIC_CFG_EEE;
 		}
 
 		break;
 	case OSI_CMD_CONFIG_FW_ERR:
-		ret = hw_config_fw_err_pkts(osi_core, data->arg1_u32, data->arg2_u32);
+		ret = hw_config_fw_err_pkts(osi_core, ioctl_data->arg1_u32, ioctl_data->arg2_u32);
 		break;
 
 	case OSI_CMD_POLL_FOR_MAC_RST:
@@ -3034,11 +3078,17 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 		break;
 
 	case OSI_CMD_GET_MAC_VER:
-		ret = osi_get_mac_version(osi_core, &data->arg1_u32);
+		ret = osi_get_mac_version(osi_core, &ioctl_data->arg1_u32);
 		break;
 
 	case OSI_CMD_SET_MODE:
-		ret = hw_set_mode(osi_core, data->arg6_32);
+		ret = hw_set_mode(osi_core, ioctl_data->arg6_32);
+		break;
+	case OSI_CMD_GET_RSS:
+#ifdef OSI_RM_FTRACE
+		ethernet_server_cmd_log("OSI_CMD_GET_RSS");
+#endif
+		ret = ops_p->get_rss(osi_core, &ioctl_data->data.rss);
 		break;
 #endif /* !OSI_STRIPPED_LIB */
 
@@ -3046,14 +3096,14 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_GET_AVB");
 #endif
-		ret = ops_p->get_avb_algorithm(osi_core, &data->avb);
+		ret = ops_p->get_avb_algorithm(osi_core, &ioctl_data->data.avb);
 		break;
 
 	case OSI_CMD_SET_AVB:
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_SET_AVB");
 #endif
-		ret = handle_set_avb_ioctl(osi_core, data);
+		ret = handle_set_avb_ioctl(osi_core, ioctl_data);
 		break;
 
 	case OSI_CMD_COMMON_ISR:
@@ -3083,7 +3133,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_SET_SPEED");
 #endif
-		ret = hw_set_speed(osi_core, data->arg6_32);
+		ret = hw_set_speed(osi_core, ioctl_data->arg6_32);
 		break;
 
 	case OSI_CMD_L2_FILTER:
@@ -3091,16 +3141,16 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_L2_FILTER/OSI_CMD_L3L4_FILTER");
 #endif
-		ret = handle_config_filters(osi_core, data);
+		ret = handle_config_filters(osi_core, ioctl_data);
 		break;
 
 	case OSI_CMD_RXCSUM_OFFLOAD:
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_RXCSUM_OFFLOAD");
 #endif
-		ret = hw_config_rxcsum_offload(osi_core, data->arg1_u32);
+		ret = hw_config_rxcsum_offload(osi_core, ioctl_data->arg1_u32);
 		if (ret == 0) {
-			l_core->cfg.rxcsum = data->arg1_u32;
+			l_core->cfg.rxcsum = ioctl_data->arg1_u32;
 			l_core->cfg.flags |= DYNAMIC_CFG_RXCSUM;
 		}
 
@@ -3112,14 +3162,14 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 			ethernet_server_cmd_log("OSI_CMD_ADJ_FREQ");
 		}
 #endif
-		ret = handle_adjust_freq_ioctl(osi_core, data);
+		ret = handle_adjust_freq_ioctl(osi_core, ioctl_data);
 		break;
 
 	case OSI_CMD_ADJ_TIME:
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_ADJ_TIME");
 #endif
-		ret = handle_adjust_time_ioctl(osi_core, data);
+		ret = handle_adjust_time_ioctl(osi_core, ioctl_data);
 		break;
 
 	case OSI_CMD_GET_HW_FEAT:
@@ -3128,9 +3178,9 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #endif
 		/* get hw features */
 		l_core->ops_p->get_hw_features(osi_core, &l_core->hw_features);
-		osi_memcpy(&data->hw_feat, &l_core->hw_features, sizeof(struct osi_hw_features));
+		osi_memcpy(&ioctl_data->data.hw_feat, &l_core->hw_features, sizeof(struct osi_hw_features));
 		/* Get MAC version */
-		ret = osi_get_mac_version(osi_core, &data->arg1_u32);
+		ret = osi_get_mac_version(osi_core, &ioctl_data->arg1_u32);
 
 		break;
 
@@ -3138,23 +3188,23 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_SET_SYSTOHW_TIME");
 #endif
-		ret = handle_set_systohw_time_ioctl(osi_core, data);
+		ret = handle_set_systohw_time_ioctl(osi_core, ioctl_data);
 		break;
 
 	case OSI_CMD_CONFIG_PTP:
-		ret = handle_config_ptp_ioctl(osi_core, data);
+		ret = handle_config_ptp_ioctl(osi_core, ioctl_data);
 		break;
 #ifndef OSI_STRIPPED_LIB
 	case OSI_CMD_CONFIG_PTP_OFFLOAD:
-		ret = conf_ptp_offload(osi_core, &data->pto_config);
+		ret = conf_ptp_offload(osi_core, &ioctl_data->data.pto_config);
 		break;
 
 	case OSI_CMD_PTP_RXQ_ROUTE:
-		ret = rxq_route_config(osi_core, &data->rxq_route);
+		ret = rxq_route_config(osi_core, &ioctl_data->data.rxq_route);
 		break;
 
 	case OSI_CMD_CONFIG_RSS:
-		ret = ops_p->config_rss(osi_core);
+		ret = ops_p->config_rss(osi_core, &ioctl_data->data.rss);
 		break;
 
 #endif /* !OSI_STRIPPED_LIB */
@@ -3162,7 +3212,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_CONFIG_FRP");
 #endif
-		ret = configure_frp(osi_core, &data->frp_cmd);
+		ret = configure_frp(osi_core, &ioctl_data->data.frp_cmd);
 		l_core->cfg.flags |= DYNAMIC_CFG_FRP;
 		break;
 
@@ -3171,31 +3221,31 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_CONFIG_EST/OSI_CMD_CONFIG_FPE");
 #endif
-		ret = handle_config_est_fpe_ioctl(osi_core, data);
+		ret = handle_config_est_fpe_ioctl(osi_core, ioctl_data);
 		break;
 
 #ifndef OSI_STRIPPED_LIB
 	case OSI_CMD_READ_REG:
-		ret_s32 = convert_to_s32_with_same_hex(&(data->arg1_u32));
+		ret_s32 = convert_to_s32_with_same_hex(&(ioctl_data->arg1_u32));
 		ret_u32 = ops_p->read_reg(osi_core, ret_s32);
 		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 
 	case OSI_CMD_WRITE_REG:
-		ret_s32 = convert_to_s32_with_same_hex(&(data->arg2_u32));
-		ret_u32 = ops_p->write_reg(osi_core, (nveu32_t) data->arg1_u32, ret_s32);
+		ret_s32 = convert_to_s32_with_same_hex(&(ioctl_data->arg2_u32));
+		ret_u32 = ops_p->write_reg(osi_core, (nveu32_t) ioctl_data->arg1_u32, ret_s32);
 		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 #ifdef MACSEC_SUPPORT
 	case OSI_CMD_READ_MACSEC_REG:
-		ret_s32 = convert_to_s32_with_same_hex(&(data->arg1_u32));
+		ret_s32 = convert_to_s32_with_same_hex(&(ioctl_data->arg1_u32));
 		ret_u32 = ops_p->read_macsec_reg(osi_core, ret_s32);
 		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 
 	case OSI_CMD_WRITE_MACSEC_REG:
-		ret_s32 = convert_to_s32_with_same_hex(&(data->arg2_u32));
-		ret_u32 = ops_p->write_macsec_reg(osi_core, data->arg1_u32, ret_s32);
+		ret_s32 = convert_to_s32_with_same_hex(&(ioctl_data->arg2_u32));
+		ret_u32 = ops_p->write_macsec_reg(osi_core, ioctl_data->arg1_u32, ret_s32);
 		ret = convert_to_s32_with_same_hex(&ret_u32);
 		break;
 #endif /*  MACSEC_SUPPORT */
@@ -3206,7 +3256,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 			ethernet_server_cmd_log("OSI_CMD_GET_TX_TS");
 		}
 #endif
-		ret = get_tx_ts(osi_core, &data->tx_ts);
+		ret = get_tx_ts(osi_core, &ioctl_data->data.tx_ts);
 		break;
 
 	case OSI_CMD_FREE_TS:
@@ -3215,7 +3265,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 			ethernet_server_cmd_log("OSI_CMD_FREE_TS");
 		}
 #endif
-		free_tx_ts(osi_core, data->arg1_u32);
+		free_tx_ts(osi_core, ioctl_data->arg1_u32);
 		ret = 0;
 		break;
 
@@ -3227,7 +3277,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #endif
 		if ((l_core->macsec_ops != OSI_NULL) &&
 		    (l_core->macsec_ops->update_mtu != OSI_NULL)) {
-			ret = l_core->macsec_ops->update_mtu(osi_core, data->arg1_u32);
+			ret = l_core->macsec_ops->update_mtu(osi_core, ioctl_data->arg1_u32);
 		}
 #endif /*  MACSEC_SUPPORT */
 		break;
@@ -3248,7 +3298,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 			ethernet_server_cmd_log("OSI_CMD_CAP_TSC_PTP");
 		}
 #endif
-		ret = hw_ptp_tsc_capture(osi_core, &data->ptp_tsc);
+		ret = hw_ptp_tsc_capture(osi_core, &ioctl_data->data.ptp_tsc);
 		break;
 
 	case OSI_CMD_CONF_M2M_TS:
@@ -3257,8 +3307,8 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 			ethernet_server_cmd_log("OSI_CMD_CONF_M2M_TS");
 		}
 #endif
-		if (data->arg1_u32 <= OSI_ENABLE) {
-			l_core->m2m_tsync = data->arg1_u32;
+		if (ioctl_data->arg1_u32 <= OSI_ENABLE) {
+			l_core->m2m_tsync = ioctl_data->arg1_u32;
 			ret = 0;
 		}
 		break;
@@ -3267,16 +3317,16 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_HSI_CONFIGURE");
 #endif
-		ret = ops_p->core_hsi_configure(osi_core, data->arg1_u32);
+		ret = ops_p->core_hsi_configure(osi_core, ioctl_data->arg1_u32);
 		if (ret == 0) {
-			l_core->cfg.hsi_en_dis = data->arg1_u32;
+			l_core->cfg.hsi_en_dis = ioctl_data->arg1_u32;
 			l_core->cfg.flags |= DYNAMIC_CFG_HSI;
 		}
 
 		break;
 #ifdef NV_VLTEST_BUILD
 	case OSI_CMD_HSI_INJECT_ERR:
-		ret = ops_p->core_hsi_inject_err(osi_core, data->arg1_u32);
+		ret = ops_p->core_hsi_inject_err(osi_core, ioctl_data->arg1_u32);
 		break;
 #endif /* NV_VLTEST_BUILD */
 	case OSI_CMD_READ_HSI_ERR:
@@ -3288,7 +3338,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #ifdef OSI_DEBUG
 	case OSI_CMD_DEBUG_INTR_CONFIG:
 #ifdef DEBUG_MACSEC
-		l_core->macsec_ops->intr_config(osi_core, data->arg1_u32);
+		l_core->macsec_ops->intr_config(osi_core, ioctl_data->arg1_u32);
 #endif
 		ret = 0;
 		break;
@@ -3315,7 +3365,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 #ifdef OSI_RM_FTRACE
 		ethernet_server_cmd_log("OSI_CMD_GMSL_COE_CONFIG");
 #endif
-		ret = ops_p->config_coe_buf(osi_core, data->mgbe_coe);
+		ret = ops_p->config_coe_buf(osi_core, ioctl_data->data.mgbe_coe);
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "CORE: OSI_CMD_GMSL_COE_CONFIG ret: \n",
 			     (nveul64_t)ret);
@@ -3323,7 +3373,7 @@ static nve32_t osi_hal_handle_ioctl(struct osi_core_priv_data *osi_core,
 	default:
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_INVALID,
 			     "CORE: Incorrect command\n",
-			     (nveul64_t)data->cmd);
+			     (nveul64_t)ioctl_data->cmd);
 		break;
 	}
 
@@ -3336,6 +3386,10 @@ void hw_interface_init_core_ops(struct if_core_ops *if_ops_p)
 	if_ops_p->if_core_deinit = osi_hal_hw_core_deinit;
 	if_ops_p->if_write_phy_reg = osi_hal_write_phy_reg;
 	if_ops_p->if_read_phy_reg = osi_hal_read_phy_reg;
+#ifdef PHY_PROG
+	if_ops_p->if_write_phy_reg_dt = osi_hal_write_phy_reg_dt;
+	if_ops_p->if_read_phy_reg_dt = osi_hal_read_phy_reg_dt;
+#endif /* PHY_PROG */
 	if_ops_p->if_init_core_ops = osi_hal_init_core_ops;
 	if_ops_p->if_handle_ioctl = osi_hal_handle_ioctl;
 }
