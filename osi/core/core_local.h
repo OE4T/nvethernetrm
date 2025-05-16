@@ -613,15 +613,18 @@ static inline nveu64_t osi_update_stats_counter(nveu64_t last_value,
  */
 #define RETRY_COUNT	1000U
 #define RETRY_DELAY	1U
+#define OSI_DELAY_2US		2U
 #define OSI_DELAY_4US		4U
 #define OSI_DELAY_10US		10U
 #ifndef OSI_STRIPPED_LIB
 #define OSI_DELAY_100US		100U
 #endif
 #define OSI_DELAY_200US		200U
+#define OSI_DELAY_500US		500U
 #define OSI_DELAY_1000US	1000U
 #define OSI_DELAY_10000US	10000U
 #define OSI_DELAY_30000US	30000U
+#define OSI_DELAY_1000000US	1000000U
 
 /** @} */
 

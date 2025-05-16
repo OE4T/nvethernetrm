@@ -776,6 +776,16 @@ typedef my_lint_64		nvel64_t;
 /** @} */
 #endif
 
+/**
+ * @addtogroup RX EQ related information
+ *
+ * @brief RX EQ Software override
+ * @{
+ */
+/** @brief RX EQ Software override is enabled */
+#define OSI_RX_EQ_SW_OVRD		1U
+/** @} */
+
 struct osi_core_priv_data;
 
 /**
@@ -1892,6 +1902,8 @@ struct osi_core_priv_data {
 	nveu32_t skip_usxgmii_an;
 	/** MAC common interrupt received */
 	nveu32_t mac_common_intr_rcvd;
+	/** Flag to enable pcs RX EQ SW override logic */
+	nveu32_t pcs_rx_eq_sw_ovrd_en;
 };
 
 /**
