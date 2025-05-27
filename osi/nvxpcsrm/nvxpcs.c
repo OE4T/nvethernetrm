@@ -158,7 +158,7 @@ nve32_t eqos_xpcs_init(struct osi_core_priv_data *osi_core)
 		if ((ctrl & XPCS_SR_MII_CTRL_RST) == 0U) {
 			cond = 0;
 		} else {
-			osi_core->osd_ops.udelay(100U);
+			osi_core->osd_ops.usleep(100U);
 		}
 	}
 
@@ -217,7 +217,7 @@ nve32_t eqos_xpcs_init(struct osi_core_priv_data *osi_core)
 		    XPCS_SR_MII_STS_0_LINK_STS) {
 			cond = 0;
 		} else {
-			osi_core->osd_ops.udelay(100U);
+			osi_core->osd_ops.usleep(100U);
 		}
 	}
 
