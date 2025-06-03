@@ -389,7 +389,7 @@ nve32_t xlgpcs_start(struct osi_core_priv_data *osi_core)
 				 * so that if check get satisfies before 1msec will come
 				 * out of loop and it can save some boot time
 				 */
-				osi_core->osd_ops.udelay(10U);
+				osi_core->osd_ops.usleep(10U);
 			}
 		}
 	}
@@ -421,7 +421,7 @@ nve32_t xlgpcs_start(struct osi_core_priv_data *osi_core)
 			 * so that if check get satisfies before 1msec will come
 			 * out of loop and it can save some boot time
 			 */
-			osi_core->osd_ops.udelay(10U);
+			osi_core->osd_ops.usleep(10U);
 		}
 	}
 fail:
@@ -449,7 +449,6 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 	nveu32_t val = 0;
 	nveu32_t count;
 	nve32_t ret = 0;
-	nveu32_t once = 0;
 	nveu64_t retry_delay = OSI_DELAY_1US;
 	const nveu32_t uphy_status_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_XPCS_WRAP_UPHY_STATUS,
@@ -510,15 +509,11 @@ static nve32_t xpcs_uphy_lane_bring_up(struct osi_core_priv_data *osi_core,
 					goto done;
 				}
 				count++;
-				/* Max wait time is 1usec.
-				 * Most of the time loop got exited in first iteration.
-				 * but added an extra count of 4 for safer side
-				 */
-				if (once == 0U) {
+				/* Apply delay based on retry_delay value */
+				if (retry_delay == OSI_DELAY_1US) {
 					osi_core->osd_ops.udelay(retry_delay);
-					once = 1U;
 				} else {
-					osi_core->osd_ops.udelay(retry_delay);
+					osi_core->osd_ops.usleep(retry_delay);
 				}
 			}
 		}
@@ -1261,7 +1256,7 @@ nve32_t xlgpcs_eee(struct osi_core_priv_data *osi_core, nveu32_t en_dis)
 			if ((val & XLGPCS_VR_PCS_DIG_STSLTXRX_STATE) == 0U) {
 				cond = 0;
 			} else {
-				osi_core->osd_ops.udelay(100U);
+				osi_core->osd_ops.usleep(100U);
 			}
 		}
 	} else {
