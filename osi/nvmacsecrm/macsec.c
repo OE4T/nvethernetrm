@@ -4748,9 +4748,7 @@ static nve32_t macsec_coe_config(struct osi_core_priv_data *const osi_core,
 	nve32_t ret = 0;
 
 	val = coe_enable & MACSEC_COE_ENABLE_MASK;
-	/* TODO - re-enable seq num check for production. This is just till HSB FPGA can be
-	 * fixed to use proper starting seq for every SOF. */
-	//val |= (coe_enable & MACSEC_COE_ENABLE_MASK) << MACSEC_COE_SEQ_CHK_SHIFT;
+	val |= (coe_enable & MACSEC_COE_ENABLE_MASK) << MACSEC_COE_SEQ_CHK_SHIFT;
 	val |= (coe_hdr_offset & MACSEC_COE_HDROFST_MASK) << MACSEC_COE_HDROFST_SHIFT;
 	osi_macsec_writela(osi_core, val, addr + MACSEC_COE_CONFIG);
 
