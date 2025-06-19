@@ -576,17 +576,87 @@ fail:
 }
 
 /**
- * @brief xpcs_lane_bring_up - Bring up UPHY Tx/Rx lanes
+ * @brief perform_xpcs_rx_eq_reset_and_train - Rx EQ training via sw override
  *
- * Algorithm: This routine bring up the UPHY Tx/Rx lanes
- * through XPCS FSM wrapper.
+ * Algorithm: This routine executes RX EQ training
+ * through SW Override method.
  *
  * @param[in] osi_core: OSI core data structure.
  *
  * @retval 0 on success
  * @retval -1 on failure.
  */
-nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
+
+static nve32_t perform_xpcs_rx_eq_reset_and_train(struct osi_core_priv_data *osi_core)
+{
+	nveu32_t retry = 2U;
+	nveu32_t count;
+	nveu32_t val = 0;
+	nve32_t cond;
+	nve32_t ret = 0;
+
+	cond = COND_NOT_MET;
+	count = 0;
+	/* RX_EQ_RESET timeout is 2msec. Bug 5087758 */
+	while (cond == COND_NOT_MET) {
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + XPCS_WRAP_T26X_UPHY_RX_CONTROL_0_0);
+		if ((val & XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_EQ_RESET) == 0U) {
+			cond = COND_MET;
+		} else {
+			if (count > retry) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+						"RX_EQ_RESET polling timeout: ", val);
+				ret = -1;
+				goto fail;
+			}
+			count++;
+			osi_core->osd_ops.usleep(1000U);
+		}
+	}
+
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + XPCS_WRAP_T26X_UPHY_RX_CONTROL_0_0);
+	val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_EQ_TRAIN_EN;
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base + XPCS_WRAP_T26X_UPHY_RX_CONTROL_0_0);
+
+	count = 0;
+	cond = COND_NOT_MET;
+	retry = 70U;
+	/* EQ Training Polling timeout 70msec. Bug 5087758 */
+	while (cond == COND_NOT_MET) {
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + XPCS_WRAP_T26X_UPHY_RX_CONTROL_0_0);
+		if ((val & XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_EQ_TRAIN_EN) == 0U) {
+			cond = COND_MET;
+		} else {
+			if (count > retry) {
+				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+						"RX_EQ_TRAIN_EN polling timeout: ", val);
+				ret = -1;
+				goto fail;
+			}
+			count++;
+			osi_core->osd_ops.usleep(1000U);
+		}
+	}
+
+fail:
+	return ret;
+}
+
+/**
+ * @brief sw_ovveride_method_for_uphy_rx_lane - uphy Rx lane bringup via sw override
+ *
+ * Algorithm: This routine executes uphy RX lane bringup
+ * through SW Override method.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ * @param[in] uphy_rx_ctrl: UPHY Rx control register
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+
+static inline nve32_t sw_ovveride_method_for_uphy_rx_lane(struct osi_core_priv_data *osi_core,
+							  const nveu32_t uphy_rx_ctrl)
 {
 	struct core_local *l_core = (struct core_local *)(void *)osi_core;
 	nveu32_t retry = 7U;
@@ -595,99 +665,45 @@ nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
 	nve32_t cond;
 	nve32_t ret = 0;
 
-	if (xpcs_uphy_lane_bring_up(osi_core,
-				    XPCS_WRAP_UPHY_HW_INIT_CTRL_TX_EN) < 0) {
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			     "UPHY TX lane bring-up failed\n", 0ULL);
-		ret = -1;
-		goto fail;
-	}
-
-	if (osi_core->mac != OSI_MAC_HW_MGBE) {
-		if (xpcs_uphy_lane_bring_up(osi_core,
-					    XPCS_WRAP_UPHY_HW_INIT_CTRL_RX_EN) < 0) {
-			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-					"UPHY RX lane bring-up failed\n", 0ULL);
-			/* Peform UPHY Rx lane power down on Lane bring up failure path.
-			 * FIXME: Discuss with HW team further whether this is necessary step or not
-			 */
-			if (xpcs_uphy_lane_bring_up(osi_core,
-						    XPCS_WRAP_UPHY_HW_INIT_CTRL_RX_P_DN) < 0) {
-				OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-					     "UPHY Rx lane power down failed\n", 0ULL);
-			}
-			ret = -1;
-			goto fail;
-		}
-	} else {
-		if (l_core->lane_powered_up == OSI_ENABLE) {
-			goto step10;
-		}
-
-		val = osi_readla(osi_core,
-				(nveu8_t *)osi_core->xpcs_base +
-				XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-		/* Step1 RX_SW_OVRD */
+	if (l_core->lane_powered_up == OSI_DISABLE) {
+		/* Step1: set RX_SW_OVRD to 1 */
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_SW_OVRD;
-		osi_writela(osi_core, val,
-			    (nveu8_t *)osi_core->xpcs_base +
-			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 
-		val = osi_readla(osi_core,
-				 (nveu8_t *)osi_core->xpcs_base +
-				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
-		/* Step2 RX_IDDQ */
-		val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_IDDQ);
-		osi_writela(osi_core, val,
-			    (nveu8_t *)osi_core->xpcs_base +
-			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
-		val = osi_readla(osi_core,
-				 (nveu8_t *)osi_core->xpcs_base +
-				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
-		/* Step2 AUX_RX_IDDQ */
-		val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_AUX_RX_IDDQ);
-		osi_writela(osi_core, val,
-			    (nveu8_t *)osi_core->xpcs_base +
-			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		/* Step2: set AUX_RX_IDDQ to 0 and RX_IDDQ to 0 */
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
+		val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_IDDQ | XPCS_WRAP_UPHY_RX_CONTROL_0_0_AUX_RX_IDDQ);
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 
 		/* Step3: wait for 1usec, HW recommended value is 50nsec minimum */
 		osi_core->osd_ops.udelay(1U);
 
-		/* Step4 RX_SLEEP */
-		val = osi_readla(osi_core,
-				 (nveu8_t *)osi_core->xpcs_base +
-				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		/* Step4: set RX_SLEEP to 0 */
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 		val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_SLEEP);
-		osi_writela(osi_core, val,
-			    (nveu8_t *)osi_core->xpcs_base +
-			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 
 		/* Step5: wait for 1usec, HW recommended value is 500nsec minimum */
 		osi_core->osd_ops.udelay(1U);
 
-		/* Step6 RX_CAL_EN */
+		/* Step6: set RX_CAL_EN to 1 */
 		val = osi_readla(osi_core,
-				 (nveu8_t *)osi_core->xpcs_base +
-				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+				(nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CAL_EN;
-		osi_writela(osi_core, val,
-			    (nveu8_t *)osi_core->xpcs_base +
-			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 
 		/* Step7 poll for Rx cal enable */
 		cond = COND_NOT_MET;
 		count = 0;
 		while (cond == COND_NOT_MET) {
-			val = osi_readla(osi_core,
-					 (nveu8_t *)osi_core->xpcs_base +
-					 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+			val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 			if ((val & XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CAL_EN) == 0U) {
 				cond = COND_MET;
 			} else {
 				if (count > retry) {
+					OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+						     "RX_CAL_EN polling timeout: ", val);
 					ret = -1;
 					goto fail;
 				}
@@ -705,57 +721,99 @@ nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
 		/* Step8: wait for 1usec, HW recommended value is 50nsec minimum */
 		osi_core->osd_ops.udelay(1U);
 
-		/* Step9 RX_DATA_EN */
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+		/* Step9: set RX_DATA_EN to 1 */
+		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_DATA_EN;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
-			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
+		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 
 		/* set lane_powered_up to OSI_ENABLE */
 		l_core->lane_powered_up = OSI_ENABLE;
+	}
 
-step10:
+	/* Step10 reset RX_PCS_PHY_RDY */
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
+	val &= ~XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_PCS_PHY_RDY;
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 
-		/* Step10 reset RX_PCS_PHY_RDY */
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-		val &= ~XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_PCS_PHY_RDY;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
-			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+	/* Step11: wait for 1usec, HW recommended value is 50nsec minimum */
+	osi_core->osd_ops.udelay(1U);
 
-		/* Step11: wait for 1usec, HW recommended value is 50nsec minimum */
-		osi_core->osd_ops.udelay(1U);
+	/* Step12 RX_CDR_RESET and RX_EQ_RESET for Thor */
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
+	val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CDR_RESET;
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_EQ_RESET;
+	}
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 
-		/* Step12 RX_CDR_RESET */
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CDR_RESET;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
-			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
+	/* Step13: wait for 1usec, HW recommended value is 50nsec minimum */
+	osi_core->osd_ops.udelay(1U);
 
-		/* Step13: wait for 1usec, HW recommended value is 50nsec minimum */
-		osi_core->osd_ops.udelay(1U);
+	/* Step14 RX_PCS_PHY_RDY */
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
+	val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_PCS_PHY_RDY;
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
+	/* Step14: wait for 30ms */
+	osi_core->osd_ops.usleep(OSI_DELAY_30000US);
 
-		/* Step14 RX_PCS_PHY_RDY */
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-		val |= XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_PCS_PHY_RDY;
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
-			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-		/* Step14: wait for 30ms */
-		osi_core->osd_ops.usleep(OSI_DELAY_30000US);
+	/* Step15: Clear RX_CDR_RESET and RX_EQ_RESET for Thor*/
+	val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
+	val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CDR_RESET);
+	osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base + uphy_rx_ctrl);
 
-		/* Step15 RX_CDR_RESET */
-		val = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-				 XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-		val &= ~(XPCS_WRAP_UPHY_RX_CONTROL_0_0_RX_CDR_RESET);
-		osi_writela(osi_core, val, (nveu8_t *)osi_core->xpcs_base +
-			    XPCS_WRAP_UPHY_RX_CONTROL_0_0);
-
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		ret = perform_xpcs_rx_eq_reset_and_train(osi_core);
+	} else {
 		/* Step16: wait for 30ms */
 		osi_core->osd_ops.usleep(OSI_DELAY_30000US);
+	}
+
+fail:
+	return ret;
+}
+
+/**
+ * @brief xpcs_lane_bring_up - Bring up UPHY Tx/Rx lanes
+ *
+ * Algorithm: This routine bring up the UPHY Tx/Rx lanes
+ * through XPCS FSM wrapper.
+ *
+ * @param[in] osi_core: OSI core data structure.
+ *
+ * @retval 0 on success
+ * @retval -1 on failure.
+ */
+nve32_t xpcs_lane_bring_up(struct osi_core_priv_data *osi_core)
+{
+	struct core_local *l_core = (struct core_local *)(void *)osi_core;
+	const nveu32_t uphy_rx_ctrl_reg[OSI_MAX_MAC_IP_TYPES] = {
+		0U, XPCS_WRAP_UPHY_RX_CONTROL_0_0, XPCS_WRAP_T26X_UPHY_RX_CONTROL_0_0
+	};
+	nve32_t ret = 0;
+
+	if (xpcs_uphy_lane_bring_up(osi_core,
+				    XPCS_WRAP_UPHY_HW_INIT_CTRL_TX_EN) < 0) {
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "UPHY TX lane bring-up failed\n", 0ULL);
+		ret = -1;
+		goto fail;
+	}
+
+	if (osi_core->mac == OSI_MAC_HW_EQOS) {
+		if (xpcs_uphy_lane_bring_up(osi_core,
+					    XPCS_WRAP_UPHY_HW_INIT_CTRL_RX_EN) < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+					"UPHY RX lane bring-up failed\n", 0ULL);
+			ret = -1;
+			goto fail;
+		}
+	} else {
+		ret = sw_ovveride_method_for_uphy_rx_lane(osi_core, uphy_rx_ctrl_reg[osi_core->mac]);
+		if (ret < 0) {
+			OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+				     "UPHY Rx lane bringup failed with sw ovveride method", 0ULL);
+			goto fail;
+		}
 	}
 
 	if (xpcs_check_pcs_lock_status(osi_core) < 0) {
@@ -921,34 +979,18 @@ nve32_t xpcs_init(struct osi_core_priv_data *osi_core)
 		if ((osi_core->mac == OSI_MAC_HW_MGBE_T26X) &&
 		    (osi_core->uphy_gbe_mode == OSI_GBE_MODE_10G)) {
 			/* Added below programming sequence from hw scripts */
-			value = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base +
-					   T26X_XPCS_WRAP_CONFIG_0);
+			value = osi_readla(osi_core, (nveu8_t *)osi_core->xpcs_base + T26X_XPCS_WRAP_CONFIG_0);
 			value &= ~OSI_BIT(0);
-			osi_writela(osi_core, value, (nveu8_t *)osi_core->xpcs_base +
-				    T26X_XPCS_WRAP_CONFIG_0);
+			osi_writela(osi_core, value, (nveu8_t *)osi_core->xpcs_base + T26X_XPCS_WRAP_CONFIG_0);
+
+			/* Program the delay values for HW method for Tx lane bringup */
 			osi_writela(osi_core, XPCS_10G_WRAP_UPHY_RX_CTRL_2_SLEEP_CAL_EN_DLY,
-				    (nveu8_t *)osi_core->xpcs_base +
-				    T26X_XPCS_WRAP_UPHY_TX_CTRL_2);
-			osi_writela(osi_core, XPCS_10G_WRAP_UPHY_RX_CTRL_2_SLEEP_CAL_EN_DLY,
-				    (nveu8_t *)osi_core->xpcs_base +
-				    T26X_XPCS_WRAP_UPHY_RX_CTRL_2);
+				    (nveu8_t *)osi_core->xpcs_base + T26X_XPCS_WRAP_UPHY_TX_CTRL_2);
 			osi_writela(osi_core, XPCS_10G_WRAP_UPHY_TX_CTRL_3_DATAREADY_DATAEN_DLY,
-				    (nveu8_t *)osi_core->xpcs_base +
-				    T26X_XPCS_WRAP_UPHY_TX_CTRL_3);
-			osi_writela(osi_core, XPCS_10G_WRAP_UPHY_RX_CTRL_3_CAL_DONE_DATA_EN_DLY,
-				    (nveu8_t *)osi_core->xpcs_base +
-				    T26X_XPCS_WRAP_UPHY_RX_CTRL_3);
-			osi_writela(osi_core,
-				XLGPCS_WRAP_UPHY_TO_CTRL2_EQ_DONE_TOV,
-				(nveu8_t *)osi_core->xpcs_base +
-				T26X_XPCS_WRAP_UPHY_T0_CTRL_2_0);
-			value = osi_readla(osi_core,
-				(nveu8_t *)osi_core->xpcs_base +
-				T26X_XPCS_WRAP_UPHY_RX_CTRL_5_0);
-			value |= XLGPCS_WRAP_UPHY_RX_CTRL5_RX_EQ_ENABLE;
-			osi_writela(osi_core, value,
-				(nveu8_t *)osi_core->xpcs_base +
-				T26X_XPCS_WRAP_UPHY_RX_CTRL_5_0);
+				    (nveu8_t *)osi_core->xpcs_base + T26X_XPCS_WRAP_UPHY_TX_CTRL_3);
+
+			osi_writela(osi_core, XPCS_WRAP_UPHY_RX_CTRL_12_EQ_RESET_WIDTH_PCLK,
+				    (nveu8_t *)osi_core->xpcs_base + T26X_XPCS_WRAP_UPHY_RX_CTRL_12);
 		}
 
 		if (xpcs_lane_bring_up(osi_core) < 0) {
