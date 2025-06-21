@@ -70,6 +70,7 @@
  * @brief Values defined for the MGBE registers
  * @{
  */
+#define MGBE_DMA_CHX_CTRL_SPH			OSI_BIT(24)
 #define MGBE_DMA_CHX_RX_WDT_RWT_MASK		0xFFU
 #define MGBE_DMA_CHX_RX_WDT_RWTU		2048U
 #define MGBE_DMA_CHX_RX_WDT_RWTU_2048_CYCLE	0x3000U

@@ -154,6 +154,85 @@ nve32_t osi_macsec_init(struct osi_core_priv_data *const osi_core,
 }
 
 /**
+ * @brief osi_macsec_coe_config - Configure the COE engine in MACSec controller
+ *
+ * @note
+ * Algorithm:
+ *  - Return -1 if osi core or ops is null
+ *  - Configure the COE engine based on args provided
+ *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
+ *  - TraceID: ***********
+ *
+ * @param[in] osi_core: OSI core private data structure
+ * @param[in] coe_enable: Flag variable to enable COE
+ * @param[in] coe_hdr_offset: COE header offset
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ *
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
+nve32_t osi_macsec_coe_config(struct osi_core_priv_data *const osi_core,
+			nveu32_t coe_enable, nveu32_t coe_hdr_offset)
+{
+	nve32_t ret = -1;
+	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
+
+	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
+	    (l_core->macsec_ops->coe_config != OSI_NULL)) {
+		ret = l_core->macsec_ops->coe_config(osi_core, coe_enable, coe_hdr_offset);
+	}
+
+	return ret;
+}
+
+/**
+ * @brief osi_macsec_coe_lc - Configure the COE engine line counter thresholds
+ *
+ * @note
+ * Algorithm:
+ *  - Return -1 if osi core or ops is null
+ *  - Configure the COE engine based on args provided
+ *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
+ *  - TraceID: ***********
+ *
+ * @param[in] osi_core: OSI core private data structure
+ * @param[in] ch: Channel number
+ * @param[in] lc1: Line counter threshold 1
+ * @param[in] lc2: Line counter threshold 2
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ *
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
+nve32_t osi_macsec_coe_lc(struct osi_core_priv_data *const osi_core,
+			nveu32_t ch, nveu32_t lc1, nveu32_t lc2)
+{
+	nve32_t ret = -1;
+	const struct core_local *l_core = (struct core_local *)(void *)osi_core;
+
+	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
+	    (l_core->macsec_ops->coe_lc != OSI_NULL)) {
+		ret = l_core->macsec_ops->coe_lc(osi_core, ch, lc1, lc2);
+	}
+
+	return ret;
+}
+
+/**
  * @brief osi_macsec_deinit - De-Initialize the macsec controller
  *
  * @note

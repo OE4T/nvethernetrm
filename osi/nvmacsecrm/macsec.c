@@ -1963,6 +1963,64 @@ static void sa_state_lut_read(struct osi_core_priv_data *const osi_core,
 }
 
 /**
+ * @brief coe_lut_read - Read COE LUT
+ *
+ * @note
+ * Algorithm:
+ *  - Read COE lut data to lut_config
+ *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
+ *  - TraceID: ***********
+ *
+ * @param[in] osi_core: OSI core private data structure.
+ * @param[out] lut_config: Update the lut_config from h/w registers
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ *
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
+static nve32_t coe_lut_read(struct osi_core_priv_data *const osi_core,
+			     struct osi_macsec_lut_config *const lut_config)
+{
+	nveu32_t lut_data[MACSEC_LUT_DATA_REG_CNT] = {0};
+	nve32_t ret = 0;
+
+	read_lut_data(osi_core, lut_data);
+
+	switch (lut_config->table_config.ctlr_sel) {
+	case OSI_CTLR_SEL_RX:
+		lut_config->coe_lut_inout.valid = (lut_data[0] >> COE_LUT_VALID) & OSI_COE_LUT_ENTRY_VALID;
+		lut_config->coe_lut_inout.offset = ((lut_data[0] >>
+						    COE_LUT_OFFSET_SHIFT) &
+						    COE_LUT_OFFSET_MASK);
+		lut_config->coe_lut_inout.byte_pattern_mask = ((lut_data[0] >>
+						    COE_LUT_MASK_SHIFT) &
+						    COE_LUT_MASK_MASK);
+		lut_config->coe_lut_inout.byte_pattern[1] = ((lut_data[0] >>
+						    COE_LUT_BYTE_PATTERN1_SHIFT) &
+						    COE_LUT_BYTE_PATTERN_MASK);
+		lut_config->coe_lut_inout.byte_pattern[0] = ((lut_data[0] >>
+						    COE_LUT_BYTE_PATTERN0_SHIFT) &
+						    COE_LUT_BYTE_PATTERN_MASK);
+		break;
+	default:
+		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
+			     "Invalid controller selected for COE LUT\n", 0ULL);
+		ret = -1;
+		break;
+	}
+
+	/* Lookup output */
+	return ret;
+}
+
+/**
  * @brief lut_data_read - Read different types of LUT data
  *
  * @note
@@ -2007,6 +2065,9 @@ static nve32_t lut_data_read(struct osi_core_priv_data *const osi_core,
 #endif /* !OSI_STRIPPED_LIB */
 	case OSI_LUT_SEL_SA_STATE:
 		sa_state_lut_read(osi_core, lut_config);
+		break;
+	case OSI_LUT_SEL_COE:
+		ret = coe_lut_read(osi_core, lut_config);
 		break;
 	default:
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
@@ -2149,6 +2210,25 @@ static void sa_state_lut_config(struct osi_core_priv_data *const osi_core,
 		rx_sa_state_lut_config(lut_config, lut_data);
 	}
 	commit_lut_data(osi_core, lut_data);
+}
+
+static nve32_t coe_lut_config(struct osi_core_priv_data *const osi_core,
+				   const struct osi_macsec_lut_config *const lut_config)
+{
+	nveu32_t lut_data[MACSEC_LUT_DATA_REG_CNT] = {0};
+	nve32_t ret = 0;
+
+	const struct osi_coe_lut_inout *coe = &lut_config->coe_lut_inout;
+
+	lut_data[0] |= ((coe->byte_pattern[1] << COE_LUT_BYTE_PATTERN1_SHIFT) |
+			(coe->byte_pattern[0] << COE_LUT_BYTE_PATTERN0_SHIFT) |
+			(coe->byte_pattern_mask << COE_LUT_MASK_SHIFT) |
+			(coe->offset << COE_LUT_OFFSET_SHIFT) |
+			OSI_COE_LUT_ENTRY_VALID);
+
+	commit_lut_data(osi_core, lut_data);
+
+	return ret;
 }
 
 /**
@@ -3188,6 +3268,9 @@ static inline nve32_t lut_data_write(struct osi_core_priv_data *const osi_core,
 	case OSI_LUT_SEL_SA_STATE:
 		sa_state_lut_config(osi_core, lut_config);
 		break;
+	case OSI_LUT_SEL_COE:
+		ret = coe_lut_config(osi_core, lut_config);
+		break;
 	default:
 		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
 			     "Unsupported LUT\n", 0ULL);
@@ -3231,6 +3314,17 @@ static nve32_t validate_lut_conf(struct osi_core_priv_data *const osi_core,
 	};
 
 	/* Validate LUT config */
+	if ((lut_config->lut_sel == OSI_LUT_SEL_COE) &&
+	    (lut_config->table_config.index >= OSI_COE_LUT_MAX_INDEX)) {
+		MACSEC_LOG("Validating LUT config failed. ctrl: %hu,"
+			" rw: %hu, index: %hu, lut_sel: %hu",
+			lut_config->table_config.ctlr_sel,
+			lut_config->table_config.rw,
+			lut_config->table_config.index, lut_config->lut_sel);
+		ret = -1;
+		goto exit;
+	}
+
 	if ((lut_config->table_config.ctlr_sel > OSI_CTLR_SEL_MAX) ||
 	    (lut_config->table_config.rw > OSI_RW_MAX) ||
 	    (lut_config->table_config.index > lut_max_index[osi_core->macsec]) ||
@@ -4585,6 +4679,85 @@ exit:
 }
 
 /**
+ * @brief macsec_coe_lc - Configure the COE line counter registers
+ *
+ * @note
+ * Algorithm:
+ *  - Programs the MACSec COE line counter regiter with the lc thresholds for given channel
+ *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
+ *  - TraceID: ***********
+ *
+ * @param[in] osi_core: OSI core private data structure. used param macsec_base
+ * @param[in] ch: Channel number
+ * @param[in] lc1: Line counter threshold 1
+ * @param[in] lc2: Line counter threshold 2
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ *
+ * @retval 0
+ */
+static nve32_t macsec_coe_lc(struct osi_core_priv_data *const osi_core,
+		nveu32_t ch, nveu32_t lc1, nveu32_t lc2)
+{
+	nveu32_t val = 0;
+	nveu8_t *addr = (nveu8_t *)osi_core->macsec_base;
+	nve32_t ret = 0;
+
+	val = MACSEC_COE_LINE_CNTR_EN;
+	val |= (lc1 & MACSEC_COE_LC_THRESH_MASK);
+	val |= (lc2 & MACSEC_COE_LC_THRESH_MASK) << MACSEC_COE_LC2_THRESH_SHIFT;
+	osi_macsec_writela(osi_core, val, addr + MACSEC_COE_LINE_CNTR(ch));
+
+	return ret;
+}
+
+/**
+ * @brief macsec_coe_config - Configure the COE logic in MACSec controller
+ *
+ * @note
+ * Algorithm:
+ *  - Programs the MACSec COE config register with COE enable and header offset
+ *  - Refer to MACSEC column of <<******, (sequence diagram)>> for API details.
+ *  - TraceID: ***********
+ *
+ * @param[in] osi_core: OSI core private data structure. used param macsec_base
+ * @param[in] coe_enable: Flag variable to enable/disable COE
+ * @param[in] coe_hdr_offset: The offset for the COE header from SOF
+ *
+ * @pre MACSEC needs to be out of reset and proper clock configured.
+ *
+ * @note
+ * API Group:
+ * - Initialization: No
+ * - Run time: Yes
+ * - De-initialization: No
+ *
+ * @retval 0
+ */
+static nve32_t macsec_coe_config(struct osi_core_priv_data *const osi_core,
+		nveu32_t coe_enable, nveu32_t coe_hdr_offset)
+{
+	nveu32_t val = 0;
+	nveu8_t *addr = (nveu8_t *)osi_core->macsec_base;
+	nve32_t ret = 0;
+
+	val = coe_enable & MACSEC_COE_ENABLE_MASK;
+	/* TODO - re-enable seq num check for production. This is just till HSB FPGA can be
+	 * fixed to use proper starting seq for every SOF. */
+	//val |= (coe_enable & MACSEC_COE_ENABLE_MASK) << MACSEC_COE_SEQ_CHK_SHIFT;
+	val |= (coe_hdr_offset & MACSEC_COE_HDROFST_MASK) << MACSEC_COE_HDROFST_SHIFT;
+	osi_macsec_writela(osi_core, val, addr + MACSEC_COE_CONFIG);
+
+	return ret;
+}
+
+/**
  * @brief macsec_deinit - Deinitializes the macsec
  *
  * @note
@@ -5138,6 +5311,7 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 	}
 
 	osi_core->macsec_initialized = OSI_ENABLE;
+	return ret;
 
 upd_byp_sci_lut:
 	ret = upd_byp_rx_lut_with_vf_mac(osi_core, macsec_vf_mac);
@@ -6280,6 +6454,8 @@ void macsec_init_ops(void *macsecops)
 
 	ops->init = macsec_initialize;
 	ops->deinit = macsec_deinit;
+	ops->coe_config = macsec_coe_config,
+	ops->coe_lc = macsec_coe_lc,
 	ops->handle_irq = macsec_handle_irq;
 	ops->lut_config = macsec_lut_config;
 #ifdef MACSEC_KEY_PROGRAM

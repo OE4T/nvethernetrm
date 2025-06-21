@@ -624,6 +624,7 @@ struct osi_tx_ring {
 	nveu32_t skip_dmb;
 };
 
+
 #ifndef OSI_STRIPPED_LIB
 /**
  * @brief osi_xtra_dma_stat_counters -  OSI DMA extra stats counters
@@ -723,6 +724,12 @@ struct osi_dma_priv_data {
 	 * Valid array size is num_dma_chans
 	 */
 	nveu32_t dma_chans[OSI_MGBE_MAX_NUM_CHANS];
+	/** Number of channels enabled in MAC used for Camera Over Ethernet
+	 */
+	nveu32_t num_dma_chans_coe;
+	/** Array of DMA channels which are managed by camera CPU.
+	 */
+	nveu8_t dma_chans_coe[OSI_MGBE_MAX_NUM_CHANS];
 	/** DMA Rx channel buffer length at HW level. Max value is related to mtu based
 	 *  on equation documented in sequence diagram of  osi_set_rx_buf_len()
 	 */
@@ -739,6 +746,10 @@ struct osi_dma_priv_data {
 #endif /* !OSI_STRIPPED_LIB */
 	/** Receive Interrupt Watchdog Timer Count Units. Max value is NVETHERNETCL_PIF$UINT_MAX */
 	nveu32_t rx_riwt;
+	/** Flag which decides COE is enabled(1) or disabled(0) */
+	nveu32_t coe_enable;
+	/** cfg structure for COE */
+	struct osi_mgbe_coe mgbe_coe;
 	/** Flag which decides riwt is
 	 *  NVETHERNETCL_PIF$OSI_ENABLE or
 	 *  NVETHERNETCL_PIF$OSI_DISABLE

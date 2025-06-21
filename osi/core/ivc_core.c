@@ -454,6 +454,7 @@ static nve32_t ivc_macsec_cipher_config(struct osi_core_priv_data *const osi_cor
 
 	return osi_core->osd_ops.ivc_send(osi_core, &msg, sizeof(msg));
 }
+
 /**
  * @brief ivc_macsec_lut_config - LUT config.
  *
@@ -551,6 +552,66 @@ static nve32_t ivc_macsec_init(struct osi_core_priv_data *const osi_core,
 }
 
 /**
+ * @brief ivc_macsec_coe_lc - Update the Line counter threshold
+ * for the COE logic in macsec controller
+ *
+ * @param[in] osi_core: OSI Core private data structure.
+ * @param[in] ch: VDMA channel number.
+ * @param[in] lc1: Line count for first sub-frame.
+ * @param[in] lc2: Line count for all other sub-frames.
+ *
+ * @retval 0 on Success
+ * @retval -1 on Failure
+ */
+static nve32_t ivc_macsec_coe_lc(struct osi_core_priv_data *const osi_core,
+			   nveu32_t ch, nveu32_t lc1, nveu32_t lc2)
+{
+	ivc_msg_common_t msg;
+	nveu32_t index = 0;
+
+	osi_memset(&msg, 0, sizeof(msg));
+
+	msg.cmd = coe_lc_macsec;
+	msg.args.arguments[index] = ch;
+	index++;
+	msg.args.arguments[index] = lc1;
+	index++;
+	msg.args.arguments[index] = lc2;
+	index++;
+	msg.args.count = index;
+
+	return osi_core->osd_ops.ivc_send(osi_core, &msg, sizeof(msg));
+}
+
+/**
+ * @brief ivc_macsec_coe_config - Enable/disable the COE logic in macsec controller
+ *
+ * @param[in] osi_core: OSI Core private data structure.
+ * @param[in] coe_enable: enable/disable flag.
+ * @param[in] coe_hdr_offset: Header offset for the COE header from SOF.
+ *
+ * @retval 0 on Success
+ * @retval -1 on Failure
+ */
+static nve32_t ivc_macsec_coe_config(struct osi_core_priv_data *const osi_core,
+			   nveu32_t coe_enable, nveu32_t coe_hdr_offset)
+{
+	ivc_msg_common_t msg;
+	nveu32_t index = 0;
+
+	osi_memset(&msg, 0, sizeof(msg));
+
+	msg.cmd = coe_config_macsec;
+	msg.args.arguments[index] = coe_enable;
+	index++;
+	msg.args.arguments[index] = coe_hdr_offset;
+	index++;
+	msg.args.count = index;
+
+	return osi_core->osd_ops.ivc_send(osi_core, &msg, sizeof(msg));
+}
+
+/**
  * @brief ivc_init_macsec_ops - Initialize IVC core operations.
  *
  * @note
@@ -567,6 +628,8 @@ void ivc_init_macsec_ops(void *macsecops)
 	ops->deinit = ivc_macsec_deinit;
 	ops->handle_irq = ivc_macsec_handle_irq;
 	ops->lut_config = ivc_macsec_lut_config;
+	ops->coe_config = ivc_macsec_coe_config;
+	ops->coe_lc = ivc_macsec_coe_lc;
 #ifdef MACSEC_KEY_PROGRAM
 	ops->kt_config = ivc_macsec_kt_config;
 #endif /* MACSEC_KEY_PROGRAM */

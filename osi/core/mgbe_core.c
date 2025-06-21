@@ -2162,7 +2162,7 @@ static nve32_t mgbe_config_flow_control(struct osi_core_priv_data *const osi_cor
  * @brief pcs_configure_fsm - Configure FSM for XPCS/XLGPCS
  *
  * @note
- * Algorithm: enable/disable the FSM timeout safety feature 
+ * Algorithm: enable/disable the FSM timeout safety feature
  *
  * @param[in, out] osi_core: OSI core private data structure.
  * @param[in] enable: OSI_ENABLE for Enabling FSM timeout safety feature, else disable
@@ -2482,6 +2482,24 @@ static nve32_t mgbe_hsi_inject_err(struct osi_core_priv_data *const osi_core,
 #endif
 #endif
 
+static inline nveu32_t
+mgbe_core_chan_is_coe(const struct osi_core_priv_data * const osi_core,
+		      nveu32_t chan_id)
+{
+	for (nveu32_t irqn = 0U; irqn < osi_core->num_vm_irqs; irqn++) {
+		if (osi_core->irq_data[irqn].is_coe == 0U)
+			continue;
+
+		for (nveu32_t ch = 0U; ch < osi_core->irq_data[irqn].num_vm_chans; ch++) {
+			if (osi_core->irq_data[irqn].vm_chans[ch] == chan_id) {
+				return 1U;
+			}
+		}
+	}
+
+	return 0U;
+}
+
 /**
  * @brief mgbe_configure_mac - Configure MAC
  *
@@ -2555,13 +2573,14 @@ static void mgbe_configure_mac(struct osi_core_priv_data *osi_core)
 			   (nveu8_t *)osi_core->base + MGBE_MAC_RQC1R);
 	value |= MGBE_MAC_RQC1R_MCBCQEN;
 	/* Set MCBCQ to highest enabled RX queue index */
-	for (i = 0; i < osi_core->num_mtl_queues; i++) {
-		if ((max_queue < osi_core->mtl_queues[i]) &&
-		    (osi_core->mtl_queues[i] < OSI_MGBE_MAX_NUM_QUEUES)) {
+	for (i = 0; i < osi_core->num_dma_chans; i++) {
+		if ((max_queue < osi_core->dma_chans[i]) &&
+		    (osi_core->dma_chans[i] < OSI_MGBE_MAX_NUM_QUEUES)) {
 			/* Update max queue number */
-			max_queue = osi_core->mtl_queues[i];
+			max_queue = osi_core->dma_chans[i];
 		}
 	}
+
 	value &= ~(MGBE_MAC_RQC1R_MCBCQ);
 	value |= (max_queue << MGBE_MAC_RQC1R_MCBCQ_SHIFT);
 	osi_writela(osi_core, value,
@@ -3074,15 +3093,20 @@ static nve32_t mgbe_core_init(struct osi_core_priv_data *const osi_core)
 		 * Since this is a local function this will always return sucess,
 		 * so no need to check for return value
 		 */
+		if (mgbe_core_chan_is_coe(osi_core, osi_core->mtl_queues[qinx])) {
+			ret = hw_config_fw_err_pkts(osi_core,
+						    osi_core->mtl_queues[qinx], OSI_DISABLE);
+		} else {
+			ret = hw_config_fw_err_pkts(osi_core,
+						    osi_core->mtl_queues[qinx], OSI_ENABLE);
+		}
 #ifndef OSI_STRIPPED_LIB
-		ret = hw_config_fw_err_pkts(osi_core, osi_core->mtl_queues[qinx], OSI_ENABLE);
 		if (ret < 0) {
 			goto fail;
 		}
 #else
-		(void)hw_config_fw_err_pkts(osi_core, osi_core->mtl_queues[qinx], OSI_ENABLE);
-#endif /* !OSI_STRIPPED_LIB */
-
+		(void)ret;
+#endif
 	}
 
 	/* configure MGBE MAC HW */
@@ -5318,6 +5342,68 @@ static void mgbe_config_for_macsec(struct osi_core_priv_data *const osi_core,
 }
 #endif /*  MACSEC_SUPPORT */
 
+static nve32_t mgbe_config_coe_buf(struct osi_core_priv_data *const osi_core,
+			    struct osi_mgbe_coe mgbe_coe)
+{
+	nve32_t ret = 0;
+	nveu32_t val = 0;
+	nveu32_t i;
+
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		/* TODO: Need to enable VLAN tag stripping as SPH feature needs untagged frame only */
+		/* Configure MAC_Ext_Cfg1 register for SPH offsets */
+		val = osi_readl((nveu8_t *)osi_core->base +
+				MGBE_MAC_EXT_CFG1);
+		val |= MGBE_MAC_EXT_CFG1_SAVE;
+		val |= (MGBE_MAC_EXT_CFG1_COE_SAVO << MGBE_MAC_EXT_CFG1_COE_SAVO_SHIFT);
+		val |= MGBE_MAC_EXT_CFG1_COE_SPLM;
+		val |= MGBE_MAC_EXT_CFG1_COE_SPLOFST;
+		osi_writel(val, (nveu8_t *)osi_core->base +
+				MGBE_MAC_EXT_CFG1);
+		/* Configure MTL_Rx_SPKT_CTRL register for COE header offset */
+		val = osi_readl((nveu8_t *)osi_core->base +
+				MGBE_MTL_RX_SPKT_CTRL);
+		val |= MGBE_MTL_RX_SPKT_CTRL_COE_HDROS;
+		osi_writel(val, (nveu8_t *)osi_core->base +
+				MGBE_MTL_RX_SPKT_CTRL);
+		/* Configure the MGBE wrapper for pktinfo cntr */
+		val = osi_readl((nveu8_t *)osi_core->base +
+				MGBE_WRAP_COE_PKTINFO_CNTR_INTR_MASK_0);
+		val = OSI_BIT(mgbe_coe.pdma);
+		osi_writel(val, (nveu8_t *)osi_core->base +
+				MGBE_WRAP_COE_PKTINFO_CNTR_INTR_MASK_0);
+		/* configure the Rx Frame buffers */
+		for (i = 0;i < OSI_MGBE_COE_NUM_RX_FRAMES; i++) {
+			val = H32(mgbe_coe.rx_fb_addr_phys[i]) &
+				MGBE_COE_RXFRAMEBUF_HI_MASK;
+			ret = mgbe_dma_indir_addr_write(osi_core,
+						MGBE_COE_MSEL_RXFRAMEBUF_HI,
+						mgbe_coe.vdma, val);
+			val = L32(mgbe_coe.rx_fb_addr_phys[i]) &
+				MGBE_COE_RXFRAMEBUF_LO_MASK;
+			ret = mgbe_dma_indir_addr_write(osi_core,
+						MGBE_COE_MSEL_RXFRAMEBUF_LO_BASE + i,
+						mgbe_coe.vdma, val);
+		}
+		/* configure the Rx pkt info buffers */
+		val = L32(mgbe_coe.rx_pib_addr_phys) &
+			MGBE_COE_RXPKTINFO_BUF_LO_MASK;
+		val |= mgbe_coe.rx_pib_sz &
+			MGBE_COE_PIB_SIZE_MASK;
+		ret = mgbe_dma_indir_addr_write(osi_core,
+					MGBE_COE_MSEL_RXPKTINFOBUF_LO,
+					mgbe_coe.pdma, val);
+		val = H32(mgbe_coe.rx_pib_addr_phys) &
+			MGBE_COE_RXPKTINFO_BUF_HI_MASK;
+		ret = mgbe_dma_indir_addr_write(osi_core,
+					MGBE_COE_MSEL_RXPKTINFOBUF_HI,
+					mgbe_coe.pdma, val);
+	}
+
+
+	return ret;
+}
+
 /**
  * @brief mgbe_init_core_ops - Initialize MGBE MAC core operations
  */
@@ -5354,6 +5440,7 @@ void mgbe_init_core_ops(struct core_ops *ops)
 #ifdef MACSEC_SUPPORT
 	ops->macsec_config_mac = mgbe_config_for_macsec;
 #endif
+	ops->config_coe_buf = mgbe_config_coe_buf;
 	ops->config_l3l4_filters = mgbe_config_l3l4_filters;
 #ifndef OSI_STRIPPED_LIB
 	ops->config_tx_status = mgbe_config_tx_status;

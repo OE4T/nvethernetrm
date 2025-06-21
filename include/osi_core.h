@@ -522,6 +522,10 @@ typedef my_lint_64		nvel64_t;
  * @brief Command to GET RSS Configuration
  */
 #define OSI_CMD_GET_RSS			58U
+/**
+ * @brief Command to config camera over eth logic
+ */
+#define OSI_CMD_GMSL_COE_CONFIG		59U
 /** @} */
 
 #ifdef LOG_OSI
@@ -1310,6 +1314,8 @@ struct osi_vm_irq_data {
 	 * valid values are from 0 to NVETHERNETRM_PIF$OSI_EQOS_MAX_NUM_CHANS-1 for eqos
 	 * and 0 to NVETHERNETRM_PIF$OSI_MGBE_MAX_NUM_CHANS-1 */
 	nveu32_t vm_chans[OSI_MGBE_MAX_NUM_CHANS];
+	/** If the IRQ is used for Camera Over Ethernet (handled by camera CPU) */
+	nveu8_t is_coe;
 };
 
 /**
@@ -1601,6 +1607,8 @@ struct osi_ioctl {
 		struct osi_core_tx_ts tx_ts;
 		/** PTP TSC data */
 		struct osi_core_ptp_tsc_data ptp_tsc;
+        /** COE config data */
+        struct osi_mgbe_coe mgbe_coe;
 	}data;
 };
 
@@ -1874,13 +1882,13 @@ struct osi_core_priv_data {
 	 * (4 for XFI 25G) (5 for USXGMII 25G */
 	nveu32_t phy_iface_mode;
 	/** MGBE MAC instance ID's
-	 * valid values are from 0 to 4 
+	 * valid values are from 0 to 4
 	 * 0 to 3 fo reach MGBE instance and 4 for EQOS */
 	nveu32_t instance_id;
 	/** Ethernet controller MAC to MAC Time sync role
 	 * valid values are NVETHERNETRM_PIF$OSI_PTP_M2M_INACTIVE,
 	 * NVETHERNETRM_PIF$OSI_PTP_M2M_PRIMARY and
-	 * NVETHERNETRM_PIF$OSI_PTP_M2M_SECONDARY 
+	 * NVETHERNETRM_PIF$OSI_PTP_M2M_SECONDARY
 	 */
 	nveu32_t m2m_role;
 	/** control pps output signal
@@ -1893,6 +1901,10 @@ struct osi_core_priv_data {
 	nveu32_t pre_sil;
 	/** rCHlist bookkeeping **/
 	struct rchlist_index rch_index[RCHLIST_SIZE];
+	/** Flag which decides COE is enabled(1) or disabled(0) */
+	nveu32_t coe_enable;
+	/** cfg structure for COE */
+	struct osi_mgbe_coe mgbe_coe;
 	/** Parameter indicates the current operating speed */
 	nve32_t speed;
 	/** PCS BASE-R FEC enable */

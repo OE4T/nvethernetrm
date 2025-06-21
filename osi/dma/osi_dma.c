@@ -266,6 +266,36 @@ static inline nve32_t validate_dma_chans(struct osi_dma_priv_data *osi_dma)
 	return ret;
 }
 
+/**
+ * @brief Function to validate array of CoE DMA channels.
+ *
+ * @param[in] osi_dma: OSI DMA private data structure.
+ *
+ * @note
+ * API Group:
+ * - Initialization: Yes
+ * - Run time: Yes
+ * - De-initialization: Yes
+ *
+ * @retval 0 on Success
+ * @retval -1 on Failure
+ */
+static inline nve32_t validate_coe_dma_chans(struct osi_dma_priv_data *osi_dma)
+{
+	const struct dma_local *const l_dma = (struct dma_local *)(void *)osi_dma;
+	nveu32_t i = 0U;
+	nve32_t ret = 0;
+	for (i = 0; i < osi_dma->num_dma_chans_coe; i++) {
+		if (osi_dma->dma_chans_coe[i] > l_dma->num_max_chans) {
+			OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+				    "Invalid CoE DMA channel number:\n",
+				    osi_dma->dma_chans_coe[i]);
+			ret = -1;
+		}
+	}
+	return ret;
+}
+
 #ifndef OSI_STRIPPED_LIB
 /**
  * @brief Function to validate function pointers.
@@ -516,6 +546,37 @@ static inline void start_dma(const struct osi_dma_priv_data *const osi_dma, nveu
 	osi_dma_writel(val, (nveu8_t *)osi_dma->base + rx_dma_reg[local_mac]);
 }
 
+static inline void stop_dma(const struct osi_dma_priv_data *const osi_dma,
+			    nveu32_t dma_chan)
+{
+	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
+	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
+	// Added bitwise with 0xFF to avoid CERT INT30-C error
+	nveu32_t chan = ((dma_chan & chan_mask[local_mac]) & (0xFFU));
+	const nveu32_t dma_tx_reg[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_DMA_CHX_TX_CTRL(chan),
+		MGBE_DMA_CHX_TX_CTRL(chan),
+		MGBE_DMA_CHX_TX_CTRL(chan)
+	};
+	const nveu32_t dma_rx_reg[OSI_MAX_MAC_IP_TYPES] = {
+		EQOS_DMA_CHX_RX_CTRL(chan),
+		MGBE_DMA_CHX_RX_CTRL(chan),
+		MGBE_DMA_CHX_RX_CTRL(chan)
+	};
+	nveu32_t val;
+
+	/* Stop Tx DMA */
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + dma_tx_reg[osi_dma->mac]);
+	val &= ~OSI_BIT(0);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + dma_tx_reg[osi_dma->mac]);
+
+	/* Stop Rx DMA */
+	val = osi_dma_readl((nveu8_t *)osi_dma->base + dma_rx_reg[osi_dma->mac]);
+	val &= ~OSI_BIT(0);
+	val |= OSI_BIT(31);
+	osi_dma_writel(val, (nveu8_t *)osi_dma->base + dma_rx_reg[osi_dma->mac]);
+}
+
 static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 			     nveu32_t dma_chan)
 {
@@ -526,6 +587,7 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 	// Added bitwise with 0xFF to avoid CERT INT30-C error
 	nveu32_t chan = ((dma_chan & chan_mask[local_mac]) & (0xFFU));
 	nveu32_t riwt = osi_dma->rx_riwt & 0xFFFU;
+	const nveu32_t total_num_chans = osi_dma->num_dma_chans + osi_dma->num_dma_chans_coe;
 	const nveu32_t intr_en_reg[OSI_MAX_MAC_IP_TYPES] = {
 		EQOS_DMA_CHX_INTR_ENA(chan),
 		MGBE_DMA_CHX_INTR_ENA(chan),
@@ -558,7 +620,7 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 	const nveu32_t rx_pbl[2] = {
 		EQOS_DMA_CHX_RX_CTRL_RXPBL_RECOMMENDED,
 		((Q_SZ_DEPTH(MGBE_RXQ_SIZE/OSI_MGBE_MAX_NUM_QUEUES) /
-		osi_dma->num_dma_chans) / 2U)
+		total_num_chans) / 2U)
 	};
 	const nveu32_t rwt_val[OSI_MAX_MAC_IP_TYPES] = {
 		(((riwt * (EQOS_AXI_CLK_FREQ / OSI_ONE_MEGA_HZ)) /
@@ -583,7 +645,7 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 		(DMA_CHX_TX_CTRL_OSP | DMA_CHX_TX_CTRL_TSE),
 		DMA_CHX_TX_CTRL_TSE
 	};
-	const nveu32_t owrq = (MGBE_DMA_CHX_RX_CNTRL2_OWRQ_MCHAN / osi_dma->num_dma_chans);
+	const nveu32_t owrq = (MGBE_DMA_CHX_RX_CNTRL2_OWRQ_MCHAN / total_num_chans);
 	const nveu32_t owrq_arr[OSI_MGBE_T23X_MAX_NUM_CHANS] = {
 		MGBE_DMA_CHX_RX_CNTRL2_OWRQ_SCHAN, owrq, owrq, owrq,
 		owrq, owrq, owrq, owrq, owrq, owrq
@@ -606,6 +668,16 @@ static nve32_t init_dma_channel(const struct osi_dma_priv_data *const osi_dma,
 			   chx_ctrl_reg[osi_dma->mac]);
 	}
 	if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
+		/* if COE is enabled - then enable split header
+		 * and program related registers.
+		 */
+		val = osi_dma_readl((nveu8_t *)osi_dma->base +
+				chx_ctrl_reg[osi_dma->mac]);
+		if (osi_dma->coe_enable) {
+			val |= MGBE_DMA_CHX_CTRL_SPH;
+		}
+		osi_dma_writel(val, (nveu8_t *)osi_dma->base +
+			   chx_ctrl_reg[osi_dma->mac]);
 		/* Find VDMA to PDMA mapping */
 		ret = vdma_to_pdma_map(osi_dma, dma_chan, &pdma_chan);
 		if (ret != 0) {
@@ -789,14 +861,16 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma)
 	}
 
 	if ((osi_dma->num_dma_chans == 0U) ||
-	    (osi_dma->num_dma_chans > l_dma->num_max_chans)) {
+	    (osi_dma->num_dma_chans > l_dma->num_max_chans) ||
+	    (osi_dma->num_dma_chans_coe > l_dma->num_max_chans)) {
 		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
 			    "Invalid number of DMA channels\n", 0ULL);
 		ret = -1;
 		goto fail;
 	}
 
-	if (validate_dma_chans(osi_dma) < 0) {
+	if ((validate_dma_chans(osi_dma) < 0) ||
+	    (validate_coe_dma_chans(osi_dma) < 0)) {
 		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
 			    "DMA channels validation failed\n", 0ULL);
 		ret = -1;
@@ -816,43 +890,24 @@ nve32_t osi_hw_dma_init(struct osi_dma_priv_data *osi_dma)
 		}
 	}
 
+	/* Init DMA engine settings for CoE channels, but don't start the DMA */
+	for (i = 0; i < osi_dma->num_dma_chans_coe; i++) {
+		ret = init_dma_channel(osi_dma, osi_dma->dma_chans_coe[i]);
+		if (ret < 0) {
+			OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
+				    "DMA: Init CoE DMA channel failed\n", 0ULL);
+			goto fail;
+		}
+
+		stop_dma(osi_dma, osi_dma->dma_chans_coe[i]);
+	}
+
 	set_default_ptp_config(osi_dma);
 fail:
 #ifdef OSI_CL_FTRACE
 	slogf(0, 2, "%s : Function Exit\n", __func__);
 #endif /* OSI_CL_FTRACE */
 	return ret;
-}
-
-static inline void stop_dma(const struct osi_dma_priv_data *const osi_dma,
-			    nveu32_t dma_chan)
-{
-	const nveu32_t chan_mask[OSI_MAX_MAC_IP_TYPES] = {0xFU, 0xFU, 0x3FU};
-	const nveu32_t local_mac = osi_dma->mac % OSI_MAX_MAC_IP_TYPES;
-	// Added bitwise with 0xFF to avoid CERT INT30-C error
-	nveu32_t chan = ((dma_chan & chan_mask[local_mac]) & (0xFFU));
-	const nveu32_t dma_tx_reg[OSI_MAX_MAC_IP_TYPES] = {
-		EQOS_DMA_CHX_TX_CTRL(chan),
-		MGBE_DMA_CHX_TX_CTRL(chan),
-		MGBE_DMA_CHX_TX_CTRL(chan)
-	};
-	const nveu32_t dma_rx_reg[OSI_MAX_MAC_IP_TYPES] = {
-		EQOS_DMA_CHX_RX_CTRL(chan),
-		MGBE_DMA_CHX_RX_CTRL(chan),
-		MGBE_DMA_CHX_RX_CTRL(chan)
-	};
-	nveu32_t val;
-
-	/* Stop Tx DMA */
-	val = osi_dma_readl((nveu8_t *)osi_dma->base + dma_tx_reg[osi_dma->mac]);
-	val &= ~OSI_BIT(0);
-	osi_dma_writel(val, (nveu8_t *)osi_dma->base + dma_tx_reg[osi_dma->mac]);
-
-	/* Stop Rx DMA */
-	val = osi_dma_readl((nveu8_t *)osi_dma->base + dma_rx_reg[osi_dma->mac]);
-	val &= ~OSI_BIT(0);
-	val |= OSI_BIT(31);
-	osi_dma_writel(val, (nveu8_t *)osi_dma->base + dma_rx_reg[osi_dma->mac]);
 }
 
 static inline void set_rx_riit_dma(
@@ -924,7 +979,14 @@ static inline void set_rx_riit(
 
 	for (i = 0; i < osi_dma->num_dma_chans; i++) {
 		chan = osi_dma->dma_chans[i];
+
 		set_rx_riit_dma(osi_dma, chan, riit);
+	}
+
+	for (i = 0; i < osi_dma->num_dma_chans_coe; i++) {
+		chan = osi_dma->dma_chans_coe[i];
+
+		set_rx_riit_dma(osi_dma, chan, 0U);
 	}
 	return;
 }
@@ -943,14 +1005,16 @@ nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma)
 		goto fail;
 	}
 
-	if (osi_dma->num_dma_chans > l_dma->num_max_chans) {
+	if ((osi_dma->num_dma_chans > l_dma->num_max_chans) ||
+	    (osi_dma->num_dma_chans_coe > l_dma->num_max_chans)) {
 		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
 			    "Invalid number of DMA channels\n", 0ULL);
 		ret = -1;
 		goto fail;
 	}
 
-	if (validate_dma_chans(osi_dma) < 0) {
+	if ((validate_dma_chans(osi_dma) < 0) ||
+	    (validate_coe_dma_chans(osi_dma) < 0)) {
 		OSI_DMA_ERR(osi_dma->osd, OSI_LOG_ARG_INVALID,
 			    "DMA channels validation failed\n", 0ULL);
 		ret = -1;
@@ -959,6 +1023,10 @@ nve32_t osi_hw_dma_deinit(struct osi_dma_priv_data *osi_dma)
 
 	for (i = 0; i < osi_dma->num_dma_chans; i++) {
 		stop_dma(osi_dma, osi_dma->dma_chans[i]);
+	}
+
+	for (i = 0; i < osi_dma->num_dma_chans_coe; i++) {
+		stop_dma(osi_dma, osi_dma->dma_chans_coe[i]);
 	}
 
 fail:

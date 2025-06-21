@@ -309,6 +309,38 @@
 #endif /* OSI_STRIPPED_LIB */
 /** @} */
 
+#define OSI_MGBE_COE_NUM_RX_FRAMES	4U
+struct osi_mgbe_coe {
+	/** Rx frame buffer virt addr for 4 frames */
+	nveu64_t rx_fb_addr[OSI_MGBE_COE_NUM_RX_FRAMES];
+	/** Rx frame buffer phys addr for 4 frames */
+	nveu64_t rx_fb_addr_phys[OSI_MGBE_COE_NUM_RX_FRAMES];
+	/** Rx pkt info buffer virt addr */
+	nveu64_t rx_pib_addr;
+	/** Rx pkt info buffer phys addr */
+	nveu64_t rx_pib_addr_phys;
+	/** Rx pkt info buffer ring size */
+	nveu32_t rx_pib_sz;
+	/** VDMA enabled for COE */
+	nveu32_t vdma;
+	/** PDMA enabled for COE */
+	nveu32_t pdma;
+};
+
+/**
+ * @brief COE pkt info buffer
+ */
+struct osi_mgbe_coe_pib {
+	/** pkt info buf 0 */
+	nveu32_t pib0;
+	/** pkt info buf 1 */
+	nveu32_t pib1;
+	/** pkt info buf 2 */
+	nveu32_t pib2;
+	/** pkt info buf 3 */
+	nveu32_t pib3;
+};
+
 /**
  * @addtogroup OSI-DEBUG helper macros
  *

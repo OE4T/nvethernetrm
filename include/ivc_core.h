@@ -50,6 +50,8 @@ typedef enum {
 	handle_irq_macsec,
 	lut_config_macsec,
 	kt_config_macsec,
+	coe_lc_macsec,
+	coe_config_macsec,
 	cipher_config,
 	loopback_config_macsec,
 	config_macsec,
