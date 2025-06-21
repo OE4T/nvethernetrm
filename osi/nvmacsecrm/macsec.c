@@ -5105,21 +5105,20 @@ static void macsec_intr_config(struct osi_core_priv_data *const osi_core, nveu32
 
 	val = osi_macsec_readla(osi_core, addr + rx_imr_reg[macsec]);
 	MACSEC_LOG("Read MACSEC_RX_IMR: 0x%x\n", val);
-/*
+
 	val |= (MACSEC_RX_DBG_BUF_CAPTURE_DONE_INT_EN |
 		RX_REPLAY_ERROR_INT_EN |
 		MACSEC_RX_MTU_CHECK_FAIL_INT_EN |
 		MACSEC_RX_AES_GCM_BUF_OVF_INT_EN |
 		MACSEC_RX_PN_EXHAUSTED_INT_EN
-	       );*/
-	val = 0U;
+	       );
 	osi_macsec_writela(osi_core, val, addr + rx_imr_reg[macsec]);
 	MACSEC_LOG("Write MACSEC_RX_IMR: 0x%x\n", val);
 
 	val = osi_macsec_readla(osi_core, addr + common_imr_reg[macsec]);
 	MACSEC_LOG("Read MACSEC_COMMON_IMR: 0x%x\n", val);
-	val |= (/*MACSEC_RX_UNINIT_KEY_SLOT_INT_EN |
-		MACSEC_RX_LKUP_MISS_INT_EN |*/
+	val |= (MACSEC_RX_UNINIT_KEY_SLOT_INT_EN |
+		MACSEC_RX_LKUP_MISS_INT_EN |
 		MACSEC_TX_UNINIT_KEY_SLOT_INT_EN |
 		MACSEC_TX_LKUP_MISS_INT_EN);
 	osi_macsec_writela(osi_core, val, addr + common_imr_reg[macsec]);
@@ -5280,15 +5279,13 @@ static nve32_t macsec_initialize(struct osi_core_priv_data *const osi_core, nveu
 	/* Enabling interrupts only related to HSI */
 	val = osi_macsec_readla(osi_core, addr + rx_imr_reg[macsec]);
 	MACSEC_LOG("Read MACSEC_RX_IMR: 0x%x\n", val);
-	//val |= (MACSEC_RX_ICV_ERROR_INT_EN |
-	//	MACSEC_RX_MAC_CRC_ERROR_INT_EN);
-	val = 0U;
+	val |= (MACSEC_RX_ICV_ERROR_INT_EN |
+		MACSEC_RX_MAC_CRC_ERROR_INT_EN);
 	MACSEC_LOG("Write MACSEC_RX_IMR: 0x%x\n", val);
 	osi_macsec_writela(osi_core, val, addr + rx_imr_reg[macsec]);
 
 	val = osi_macsec_readla(osi_core, addr + common_imr_reg[macsec]);
-	//val |= MACSEC_SECURE_REG_VIOL_INT_EN;
-	val = 0U;
+	val |= MACSEC_SECURE_REG_VIOL_INT_EN;
 	osi_macsec_writela(osi_core, val, addr + common_imr_reg[macsec]);
 
 	/* Set AES mode

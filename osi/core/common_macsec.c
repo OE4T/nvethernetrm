@@ -227,8 +227,6 @@ nve32_t osi_macsec_coe_lc(struct osi_core_priv_data *const osi_core,
 	if ((osi_core != OSI_NULL) && (l_core->macsec_ops != OSI_NULL) &&
 	    (l_core->macsec_ops->coe_lc != OSI_NULL)) {
 		ret = l_core->macsec_ops->coe_lc(osi_core, ch, lc1, lc2);
-		OSI_CORE_ERR(osi_core->osd, OSI_LOG_ARG_HW_FAIL,
-			"osi_macsec_coe_lc: ret \n", ret);
 	}
 
 	return ret;
