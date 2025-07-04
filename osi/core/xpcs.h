@@ -71,8 +71,6 @@
 #define T26X_XPCS_WRAP_UPHY_RX_CTRL_2		0x8040
 #define T26X_XPCS_WRAP_UPHY_RX_CTRL_3		0x8044
 #define T26X_XPCS_WRAP_UPHY_TIMEOUT_CONTROL_0_0	0x8070
-#define T26X_XPCS_WRAP_UPHY_RX_CTRL_0_0		0x8034
-#define T26X_XPCS_WRAP_UPHY_RX_CTRL_12_0	0x8058
 
 /** @} */
 
@@ -196,13 +194,6 @@
 #define XPCS_WRAP_UPHY_STATUS_RX_P_UP_STATUS		OSI_BIT(2)
 #define XPCS_SR_PMA_KR_FEC_CTRL_FEC_EN			OSI_BIT(0)
 #define XPCS_SR_PMA_KR_FEC_CTRL_EN_ERR_IND		OSI_BIT(1)
-
-#define XPCS_WRAP_UPHY_RX_CTRL_0_0_PRE_RX_EQ_MASK_1	OSI_BIT(0) | OSI_BIT(10)
-#define XPCS_WRAP_UPHY_RX_CTRL_0_0_PRE_RX_EQ_MASK_2	OSI_BIT(4) | OSI_BIT(5) | OSI_BIT(6) | OSI_BIT(7)
-#define XPCS_WRAP_UPHY_RX_CTRL_0_0_RX_EQ_TRAIN_EN	OSI_BIT(11)
-#define XPCS_WRAP_UPHY_RX_CTRL_0_0_RX_EQ_RESET		OSI_BIT(12)
-#define XPCS_WRAP_UPHY_RX_CTRL_0_0_RX_SW_OVRD		OSI_BIT(31)
-#define XPCS_WRAP_UPHY_RX_CTRL_12_0_SLEEP_DLY		0x200U
 
 #ifdef HSI_SUPPORT
 #define XPCS_WRAP_INTERRUPT_CONTROL			0x8048
@@ -336,31 +327,4 @@ static inline nve32_t xpcs_write_safety(struct osi_core_priv_data *osi_core,
 #endif /* !OSI_STRIPPED_LIB */
 	return ret;
 }
-
-/**
- * @brief
- * Description: Execute RX EQ training through SW Override method.
- *
- * @param[in] osi_core: A pointer to the osi_core_priv_data structure
- *   * Range: A non-null pointer to NVETHERNETRM_PIF$osi_core_priv_data structure.
- *     * Refer NVETHERNETRM_PIF$osi_core_priv_data
- *
- * @usage
- * - Allowed context for the API call
- *  - Interrupt handler: No
- *  - Signal handler: No
- *  - Thread safe: No
- *  - Async/Sync: Sync
- * - Required Privileges: None
- * - API Group:
- *  - Initialization: Yes
- *  - Run time: No
- *  - De-initialization: No
- *
- * @return
- * 0 on success
- * -1 on failure
- *
- */
-nve32_t xpcs_rx_eq_sw_override(struct osi_core_priv_data *osi_core);
 #endif /* INCLUDED_XPCS_H_ */
