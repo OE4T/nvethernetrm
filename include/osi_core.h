@@ -1914,8 +1914,6 @@ struct osi_core_priv_data {
 	nveu32_t skip_usxgmii_an;
 	/** MAC common interrupt received */
 	nveu32_t mac_common_intr_rcvd;
-	/** Flag to enable pcs RX EQ SW override logic */
-	nveu32_t pcs_rx_eq_sw_ovrd_en;
 };
 
 /**
